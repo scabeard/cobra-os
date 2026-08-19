@@ -408,9 +408,53 @@ if ! id "$OPERATOR_USER" &>/dev/null; then
   fi
   echo "${OPERATOR_USER}:changeme" | chpasswd
   usermod -aG sudo "$OPERATOR_USER"
-  echo "[!] Default password is 'changeme' — force a change on first login."
-  chage -d 0 "$OPERATOR_USER"
+  echo "[!] Scaffold password is 'changeme' — replaced on first login (see below)."
 fi
+# First-login password flow (2026-08-18): the old `chage -d 0` PAM-forced
+# change made operators type 'changeme' TWICE in a row (login password, then
+# pam's "current password" verification) — clunky and confusing on a console
+# live OS. Replaced with: console autologin on tty1 (the live-distro norm —
+# Debian/Kali/Parrot live all boot straight into the session) + a profile.d
+# hook that forces `passwd` once, before the cobrashell loads, on EVERY
+# login path until it succeeds. Un-expire accounts a previous build expired
+# (warm chroots carry lastchg=0 forward).
+chage -d "$(date +%F)" "$OPERATOR_USER" 2>/dev/null || true
+
+echo "[*] Console: autologin $OPERATOR_USER on tty1 (live-image norm)..."
+install -d -m 0755 /etc/systemd/system/getty@tty1.service.d
+cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
+# COBRA OS — console autologin (live-image norm). The scaffold password is
+# still replaced on first login via /etc/profile.d/00-cobra-firstlogin.sh;
+# root stays locked, sudo still requires the operator password. Physical
+# access = operator shell, same as any live distro — LUKS persistence
+# (BUILD_PLAN.md §5) is the data-at-rest protection, not the console login.
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin ${OPERATOR_USER} --noclear %I \$TERM
+EOF
+
+echo "[*] First-login hook: forced one-time scaffold password replacement..."
+cat > /etc/profile.d/00-cobra-firstlogin.sh << EOF
+# COBRA OS — one-time scaffold-password replacement.
+# Runs before the cobrashell loads (login shells, every path: tty, ssh).
+# Loops (exit 1 -> session drops -> autologin/getty retries) until passwd
+# succeeds. A user-run passwd verifies the current password once — the
+# single remaining 'changeme' prompt. No TTY -> skip (never wedge a
+# non-interactive login; the next interactive one catches it).
+if [ -t 0 ] && [ "\$(id -un 2>/dev/null)" = "${OPERATOR_USER}" ] && [ ! -e "\$HOME/.cobra-pw-done" ]; then
+    echo ""
+    echo "COBRA OS — replace the scaffold password 'changeme' now."
+    echo "(current password, one last time: changeme)"
+    if passwd; then
+        touch "\$HOME/.cobra-pw-done" 2>/dev/null
+        echo "[+] Operator password set. Stay frosty."
+    else
+        echo "[!] Password change is REQUIRED — dropping back to login."
+        sleep 2
+        exit 1
+    fi
+fi
+EOF
 
 echo "[*] Hardening: locking root account (sudo-only access)..."
 passwd -l root

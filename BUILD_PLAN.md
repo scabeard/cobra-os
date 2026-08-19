@@ -153,7 +153,9 @@ Retired profiles: `headless` (obsolete — every build is headless now).
 Applied in `chroot-setup.sh` (idempotent):
 
 - root locked (`passwd -l`), sudo-only via `operator` (password
-  `changeme`, forced change on first login via `chage -d 0`)
+  `changeme`; tty1 console autologin + one-time forced `passwd` via
+  /etc/profile.d/00-cobra-firstlogin.sh — replaced the `chage -d 0` PAM
+  flow on 2026-08-18: it made operators type 'changeme' twice in a row)
 - nftables default-deny input/forward; loopback + established allowed;
   ICMPv4 + ICMPv6 allowed (ICMPv6 carries NDP — without it IPv6 dies on the
   LAN); output open (operator box, not a server)

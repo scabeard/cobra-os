@@ -3383,7 +3383,7 @@ hs_info() {
 
 # shellcheck disable=SC2120
 # Output help
-xhelp() {
+_cobra_xhelp_body() {
     _hs_no_tty_no_color
     [[ "$1" == "scan" ]] && { xhelp_scan; _hs_init_color; return; }
     [[ "$1" == "dbin" ]] && { xhelp_dbin; _hs_init_color; return; }
@@ -3391,6 +3391,7 @@ xhelp() {
     [[ "$1" == "memexec" ]] && { xhelp_memexec; _hs_init_color; return; }
     [[ "$1" == "bounce" ]] && { xhelp_bounce; _hs_init_color; return; }
 
+    _cobra_banner
     echo -en "\
 ${CDC} xlog '1.2.3.4' /var/log/auth.log      ${CDM}Cleanse log file
 ${CDC} wtmp_trim                             ${CDM}Trim & cleanse wtmp,utmp,btmp and lastlog
@@ -3432,9 +3433,21 @@ ${CDC} xhelp                                 ${CDM}This help${CN}\n"
     _hs_init_color
 }
 
+xhelp() {
+    # COBRA console UX: banner + full help is ~55 lines — far taller than the
+    # 80x25 live console, so the art and top rows scrolled straight off the
+    # screen. Page it (less is core; -RF = raw colors, quit-if-one-screen for
+    # the short sub-topics). COBRA_NOPAGE=1 or piping keeps the old raw dump.
+    if [ -t 1 ] && [ -z "${COBRA_NOPAGE:-}" ] && command -v less >/dev/null; then
+        FORCE=1 _cobra_xhelp_body "$@" | less -RF
+    else
+        _cobra_xhelp_body "$@"
+    fi
+}
+
 _cobra_banner() {
     [ -n "$QUIET" ] && return
-    [ -t 1 ] || return
+    [ -t 1 ] || [ -n "$FORCE" ] || return
     echo -en "${CG}"
     cat <<'COBRA'
    ██████╗ ██████╗ ██████╗ ██████╗  █████╗

@@ -45,7 +45,7 @@ sudo SKIP_DEBOOTSTRAP=1 ./build-rootfs.sh                # resume on a warm root
 
 Produces `./rootfs/`: minimal Debian base + Parrot repo, the curated core
 tool set, locked root, an `operator` sudo user (password `changeme` —
-forced change on first login), default-deny nftables firewall,
+tty1 console autologin, forced replacement on first login), default-deny nftables firewall,
 sysctl/modprobe hardening, MAC randomization, and history-off defaults.
 
 **Console-only.** The brief X11/i3/Terminator + Firefox/Tor Browser layer
