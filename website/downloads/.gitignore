@@ -1,0 +1,3 @@
+# ISOs never enter git (2.4+ GiB each) — they ship to R2 (dl.cobra-os.com).
+# Only the .sha256 sidecars are versioned with the site.
+*.iso

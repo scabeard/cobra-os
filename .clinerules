@@ -1,0 +1,57 @@
+# COBRA OS — project rules for Cline
+
+## What this project is
+COBRA OS is a **minimal, hardened, red team live OS**: Debian trixie
+`minbase` + Parrot OS package repos, a rebranded operator shell
+(`shell/cobrashell.sh`, forked from THC's hackshell), and the curated
+operator command registry (`shell/cobra-ops.sh` — the retired Textual TUI
+ported to bash functions). It is **console-only**: no X server, no display
+manager, no GUI packages — tmux is the dashboard. Web access is `links2`
+(optionally over system tor via `torify`), gated behind `xint`. The
+2026-08-15/16 X11/i3/Terminator + Firefox/Tor Browser layer was tried and
+reverted — do not resurrect it. It is built for
+**authorized penetration testing only** — always frame offensive tooling
+around consented, contracted use.
+
+## Prime directives
+1. **Minimalism first.** Every package must be justified. If you add a
+   package to `chroot-setup.sh`, it must either (a) map to a cobra-ops
+   function, or (b) have a written reason in `BUILD_PLAN.md`. Never suggest
+   `parrot-tools-full`, desktop environments, or X11/GUI packages of any
+   kind (including GUI browsers) — the console-only line only moves if the
+   user explicitly reverses it.
+2. **Security by default.** Default-deny firewall stays default-deny.
+   Root stays locked. History stays off. Internet-touching shell helpers
+   stay gated behind `xint`. Never weaken a hardening default without the
+   user explicitly asking.
+3. **No telemetry, ever.** No analytics, no phone-home, no remote
+   sourcing of scripts. cobrashell must only reference its LOCAL copy at
+   `/etc/cobra/cobrashell.sh`.
+4. **No secrets in the repo.** The `changeme` operator password is a
+   documented scaffold default with forced change on first login — never
+   replace it with a "real" hardcoded password; instruct the user instead.
+
+## Coding conventions
+- Bash: `#!/usr/bin/env bash`, `set -euo pipefail`, quote expansions,
+  `shellcheck`-clean style. Always `bash -n` after editing a script.
+- Python: stdlib only, and never a UI layer — the Textual TUI was retired
+  (2026-08-15). python3 exists for the tools (sqlmap, `serve`, impacket),
+  not for COBRA code.
+- Command registry rule: adding a function to `shell/cobra-ops.sh`
+  REQUIRES the matching package in `chroot-setup.sh` and a row in
+  `BUILD_PLAN.md` §2. Keep the three in sync.
+- Console-only rule: scripts, shell configs, and cobra-ops functions must
+  never require X11/startx/a display. Web access is `links2` (or
+  `torify links2`) — deliberate, operator-summoned, xint-gated.
+- Preserve upstream provenance comments in `shell/cobrashell.sh`
+  (THC hackshell credit stays).
+
+## Build-system rules
+- `PARROT_SUITE` must be verified against https://deb.parrot.sh before
+  changing it; never silently bump the codename.
+- `build-rootfs.sh` / `chroot-setup.sh` require root and run debootstrap
+  + chroot — NEVER execute them without explicit user approval.
+- New tool categories go in as a `COBRA_PROFILES` case in
+  `chroot-setup.sh`, not into the core package list.
+- File layout is fixed: scripts at root, shell configs in `shell/`, plan
+  in `BUILD_PLAN.md`. Keep README.md in sync with reality.

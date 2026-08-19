@@ -1,0 +1,13 @@
+# COBRA OS — root .gitignore
+#
+# Keep the repo to sources + docs only. Anything multi-GB or machine-local
+# never enters git.
+
+# The debootstrap chroot — ~2 GB of extracted rootfs, rebuilt by
+# build-rootfs.sh / chroot-setup.sh on demand.
+/rootfs/
+
+# Built images and their root-level checksum sidecars.
+# (website/downloads/*.sha256 stays tracked — see website/downloads/.gitignore.)
+/*.iso
+/*.iso.sha256

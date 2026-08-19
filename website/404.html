@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>404 — shell not found · COBRA OS</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="assets/img/cobra-logo.png">
+<link rel="stylesheet" href="assets/css/style.css">
+<style>
+  .nf {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .nf-code {
+    font-size: clamp(72px, 16vw, 150px);
+    font-weight: 700;
+    color: var(--red);
+    text-shadow: 0 0 40px rgba(255, 42, 60, .55);
+    line-height: 1;
+    margin: 0;
+  }
+  .nf-msg { color: var(--dim); margin: 18px 0 30px; font-size: 16px; }
+  .nf-msg .p { color: var(--green); }
+</style>
+</head>
+<body>
+  <main class="nf">
+    <p class="nf-code">404</p>
+    <p class="nf-msg"><span class="p">operator@cobra:~$</span> cd "$REQUEST_URI"<br>
+      bash: cd: no such file or directory — this path left no trace. Like everything else here.</p>
+    <a class="btn btn-red" href="/">[ back to base ]</a>
+  </main>
+</body>
+</html>
