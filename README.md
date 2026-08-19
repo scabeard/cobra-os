@@ -171,6 +171,10 @@ The whole boot-to-shell path is themed, with zero packages and zero X:
 - **console**: `cobra-theme.sh` remaps the TTY's 16-color VGA palette to
   the COBRA neon ramp (cobrashell's prompt goes red/cyan/violet
   automatically), plus themed `LS_COLORS`, grep matches and man pages
+- **opshelp**: the operator help screen itself renders in the ramp —
+  neon-red section headers, phosphor-green commands, amber gotchas,
+  gunmetal parentheticals (reuses cobrashell's color vars; plain when
+  piped)
 - **tmux**: `/etc/tmux.conf` — black status bar, neon-red active
   tab/pane border, cyan clock
 

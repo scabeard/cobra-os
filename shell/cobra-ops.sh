@@ -54,53 +54,61 @@ target() {
 }
 
 # --- Help --------------------------------------------------------------
+# Rendered in the COBRA ramp: bold-red headers, phosphor-green commands,
+# faint parentheticals, amber gotchas. Colors reuse cobrashell's vars (set
+# by _hs_init_color) with raw 16-color SGR fallbacks so the help still
+# renders if cobra-ops is sourced standalone. 16-color slots only — the
+# cobra-theme VGA remap turns them neon on the console. Plain when piped.
 opshelp() {
-    cat <<'HELP'
-COBRA operator commands (cobra-ops)
-  target <host>             set the active target (fallback for recon cmds)
-  stop                      (legacy — not needed; Ctrl+C kills the tool)
+    local R="${CR:-$'\e[1;31m'}" G="${CG:-$'\e[1;32m'}" Y="${CY:-$'\e[1;33m'}"
+    local F="${CF:-$'\e[2m'}"    N="${CN:-$'\e[0m'}"
+    [ -t 1 ] || { R=; G=; Y=; F=; N=; }
+    cat <<HELP
+${R}COBRA${N} operator commands ${F}(cobra-ops)${N}
+  ${G}target <host>${N}             set the active target ${F}(fallback for recon cmds)${N}
+  ${G}stop${N}                      ${F}(legacy — not needed; Ctrl+C kills the tool)${N}
 
-Recon (nmap) — use `fscan`/`dnsq` to avoid cobrashell collisions:
-  fscan <target>            fast nmap scan (top 1000 ports, -T4 -F)
-  portscan <target>         full TCP scan (-p-)
-  svcscan <target>          service/version + default scripts (-sV -sC)
-  vulnscan <target>         nmap vuln scripts (slow, noisy)
-  udpscan <target>          top 100 UDP ports (needs sudo)
-  dnsq <domain>             DNS record lookup (dig +noall +answer)
-  whois <domain>            whois lookup
-  smbenum <target>          enum4linux-ng -A (SMB/Windows shares, users, policy)
+${R}Recon (nmap)${N} — ${Y}use fscan/dnsq to avoid cobrashell collisions${N}:
+  ${G}fscan <target>${N}            fast nmap scan ${F}(top 1000 ports, -T4 -F)${N}
+  ${G}portscan <target>${N}         full TCP scan ${F}(-p-)${N}
+  ${G}svcscan <target>${N}          service/version + default scripts ${F}(-sV -sC)${N}
+  ${G}vulnscan <target>${N}         nmap vuln scripts ${F}(slow, noisy)${N}
+  ${G}udpscan <target>${N}          top 100 UDP ports ${F}(needs sudo)${N}
+  ${G}dnsq <domain>${N}             DNS record lookup ${F}(dig +noall +answer)${N}
+  ${G}whois <domain>${N}            whois lookup
+  ${G}smbenum <target>${N}          enum4linux-ng -A ${F}(SMB/Windows shares, users, policy)${N}
 
-Web:
-  webdir <url> [wordlist]   gobuster dir brute-force (default: dirb common.txt)
-  webvuln <url>             nikto web server scan
-  sql <url>                 sqlmap (batch, --random-agent)
+${R}Web:${N}
+  ${G}webdir <url> [wordlist]${N}   gobuster dir brute-force ${F}(default: dirb common.txt)${N}
+  ${G}webvuln <url>${N}             nikto web server scan
+  ${G}sql <url>${N}                 sqlmap ${F}(batch, --random-agent)${N}
 
-Creds:
-  brute <host> <svc> <user> hydra w/ rockyou (-t 4 -f -V)
-  crack <hashfile>          john + rockyou
-  hashcrack <mode> <hashfile>  hashcat -m <mode> + rockyou (--potfile-disable)
+${R}Creds:${N}
+  ${G}brute <host> <svc> <user>${N} hydra w/ rockyou ${F}(-t 4 -f -V)${N}
+  ${G}crack <hashfile>${N}          john + rockyou
+  ${G}hashcrack <mode> <hashfile>${N}  hashcat -m <mode> + rockyou ${F}(--potfile-disable)${N}
 
-Exploit lookup / local privesc (both offline — no network):
-  sploit <term> [...]       searchsploit — local exploit-db search
-  privesc [linpeas flags]   linpeas on THIS box — local privesc paths
+${R}Exploit lookup / local privesc${N} ${F}(both offline — no network)${N}:
+  ${G}sploit <term> [...]${N}       searchsploit — local exploit-db search
+  ${G}privesc [linpeas flags]${N}   linpeas on THIS box — local privesc paths
 
-Capture / listeners (run each in its own tmux pane — Ctrl+C to stop):
-  sniff [iface] [filter]    tcpdump live capture (sudo, -nn -l)
-  pcap [iface]              tshark live decode (sudo, -l)
-  listen <port>             nc -lvnp (catch reverse shells)
-  serve [port]              python3 -m http.server (payload hosting)
+${R}Capture / listeners${N} ${F}(run each in its own tmux pane — Ctrl+C to stop)${N}:
+  ${G}sniff [iface] [filter]${N}    tcpdump live capture ${F}(sudo, -nn -l)${N}
+  ${G}pcap [iface]${N}              tshark live decode ${F}(sudo, -l)${N}
+  ${G}listen <port>${N}             nc -lvnp ${F}(catch reverse shells)${N}
+  ${G}serve [port]${N}              python3 -m http.server ${F}(payload hosting)${N}
 
-Payload & exfil:
-  egg                       wizard: pack payloads into a self-extracting egg
-  egg <out> <f..> <cmd>     non-interactive: straight mkegg.sh passthrough
-  upserv                    wizard: PHP upload server for loot drops (webplus)
-  upserv <bind> <port> <dir>  non-interactive
+${R}Payload & exfil:${N}
+  ${G}egg${N}                       wizard: pack payloads into a self-extracting egg
+  ${G}egg <out> <f..> <cmd>${N}     non-interactive: straight mkegg.sh passthrough
+  ${G}upserv${N}                    wizard: PHP upload server for loot drops ${F}(webplus)${N}
+  ${G}upserv <bind> <port> <dir>${N}  non-interactive
 
-Dashboards (console-only — there is no X server on COBRA):
-  mon                       btop (system monitor)
-  files                     nnn (console file manager)
-  web [url]                 links2 text browser (xint-gated; loopback is open)
-                            over Tor: xint, then torify links2 <url>
+${R}Dashboards${N} ${Y}(console-only — there is no X server on COBRA)${N}:
+  ${G}mon${N}                       btop ${F}(system monitor)${N}
+  ${G}files${N}                     nnn ${F}(console file manager)${N}
+  ${G}web [url]${N}                 links2 text browser ${F}(xint-gated; loopback is open)${N}
+                            ${Y}over Tor: xint, then torify links2 <url>${N}
 
 HELP
 }
