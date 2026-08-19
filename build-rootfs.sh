@@ -53,7 +53,16 @@ else
 fi
 
 echo "[*] Copying resolv.conf so the chroot has DNS..."
-cp /etc/resolv.conf "$ROOTFS/etc/resolv.conf"
+# systemd-resolved hosts: /etc/resolv.conf points at the 127.0.0.53 stub,
+# which does not exist inside the chroot — DNS would be dead in there.
+# Prefer the resolved upstream servers when the stub is detected.
+if grep -qE '^nameserver[[:space:]]+127\.0\.0\.53$' /etc/resolv.conf 2>/dev/null \
+    && [[ -r /run/systemd/resolve/resolv.conf ]]; then
+    echo "[*] systemd-resolved stub detected — using /run/systemd/resolve/resolv.conf"
+    cp /run/systemd/resolve/resolv.conf "$ROOTFS/etc/resolv.conf"
+else
+    cp /etc/resolv.conf "$ROOTFS/etc/resolv.conf"
+fi
 
 echo "[*] Mounting virtual filesystems..."
 mountpoint -q "$ROOTFS/dev"     || mount --bind /dev "$ROOTFS/dev"

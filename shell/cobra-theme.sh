@@ -29,10 +29,12 @@
 # Opt out per-shell:  export COBRA_THEME_OFF=1  (before the shell starts)
 
 # Never run twice, never run without a TTY, honor the kill switch.
+# The loaded flag is set only AFTER the checks pass — a non-TTY first
+# source must not permanently no-op the theme for the rest of this shell.
 [ -n "${_COBRA_THEME_LOADED:-}" ] && return 0
-_COBRA_THEME_LOADED=1
 [ -n "${COBRA_THEME_OFF:-}" ] && return 0
 [ -t 1 ] || return 0
+_COBRA_THEME_LOADED=1
 
 # --- 1. Linux console palette remap ---------------------------------------
 # Only the real framebuffer/VGA console understands \e]P<slot><rrggbb>.

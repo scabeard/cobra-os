@@ -14,6 +14,10 @@
 #   - The HTTPS_curl/HTTPS_wget helpers are gone with it (nothing else used
 #     them); the thc.org promo footer is neutralized. Everything else is
 #     byte-identical to upstream.
+#   - 2026-08-19 audit fixes: dropped the dead `addcn "$ptrcn"` ($ptrcn was
+#     fed by the removed ipinfo lookup), and the msmtp fallback now checks
+#     ${#arr[@]} (domains actually found) instead of the not-yet-set
+#     ${#res[@]} — matching its own "if no domain was found" comment.
 #
 # Run it:  ws            (cobrashell function — executes this file as a child)
 #      or: bash /etc/cobra/whatserver.sh | less -R
@@ -271,7 +275,6 @@ id
 }
 
 unset arr
-addcn "$ptrcn"
 addcn "$(hostname 2>/dev/null)"
 
 # Ngingx sites
@@ -327,7 +330,7 @@ unset lines
 unset IFS
 
 # Extract domain name from msmtp config if no domain was found.
-[ "${#res[@]}" -eq 0 ] && [ -f ~/.msmtprc ] && {
+[ "${#arr[@]}" -eq 0 ] && [ -f ~/.msmtprc ] && {
     res="$(grep -im1 ^from ~/.msmtprc)"
     res="${res##*@}"
     [ -n "$res" ] && addcn "$res"

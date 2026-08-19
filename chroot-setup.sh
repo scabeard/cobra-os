@@ -94,6 +94,12 @@ BASE_PKGS=(
     # column/hexdump (whatserver COL, ssh-known-hosts2hashcat fallback).
     psmisc
     bsdextrautils
+    # iputils-ping: the vendored ghostip.sh probes candidate ghost IPs with
+    # ping (its ARP check is only the fallback); linpeas net discovery and
+    # half of red-team muscle memory want it too.
+    # strace: cobrashell tit() (TTY sniffing) hard-depends on it.
+    iputils-ping
+    strace
 )
 # NO GUI stack: COBRA OS is console-only by design. The X11/i3/Terminator +
 # Firefox/Tor Browser layer (2026-08-15/16) is retired — nothing in the image
@@ -160,7 +166,10 @@ ln -sfn /usr/sbin/john /usr/local/bin/john
 
 echo "[*] Preparing wordlists (rockyou.txt for hydra/john/hashcat)..."
 if [ -f /usr/share/wordlists/rockyou.txt.gz ] && [ ! -f /usr/share/wordlists/rockyou.txt ]; then
-    gunzip -k /usr/share/wordlists/rockyou.txt.gz
+    # no -k: keeping the .gz next to the 140 MB txt would double the
+    # footprint (~60 MB of dead weight on a minimal image) — the
+    # wordlists package can always restore it.
+    gunzip /usr/share/wordlists/rockyou.txt.gz
 fi
 
 for profile in $COBRA_PROFILES; do
@@ -436,7 +445,10 @@ EOF
 echo "[*] First-login hook: forced one-time scaffold password replacement..."
 cat > /etc/profile.d/00-cobra-firstlogin.sh << EOF
 # COBRA OS — one-time scaffold-password replacement.
-# Runs before the cobrashell loads (login shells, every path: tty, ssh).
+# Runs on every login-shell path (tty, ssh) before the first prompt.
+# Note: Debian's /etc/profile sources bash.bashrc (cobrashell) BEFORE
+# profile.d, so the banner prints first — the forced passwd still gates
+# the session, and cobrashell's hs_exit trap absorbs the exit 1 below.
 # Loops (exit 1 -> session drops -> autologin/getty retries) until passwd
 # succeeds. A user-run passwd verifies the current password once — the
 # single remaining 'changeme' prompt. No TTY -> skip (never wedge a

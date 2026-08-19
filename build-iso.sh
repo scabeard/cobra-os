@@ -143,6 +143,9 @@ echo "[*] Writing the COBRA chroot hook (baking in operator knobs)..."
 # at generation time using individual export lines — a single HOOK_VARS string
 # breaks when COBRA_PROFILES contains spaces (bash splits on whitespace and
 # tries to run the second word as a command, e.g. "wireless: command not found").
+# Same four knobs build-rootfs.sh passes through CHROOT_ENV — 2026-08-19:
+# COBRA_HOSTNAME/OPERATOR_USER were missing here, so the ISO silently
+# ignored them (always baked the defaults).
 mkdir -p config/hooks/normal
 cat > config/hooks/normal/9000-cobra.hook.chroot << EOF
 #!/bin/bash
@@ -152,7 +155,9 @@ export HOME=/root
 export DEBIAN_FRONTEND=noninteractive
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export COBRA_ISO=1
-${PARROT_SUITE:+export PARROT_SUITE=$PARROT_SUITE}
+${PARROT_SUITE:+export PARROT_SUITE='$PARROT_SUITE'}
+${COBRA_HOSTNAME:+export COBRA_HOSTNAME='$COBRA_HOSTNAME'}
+${OPERATOR_USER:+export OPERATOR_USER='$OPERATOR_USER'}
 ${COBRA_PROFILES:+export COBRA_PROFILES='$COBRA_PROFILES'}
 /root/cobra-stage/chroot-setup.sh
 # live-build's live pass auto-adds live-config — it would create the default

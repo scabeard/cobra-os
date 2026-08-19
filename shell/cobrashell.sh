@@ -259,7 +259,9 @@ ssh() {
     for arg in "$@"; do
         [[ $arg == -i* ]] && opts+=("-oBatchMode=yes") && break
     done
-    [ -n "$HS_URL" ] && echo -e "May need to cut & paste: ' ${CDC}eval \"\$(cat /etc/cobra/cobrashell.sh)\"${CN}'"
+    # COBRA: upstream checked HS_URL, which is never set (the var is _HSURL)
+    # — the hint never fired. Check the variable that actually exists.
+    [ -n "$_HSURL" ] && echo -e "May need to cut & paste: ' ${CDC}eval \"\$(cat /etc/cobra/cobrashell.sh)\"${CN}'"
     command ssh "${HS_SSH_OPT[@]}" "${opts[@]}"  "$@"
 }
 
@@ -1909,7 +1911,9 @@ gs-sftp() {
     # COBRA: gated — gsocket relay egress (GS_HOST/GS_PORT for your own relay).
     _hs_internet_allowed || return 255
     _hs_dep sftp
-    [ -z "$GSNC" ] && GSNC=$(command -v gs-netcat 2>/dev/null) && [ -z "$GSNC"] && {
+    # COBRA: upstream was missing the space before ] — bash printed
+    # "[: missing ]" on every run with gs-netcat present.
+    [ -z "$GSNC" ] && GSNC=$(command -v gs-netcat 2>/dev/null) && [ -z "$GSNC" ] && {
         HS_ERR "gs-netcat not found."
         return 255
     }
@@ -2281,7 +2285,8 @@ lootlight() {
         unset str res s
         command -v lsof >/dev/null && pid=$(lsof -ntw "$fn" 2>/dev/null) && {
             # lsof may fail as non-root
-            s=$(realpath /proc/${pid}/exe 2>/dev/null) && s=$'\t'"[ACTIVE: $pid:$str]"
+            # COBRA: upstream printed $str (unset here — empty); the exe path is in $s.
+        s=$(realpath /proc/${pid}/exe 2>/dev/null) && s=$'\t'"[ACTIVE: $pid:$s]"
         }
         str=$(SSH_AUTH_SOCK="$fn" ssh-add -l 2>/dev/null) && [ -n "$str" ] && {
             res+="$(ls -l "$fn")${s}"$'\n'
@@ -2400,7 +2405,8 @@ _lootmore_pct() {
 
 _lootmore_lxc() {
     # Skip if already looted ProxMox (it uses lxc)
-    [ -n "$_LS_LOOT_PCT" ] && return
+    # COBRA: upstream checked _LS_LOOT_PCT but _lootmore_pct sets _HS_LOOT_PCT.
+    [ -n "$_HS_LOOT_PCT" ] && return
 
     command -v lxc-ls >/dev/null || return
     command -v lxc-info >/dev/null || return

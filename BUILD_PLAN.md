@@ -1,5 +1,25 @@
 # COBRA OS — build plan & decision log
 
+> **2026-08-19: review fix pass.** Full-tree audit (bash -n + shellcheck +
+> runtime probes). Real bugs fixed: (1) cobrashell `gs-sftp()` had a
+> missing-space test (`[ -z "$GSNC"]`) that printed `[: missing ]` on every
+> run with gs-netcat present. (2) `build-iso.sh` silently dropped the
+> `OPERATOR_USER`/`COBRA_HOSTNAME` knobs `build-rootfs.sh` honors — the
+> hook now bakes all four (and quotes `PARROT_SUITE`). (3) The vendored
+> `upload_server.php` router never returned false, so `upserv`'s advertised
+> loot browsing could list but never serve files — cli-server fallback
+> added (+ https→http wording; `php -S` is plaintext). (4)
+> `build-rootfs.sh` copied the host's resolv.conf verbatim — a
+> systemd-resolved 127.0.0.53 stub is dead inside the chroot; the resolved
+> upstream servers are preferred when the stub is detected. Vendored
+> cleanups (header-noted): dead `HS_URL` check in `ssh()`, empty `$str` in
+> lootlight's ACTIVE line, `_LS_LOOT_PCT` typo, whatserver's dead `$ptrcn`
+> addcn + res/arr check. Housekeeping: rockyou.txt.gz is no longer kept
+> after gunzip (~60 MB off the image); `iputils-ping` + `strace` join
+> BASE_PKGS (ghostip.sh/linpeas and cobrashell `tit` dependencies — see
+> §2); firstlogin comment corrected (Debian sources bash.bashrc before
+> profile.d); cobra-theme's loaded flag now set only after its checks pass.
+
 > **2026-08-17: gap-closure pass — core gains SMB enum, offline exploit
 > lookup, and local privesc enumeration.** Three audit-identified holes
 > closed, all console-native and sync-rule compliant: (1) `smbenum` —
@@ -123,7 +143,8 @@ Registry rule: **function in `shell/cobra-ops.sh` ↔ package in
 Base system packages (init, network, shell plumbing) are listed in
 `BASE_PKGS` with inline justifications in `chroot-setup.sh` — including the
 small cobrashell support utilities (`psmisc` for `fuser`/xtmux socket
-cleanup, `bsdextrautils` for `column`/`hexdump`).
+cleanup, `bsdextrautils` for `column`/`hexdump`, `iputils-ping` for
+ghostip.sh/linpeas, `strace` for cobrashell `tit`).
 
 ### §2a. Profiles (`COBRA_PROFILES`, space-separated)
 
@@ -231,6 +252,11 @@ violet `#c95cff`, neon cyan `#2ee6e6`, gunmetal `#3a3f4a` (dim).
   + truecolor passthrough.
 - **/etc/issue**: red ASCII COBRA banner + cyan tagline, real ESC bytes
   (agetty prints the file raw) so even the login prompt is themed.
+- **opshelp**: `cobra-ops.sh`'s help screen colors itself with
+  cobrashell's own color vars (raw 16-color SGR fallback when sourced
+  standalone, no escapes when piped) — bold-red headers, phosphor-green
+  commands, amber gotchas, faint parentheticals. The console palette
+  remap turns the same slots neon; zero extra machinery.
 - Deliberately NOT Plymouth/dracut splash: an initramfs theme daemon is
   bloat against the minimalism directive; the bootloader menu + login
   banner carry the aesthetic at zero runtime cost.
