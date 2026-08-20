@@ -9537,7 +9537,7 @@ print_info "https://book.hacktricks.wiki/en/linux-hardening/privilege-escalation
 echo ""
 print_3title "Users with UID 0 in /etc/passwd" "T1087.001"
 awk -F: '($3 == "0") {print}' /etc/passwd 2>/dev/null | sed -${E} "s,$sh_usrs,${SED_LIGHT_CYAN},g" | sed -${E} "s,$nosh_usrs,${SED_BLUE},g" | sed -${E} "s,$knw_usrs,${SED_GREEN},g" | sed "s,$USER,${SED_RED_YELLOW},g" | sed "s,root,${SED_RED},g"
-if [ command -v getent >/dev/null 2>&1 ]; then
+if command -v getent >/dev/null 2>&1; then
     for group in sudo wheel adm docker lxd lxc root shadow disk video; do
         if getent group "$group" >/dev/null 2>&1; then
             echo "- Users in group '$group':"

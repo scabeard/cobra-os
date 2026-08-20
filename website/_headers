@@ -1,6 +1,13 @@
 # Cloudflare Pages headers — hardened, like the OS.
 # https://developers.cloudflare.com/pages/configuration/headers/
 
+# Tor mirror: once the home-server hidden service exists (see README.md →
+# "The Tor mirror (.onion)"), uncomment this so Tor Browser auto-offers the
+# onion to clearnet visitors:
+#
+# /*
+#   Onion-Location: http://<addr>.onion$request_uri
+
 /*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff

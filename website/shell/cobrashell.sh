@@ -64,12 +64,9 @@ _hs_init_color() {
     CG="\033[1;32m" # green
     CR="\033[1;31m" # red
     CB="\033[1;34m" # blue
-    CM="\033[1;35m" # magenta
-    CC="\033[1;36m" # cyan
     CDR="\033[0;31m" # red
     CDG="\033[0;32m" # green
     CDY="\033[0;33m" # yellow
-    CDB="\033[0;34m" # blue
     CDM="\033[0;35m"
     CDC="\033[0;36m" # cyan
     CF="\033[2m"    # faint
@@ -319,7 +316,7 @@ nc() {
 
 purl() {
     local opts="timeout=10"
-    local opts_init
+    local opts_init=""
     local url="${1:?}"
     _hs_internet_allowed || return 255
 
@@ -330,7 +327,7 @@ import ssl
 ctx = ssl.create_default_context()
 ctx.check_hostname = False
 ctx.verify_mode = ssl.CERT_NONE"
-        opts+=", context=ctx"
+        opts="${opts}, context=ctx"
     }
     "$HS_PY" -c "import urllib.request
 import sys
@@ -3404,7 +3401,7 @@ hs_info() {
 }
 
 # shellcheck disable=SC2120
-# Output help
+# Output help (full topic listing; sub-topics short-circuit before banner)
 _cobra_xhelp_body() {
     _hs_no_tty_no_color
     [[ "$1" == "scan" ]] && { xhelp_scan; _hs_init_color; return; }
@@ -3460,6 +3457,8 @@ xhelp() {
     # 80x25 live console, so the art and top rows scrolled straight off the
     # screen. Page it (less is core; -RF = raw colors, quit-if-one-screen for
     # the short sub-topics). COBRA_NOPAGE=1 or piping keeps the old raw dump.
+    # FORCE=1 keeps the palette when the body is piped into less (without it
+    # _hs_no_tty_no_color strips colors because the body writes to a pipe).
     if [ -t 1 ] && [ -z "${COBRA_NOPAGE:-}" ] && command -v less >/dev/null; then
         FORCE=1 _cobra_xhelp_body "$@" | less -RF
     else
@@ -3468,8 +3467,12 @@ xhelp() {
 }
 
 _cobra_banner() {
+    # One-shot per session: tmux panes / subsequent shells must not reprint
+    # the figlet (login UX bug — it doubled-up with /etc/issue on tty1).
+    [ -n "$COBRA_BANNER_DONE" ] && return
+    COBRA_BANNER_DONE=1
     [ -n "$QUIET" ] && return
-    [ -t 1 ] || [ -n "$FORCE" ] || return
+    [ -t 1 ] || return
     echo -en "${CG}"
     cat <<'COBRA'
    ██████╗ ██████╗ ██████╗ ██████╗  █████╗

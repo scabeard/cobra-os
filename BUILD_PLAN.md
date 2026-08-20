@@ -1,5 +1,19 @@
 # COBRA OS — build plan & decision log
 
+> **2026-08-20: login-flow fix pass.** The VM boot→login sequence was
+> fighting over the screen: `agetty --noclear` printed `/etc/issue` (red
+> ASCII banner), then cobrashell's figlet banner re-printed on EVERY shell
+> (tmux panes included), and cobra-theme issued an unconditional
+> `\e[2J\e[H` on any `TERM=linux` login — wiping the `/etc/issue` banner
+> you'd just seen. Three fixes in `shell/`: (1) cobra-theme's palette
+> repaint now only clears the screen on the bare console tty1 (autologin);
+> ssh/tmux/pts logins keep their buffer while still picking up the palette.
+> (2) `_cobra_banner()` (cobrashell) is one-shot per session
+> (`COBRA_BANNER_DONE`) — the figlet prints once at login, not per pane.
+> (3) `xhelp`'s comment now documents the `FORCE=1` palette-preserving
+> `less -RF` pager trick. No packages touched; the theme stays (pure
+> escapes, no forensic footprint). The bash -n shellcheck clean.
+
 > **2026-08-19: the site joins the toolchain.** cobra-os.com now serves the
 > project like upstream's gsocket.io served THC: the operator shell is
 > mirrored at `/shell/` (synced from `shell/` by `website/sync-shell.sh`,

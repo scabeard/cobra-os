@@ -57,8 +57,15 @@ if [ "${TERM:-}" = "linux" ]; then
     printf '\e]PE6ff2f2'   # 14 brcyan    -> ice cyan
     printf '\e]PFf4f6fa'   # 15 brwhite   -> near-white
     # Repaint so the new palette applies to the whole screen, not just new
-    # output. \e[40m = bg from slot 0, \e[37m = fg from slot 7.
-    printf '\e[40m\e[37m\e[2J\e[H'
+    # output. \e[40m = bg from slot 0, \e[37m = fg from slot 7. This wipes
+    # the visible screen — only do it on the bare console right after
+    # autologin (tty1), where the screen is otherwise the stale getty
+    # prompt. On ssh/tmux/'linux'-TERM xterm keep the user's buffer; new
+    # output picks up the palette anyway.
+    case "$(tty 2>/dev/null)" in
+        /dev/tty1|/dev/console) printf '\e[40m\e[37m\e[2J\e[H' ;;
+        *)                      printf '\e[40m\e[37m' ;;
+    esac
 fi
 
 # --- 2. LS_COLORS -----------------------------------------------------------
