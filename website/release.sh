@@ -10,7 +10,8 @@
 #   1. verifies the image against its .sha256 (refuses to stage a bad build)
 #   2. copies the .sha256 into website/downloads/ (versioned with the site)
 #   3. rewrites every ISO filename / size reference in website/index.html
-#   4. prints the upload + deploy checklist
+#   4. syncs the operator-shell mirror (website/shell/ via sync-shell.sh)
+#   5. prints the upload + deploy checklist
 #
 # The ISO itself NEVER enters the repo or the Pages site — Cloudflare Pages
 # caps files at 25 MiB. Builds ship to the R2 bucket behind dl.cobra-os.com
@@ -47,6 +48,9 @@ sed -i -E \
     -e "s#<strong>[0-9.]+ (GiB|GB)</strong>#<strong>${size_gib} GiB</strong>#g" \
     -e "s#>[0-9.]+&nbsp;(GiB|GB)<#>${size_gib}\&nbsp;GiB<#g" \
     "$INDEX"
+
+echo "[*] syncing the shell mirror (website/shell/)..."
+"$SITE_DIR/sync-shell.sh"
 
 cat <<EOF
 

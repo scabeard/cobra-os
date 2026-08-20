@@ -1,5 +1,20 @@
 # COBRA OS — build plan & decision log
 
+> **2026-08-19: the site joins the toolchain.** cobra-os.com now serves the
+> project like upstream's gsocket.io served THC: the operator shell is
+> mirrored at `/shell/` (synced from `shell/` by `website/sync-shell.sh`,
+> committed with the Pages deploy) so `source <(curl -fsSL
+> https://cobra-os.com/shell/cobrashell.sh)` loads cobrashell on any box;
+> gs-netcat static builds move from THC's GitHub to our R2 bucket
+> (`dl.cobra-os.com/bin/`) — `bin gs-netcat` + the `memexec` examples
+> follow suit; a VPS relay (`relay.cobra-os.com:7350`) and a `.onion`
+> address are planned. Site cleanup in the same pass: the "cobra palette"
+> section is gone (the theme row stays in the overview's base-layers card
+> where it belongs), infra trivia trimmed, and a "cobrashell, anywhere"
+> section documents the mirror. cobrashell's re-source hints are now
+> dual-mode: local path on the OS, site URL everywhere else. No new
+> packages, no OS-side defaults touched — see §8.
+
 > **2026-08-19: review fix pass.** Full-tree audit (bash -n + shellcheck +
 > runtime probes). Real bugs fixed: (1) cobrashell `gs-sftp()` had a
 > missing-space test (`[ -z "$GSNC"]`) that printed `[: missing ]` on every
@@ -271,3 +286,30 @@ violet `#c95cff`, neon cyan `#2ee6e6`, gunmetal `#3a3f4a` (dim).
   expecting a reverse shell).
 - Review the core tool list against the engagement — profiles exist so the
   core stays narrow.
+
+## §8. Website & infrastructure (cobra-os.com)
+
+The public face, and the project's own piece of the toolchain-hosting
+story (like upstream's gsocket.io / thc.org, but ours):
+
+- **Cloudflare Pages** hosts the site AND a byte-for-byte mirror of the
+  operator shell at `/shell/` (`website/sync-shell.sh` keeps it in sync —
+  bash -n checked, strays pruned; `release.sh` calls it on every release).
+  `source <(curl -fsSL https://cobra-os.com/shell/cobrashell.sh)` loads
+  cobrashell on any box when the OS isn't booted; `_redirects` maps
+  `/cobrashell.sh` → the mirror for typing speed. cobrashell itself never
+  remote-sources — the URL only ever appears in operator-facing hints
+  (on the OS the hints still point at the local `/etc/cobra/` copy).
+- **Cloudflare R2** (`dl.cobra-os.com`) hosts the ISOs AND the static
+  gs-netcat builds under `/bin/` — cobrashell's `bin gs-netcat` and the
+  `memexec` examples fetch from there, not THC's GitHub. Object names must
+  match the upstream release names (`gs-netcat_linux-<arch>`); `.sha256`
+  sidecars ride along. Upload procedure: website/README.md.
+- **Relay** (`relay.cobra-os.com:7350`): a small VPS running the gsocket
+  relay daemon. The `gs-*` tools stay relay-agnostic — nothing in the OS
+  points at COBRA infrastructure by default; using it is an explicit
+  `GS_HOST`/`GS_PORT` export behind `xint`. A `.onion` address (Tor access
+  to the relay, optionally a site mirror) is planned on the same VPS.
+- Defaults unchanged: no telemetry, no phone-home, no new package
+  requirements — the site is static HTML/CSS/JS and the mirror is plain
+  text over HTTPS.

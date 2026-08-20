@@ -1,0 +1,7 @@
+# Cloudflare Pages redirects — https://developers.cloudflare.com/pages/configuration/redirects/
+#
+# Convenience short URL for the operator shell (the canonical mirror lives
+# under /shell/). 200 = transparent rewrite, so
+#   source <(curl -fsSL https://cobra-os.com/cobrashell.sh)
+# works exactly like the /shell/ path.
+/cobrashell.sh  /shell/cobrashell.sh  200

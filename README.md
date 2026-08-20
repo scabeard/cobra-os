@@ -29,7 +29,8 @@ shell/cobra-ops.sh         operator command registry (the retired TUI, ported to
 shell/cobra-theme.sh       console theme: VGA palette, LS_COLORS, less/grep colors
 splash.png                 boot splash (640x480, flattened from Cobras-OS.png)
 BUILD_PLAN.md              decisions, tool table, profiles, hardening, live-ISO plan
-website/                   cobra-os.com static site (Cloudflare Pages; ISOs ship from R2 — see website/README.md)
+website/                   cobra-os.com static site (Cloudflare Pages; ISOs + gs-netcat binaries
+                           ship from R2, the operator shell is mirrored at /shell/ — see website/README.md)
 ```
 
 ## 1. Build the rootfs
@@ -93,7 +94,10 @@ Quick rootfs test meanwhile: `sudo chroot ./rootfs /bin/bash`
 ## 3. The shell — cobrashell
 
 Installed to `/etc/cobra/cobrashell.sh`, auto-sourced for interactive bash
-(`HUSH=1` fast mode; `COBRA_SHELL_OFF=1` to opt out). Highlights:
+(`HUSH=1` fast mode; `COBRA_SHELL_OFF=1` to opt out). Not booted into COBRA
+OS? The same file is mirrored on the project site —
+`source <(curl -fsSL https://cobra-os.com/shell/cobrashell.sh)` loads it on
+any box (helpers at `/shell/`, gs-netcat from `dl.cobra-os.com`). Highlights:
 
 - no history anywhere, XHOME in `/dev/shm`, auto-destructs on exit
 - `loot` / `lootmore` — secrets & situational awareness on a target
@@ -106,7 +110,9 @@ Installed to `/etc/cobra/cobrashell.sh`, auto-sourced for interactive bash
 - de-THC'd: upstream's `sub`/`ptr` recon calls to `ip.thc.org` are removed
   (engagement targets must not leak to third-party infra). Set
   `COBRA_RECON_HOST` to point them at your own recon service;
-  `GS_HOST`/`GS_PORT` point the `gs-*` tools at your own gsocket relay
+  `GS_HOST`/`GS_PORT` point the `gs-*` tools at a relay you trust
+  (relay.cobra-os.com runs on our VPS — or run your own); `bin gs-netcat`
+  fetches the static binary from `dl.cobra-os.com`, not THC's GitHub
 - `ws` runs the vendored `/etc/cobra/whatserver.sh` — no network, no remote
   sourcing (its upstream ipinfo.io lookup is stripped; use `ipinfo`)
 

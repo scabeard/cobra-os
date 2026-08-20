@@ -13,6 +13,13 @@
 /assets/*
   Cache-Control: public, max-age=86400, immutable
 
+# the operator shell mirror — served as plain text so browsers display it and
+# `source <(curl ...)` gets exactly the bytes from shell/ (short cache: the
+# mirror tracks the repo, updates must propagate fast)
+/shell/*
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=300
+
 /downloads/*
   Cache-Control: public, max-age=3600
   Content-Disposition: attachment

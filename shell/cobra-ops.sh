@@ -59,9 +59,19 @@ target() {
 # by _hs_init_color) with raw 16-color SGR fallbacks so the help still
 # renders if cobra-ops is sourced standalone. 16-color slots only — the
 # cobra-theme VGA remap turns them neon on the console. Plain when piped.
+#
+# Decode note: cobrashell stores its color vars as LITERAL backslash text
+# (CR="\033[1;31m") because it only ever prints them via echo -e. This
+# heredoc does no escape interpretation, so each var is expanded through
+# printf %b once to turn \033 into a real ESC byte; the $'\e[...' fallbacks
+# already contain real ESC and pass through %b unchanged.
 opshelp() {
-    local R="${CR:-$'\e[1;31m'}" G="${CG:-$'\e[1;32m'}" Y="${CY:-$'\e[1;33m'}"
-    local F="${CF:-$'\e[2m'}"    N="${CN:-$'\e[0m'}"
+    local R G Y F N
+    printf -v R '%b' "${CR:-$'\e[1;31m'}"
+    printf -v G '%b' "${CG:-$'\e[1;32m'}"
+    printf -v Y '%b' "${CY:-$'\e[1;33m'}"
+    printf -v F '%b' "${CF:-$'\e[2m'}"
+    printf -v N '%b' "${CN:-$'\e[0m'}"
     [ -t 1 ] || { R=; G=; Y=; F=; N=; }
     cat <<HELP
 ${R}COBRA${N} operator commands ${F}(cobra-ops)${N}
