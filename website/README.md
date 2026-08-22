@@ -10,37 +10,40 @@ external requests — pure HTML/CSS/JS, exactly the way the OS would want it.
 GitHub repo (this repo, website/)
         │  push to default branch
         ▼
-Cloudflare Pages ──────────────► cobra-os.com        (the site + the /shell/ mirror)
-
-Cloudflare R2 bucket ──────────► dl.cobra-os.com     (the ISOs + gs-netcat binaries)
+Cloudflare Pages ──────────────► cobra-os.com        (clearnet: the site +
+                                                      /shell/ + /cobra/ mirrors)
 
 Home server (gsocket relay) ───► relay.cobra-os.com  (gs-* rendezvous)
-        └─ tor hidden service ─► <addr>.onion        (site + /shell/ mirror over Tor)
+        └─ tor hidden service ─► afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion        (the SAME site + /shell/ +
+                                                      /cobra/  +  the ISO +
+                                                      bin/gs-netcat_* — over Tor)
 ```
-Three different jobs, three different homes:
 
-- **Pages hosts the site AND the operator-shell mirror.** Free, unlimited
-  bandwidth, git-integrated — but a hard **25 MiB per-file limit**. The shell
-  scripts are kilobytes; they deploy with the site. A 2.4 GiB ISO can never
-  live here — that's the "Cloudflare doesn't do that" part. Pages is also the
-  answer to "host it ourselves without exposing our home IP": there is **no
-  origin server** — Cloudflare's edge holds the files, so no IP of ours ever
-  appears in DNS or answers a connection.
-- **R2 hosts the big/binary things.** S3-compatible object storage in the same
-  Cloudflare account, **zero egress fees**, free tier covers ~10 GB stored:
-  the ISOs at the root, the static gs-netcat builds under `/bin/`. Attach the
-  `dl.cobra-os.com` custom domain to the bucket and every download is a plain
-  HTTPS URL.
-- **The home server runs the gsocket relay and the Tor mirror.** It is our own
-  hardware on our own network — so **nothing clearnet ever points at it**.
-  `relay.cobra-os.com` is the one exception (a single outbound-reachable
-  port); everything else it serves is Tor-only, because onion services hide
-  the host's IP by design. See "The Tor mirror (.onion)" below. If the
-  clearnet site ever needs to come home too, the only safe way is a
-  Cloudflare Tunnel — see "Serving clearnet from home" below.
-- **GitHub Releases** is only a fallback for ISOs: assets cap at **2 GiB**,
-  and the current 2.4 GiB image already exceeds that (it would need `split`
-  chunks). R2 is the primary home.
+Two front doors, one tree — plus the heavy bytes, Tor-only:
+
+- **Pages hosts the clearnet site AND the small mirrors.** Free, unlimited
+  bandwidth, git-integrated — but a hard **25 MiB per-file limit**. The site,
+  the operator-shell mirror (`/shell/`), and the CobraStrike client
+  (`/cobra/`, ~600 KB) all fit and deploy with a push. There is **no origin
+  server** — Cloudflare's edge holds the files, so no IP of ours ever appears
+  in DNS or answers a connection. The clearnet is the brochure everyone can
+  see.
+- **The .onion hosts everything the clearnet can't or shouldn't.** A tor
+  hidden service on the home server serves the **same tree Pages deploys**,
+  **plus** the two things that never touch the clearnet: the multi-GB **ISO**
+  (`/downloads/`) and the static **gs-netcat binaries** (`/bin/`). Onion
+  services hide the host's IP by design, so this is the one place serving
+  from home is safe — and it's where the actual download happens, end to end
+  over Tor.
+- **The home server also runs the gsocket relay.** It is our own hardware on
+  our own network — so **nothing clearnet ever points at it** except the
+  single outbound-reachable `relay.cobra-os.com` port. Everything else it
+  serves is Tor-only. See "The gsocket relay" below.
+
+**No R2, no object storage, no third-party download host.** The ISO and the
+binaries are fully self-hosted on the onion. If you'd rather not pull a
+multi-GB image over Tor at all, the answer is the same as it's always been:
+build it yourself with `build-iso.sh` — same script, same image.
 
 ## Layout
 
@@ -54,10 +57,19 @@ assets/js/main.js              typed hero terminal + mobile nav (vanilla, offlin
 assets/img/cobra-logo.png      logo (copy of ../Cobras-OS.png)
 shell/                         the operator-shell mirror — synced from ../shell/ by
                                sync-shell.sh, committed with the site (see below)
-downloads/                     .sha256 sidecars only — *.iso is gitignored (they live on R2)
-release.sh                     stage a new build: verify, copy sha256, rewrite index.html,
-                               sync the shell mirror
+cobra/                         the CobraStrike client mirror — synced from
+                               ../CobraStrike/cobra-client/ by sync-cobra.sh
+                               (install.sh + latest/cobra.js), committed with the site
+downloads/                     .sha256 sidecars only — *.iso is gitignored
+                               (ISOs ship from the .onion, never from Pages/git)
+bin/                           (onion-only) static gs-netcat builds + .sha256 —
+                               NOT committed; staged on the home server
+release.sh                     stage a new build: verify, copy sha256, rewrite
+                               index.html, sync the shell + cobra mirrors
 sync-shell.sh                  mirror ../shell/ into shell/ (bash -n checked, pruned)
+sync-cobra.sh                  mirror ../CobraStrike/cobra-client/ into cobra/
+onion-sync.sh                  rsync the tree (+ ISO + bin/) to the home server
+                               for the .onion to serve
 ```
 
 ## The shell mirror (cobra-os.com/shell/)
@@ -88,9 +100,44 @@ website/sync-shell.sh     # bash -n checks each script, copies on change, prunes
 `release.sh` calls it automatically, so a release always ships the current
 shell. Commit the mirror with the site.
 
+## The CobraStrike mirror (cobra-os.com/cobra/)
+
+**CobraStrike** is COBRA's self-contained, headless AI agent — it drives the
+`cobra-mcp` MCP server with any OpenRouter model, using **your own API key**
+(never this site's). The client bundles to a single `cobra.js`, served from
+`cobra-os.com/cobra/` so it installs on any box with a one-liner:
+
+```bash
+curl -fsSL https://cobra-os.com/cobra/install.sh | bash
+# then bring your own OpenRouter key:
+cobra setup --save-key     # stored 0600, never sent here
+cobra run "Recon triage the active target"
+```
+
+Mirrored files: `install.sh` + `latest/cobra.js` (the esbuild single-file
+bundle, ~600 KB — well under the Pages cap, so it ships on **both** the
+clearnet site and the onion). `_headers` serves `install.sh` as `text/plain`
+and `cobra.js` as `application/javascript`.
+
+**`../CobraStrike/cobra-client/` is the source of truth — never edit
+`website/cobra/` directly.** After changing the client or its installer:
+
+```bash
+website/sync-cobra.sh     # bash -n the installer, rebuild the bundle if stale, copy
+```
+
+`sync-cobra.sh` rebuilds `dist/cobra.js` (via `npm run bundle`) whenever the
+client's `src/` is newer than the bundle, so the mirror never ships a stale
+agent. `release.sh` calls it automatically. Commit the mirror with the site.
+
+The API key is resolved client-side (flag → env → `0600` file → hidden
+prompt), held only in memory, and sent solely to OpenRouter over HTTPS. The
+site hosts the bundle — **never** the key, and there is no telemetry or
+phone-home in the installer or the agent.
+
 ## One-time setup
 
-### 1. GitHub → Cloudflare Pages (the site)
+### 1. GitHub → Cloudflare Pages (the clearnet site)
 
 1. Push this repo to GitHub.
 2. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to
@@ -108,66 +155,46 @@ alternative (no git link):
 npx wrangler pages deploy website --project-name cobra-os
 ```
 
-### 2. R2 bucket (the builds + the gs-netcat binaries)
-
-1. Cloudflare dashboard → **R2 → Create bucket** — e.g. `cobra-os-downloads`.
-2. Bucket → **Settings → Public access → Custom domains** → attach
-   **dl.cobra-os.com** (managed TLS, automatic).
-3. Upload credentials: **R2 → Manage R2 API Tokens** → create a token, then
-   `rclone config`:
-
-```
-[r2]
-type = s3
-provider = Cloudflare
-access_key_id = <token access key id>
-secret_access_key = <token secret>
-endpoint = https://<account-id>.r2.cloudflarestorage.com
-```
-
-(`aws s3 --endpoint-url …` or the dashboard upload button work too — rclone
-is just the smoothest for multi-GB objects.)
-
 ## Shipping a new build
 
 ```bash
 sudo ./build-iso.sh                             # → cobra-os-<date>.iso + .sha256
-website/release.sh cobra-os-<date>.iso          # verify + stage + rewrite index.html + sync shell mirror
-rclone copyto cobra-os-<date>.iso \
-    r2:cobra-os-downloads/cobra-os-<date>.iso --progress
-rclone copyto cobra-os-<date>.iso.sha256 \
-    r2:cobra-os-downloads/cobra-os-<date>.iso.sha256
+website/release.sh cobra-os-<date>.iso          # verify + stage + rewrite index.html
+                                                # + sync the shell & cobra mirrors
+website/onion-sync.sh cobra-os-<date>.iso       # publish site + ISO to the .onion
 git add website && git commit -m "release cobra-os-<date>" && git push
 ```
 
 `release.sh` refuses to stage an image whose checksum doesn't verify, copies
 the `.sha256` into `downloads/`, and rewrites every ISO filename/size
-reference in `index.html` (download card, verify example, hero stat). Old
-builds can stay in the bucket (storage is cheap) or be pruned with
-`rclone delete r2:cobra-os-downloads/cobra-os-<olddate>.iso*`.
+reference in `index.html` (download card, verify example, hero stat).
+`onion-sync.sh` then rsyncs the whole tree — site, `/shell/`, `/cobra/`,
+`/bin/`, and the staged ISO — to the home server's docroot over SSH/Tor. Old
+builds can stay on the server (disk is cheap) or be pruned by deleting the
+file from `/srv/cobra-site/downloads/`.
 
-## The gs-netcat binaries (dl.cobra-os.com/bin/)
+## The gs-netcat binaries (afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/bin/)
 
 cobrashell's `bin gs-netcat`, the `memexec` examples, and the site's relay
-section all fetch gs-netcat from **our** bucket — not THC's GitHub. Mirror
-the upstream static builds, byte-for-byte, with checksum sidecars:
+section all fetch gs-netcat from **our** onion — not THC's GitHub, not a
+clearnet host. Mirror the upstream static builds, byte-for-byte, with
+checksum sidecars, onto the home server:
 
 ```bash
 for f in gs-netcat_linux-x86_64 gs-netcat_linux-i686 gs-netcat_linux-aarch64; do
     curl -fsSLO "https://github.com/hackerschoice/gsocket/releases/latest/download/$f"
     sha256sum "$f" > "$f.sha256"
-    rclone copyto "$f"        "r2:cobra-os-downloads/bin/$f" --progress
-    rclone copyto "$f.sha256" "r2:cobra-os-downloads/bin/$f.sha256"
+    rsync -a "$f" "$f.sha256" cobra-site:/srv/cobra-site/bin/   # via onion-sync's transport
 done
 ```
 
 The object names must match the upstream release names exactly —
-cobrashell builds the URL as `dl.cobra-os.com/bin/gs-netcat_${os}-${HS_ARCH}`
-(`linux-x86_64`, `linux-i686`, `linux-aarch64`). Verify after upload:
+cobrashell builds the URL as `afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/bin/gs-netcat_${os}-${HS_ARCH}`
+(`linux-x86_64`, `linux-i686`, `linux-aarch64`). Verify after upload (over Tor):
 
 ```bash
-curl -fsSLO https://dl.cobra-os.com/bin/gs-netcat_linux-x86_64
-curl -fsSLO https://dl.cobra-os.com/bin/gs-netcat_linux-x86_64.sha256
+torsocks curl -fsSLO http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/bin/gs-netcat_linux-x86_64
+torsocks curl -fsSLO http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/bin/gs-netcat_linux-x86_64.sha256
 sha256sum -c gs-netcat_linux-x86_64.sha256
 ```
 
@@ -196,13 +223,14 @@ itself (`HiddenServicePort 7350 127.0.0.1:7350` with the daemon bound to
 localhost) so the whole toolchain is reachable without any clearnet record
 at all.
 
-## The Tor mirror (.onion)
+## The Tor mirror (.onion) — the download host
 
-The self-hosted half of the hosting picture: a tor **hidden service** on the
-home server serving a read-only copy of this site. Onion services hide the
-host's IP by design — tor rendezvous means the server never reveals its
-address — so this is the one place serving from home is safe. Nothing
-clearnet (no A/AAAA record, no Cloudflare origin) ever points at the box.
+This is the half that actually ships the bytes. A tor **hidden service** on
+the home server serves a read-only copy of this site **plus** the ISO and the
+gs-netcat binaries. Onion services hide the host's IP by design — tor
+rendezvous means the server never reveals its address — so this is the one
+place serving from home is safe. Nothing clearnet (no A/AAAA record, no
+Cloudflare origin) ever points at the box.
 
 ### 1. The hidden service (torrc)
 
@@ -215,48 +243,90 @@ HiddenServicePort 80 127.0.0.1:8080
 `systemctl reload tor`, then the address is in
 `/var/lib/tor/cobra-site/hostname`. The service only ever talks to
 **127.0.0.1:8080** — the web server must bind localhost, never the LAN or
-public interface.
+public interface. Drop the address into the site: replace every
+`afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion` placeholder in `index.html`, `release.sh`, and `onion-sync.sh`
+with the real one, and uncomment the `Onion-Location` line in `_headers` (see
+"Advertising it" below).
 
-### 2. The localhost web server
+### 2. The localhost web server (multi-GB capable)
 
-Anything that can serve static files works. Minimal option:
-
-```bash
-cd /srv/cobra-site && python3 -m http.server 8080 --bind 127.0.0.1
-```
-
-or nginx bound to localhost:
+The onion serves the ISO, so the static server must handle **large files** and
+**HTTP range requests** (so `curl -C -` can resume a multi-GB Tor download that
+drops mid-way). Use nginx bound to localhost — not `python3 -m http.server`
+(it's single-threaded and flaky on big ranges):
 
 ```nginx
+# /etc/nginx/sites-available/cobra-onion
 server {
     listen 127.0.0.1:8080;
+    server_name _;
     root /srv/cobra-site;
-    # mirror the Pages _headers policy (CSP etc.) here with add_header —
-    # see the nginx equivalents in "Serving clearnet from home" below
+
+    # large-file delivery: kernel sendfile + byte ranges (resumable over Tor)
+    sendfile on;
+    tcp_nopush on;
+    aio threads;
+    directio 512k;                 # bypass page cache for big files
+    max_ranges 1;                  # allow single-range resume (curl -C -)
+    disable_symlinks if_not_owner from=$document_root;
+
+    # mirror the Pages _headers security policy
+    add_header X-Frame-Options DENY always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy no-referrer always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()" always;
+    add_header Cross-Origin-Opener-Policy same-origin always;
+    add_header Cross-Origin-Resource-Policy same-origin always;
+    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'" always;
+
+    location /shell/  { default_type text/plain; }
+    location /cobra/  { }
+    location /cobra/install.sh { default_type text/plain; }
+    location /downloads/ { }
+    location /bin/ { autoindex on; }   # list the gs-netcat builds + .sha256
+
+    # the /cobrashell.sh short URL (Pages _redirects equivalent)
+    location = /cobrashell.sh {
+        default_type text/plain;
+        alias /srv/cobra-site/shell/cobrashell.sh;
+    }
 }
 ```
 
-Serve the site + the `/shell/` mirror + the `downloads/*.sha256` checksums.
-**ISOs stay on R2** — the download links keep pointing at
-`https://dl.cobra-os.com/…`. Multi-GB over Tor is miserable and R2 egress is
-free; the onion carries the small stuff.
+Enable it and keep it localhost-only:
+
+```bash
+ln -s /etc/nginx/sites-available/cobra-onion /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
+ss -ltnp | grep 8080     # must show 127.0.0.1:8080 — never 0.0.0.0
+```
 
 ### 3. Keeping the mirror current
 
-The onion serves the same tree Pages deploys, pushed over after a release:
+The onion serves the same tree Pages deploys, plus the ISO and `bin/`, pushed
+over after a release:
 
 ```bash
-rsync -a --delete website/ home-server:/srv/cobra-site/
+website/onion-sync.sh cobra-os-<date>.iso    # stage + rsync everything over Tor/SSH
 ```
 
-(hook it into the end of `release.sh`, or a `git pull` + cron on the server —
-either way the onion always ships the current build and the current shell
-mirror.)
+`onion-sync.sh` rsyncs `website/` → `home-server:/srv/cobra-site/` with
+`--delete`, over SSH wrapped in `torsocks` (so the sync itself never exposes
+the server's IP). Set `ONION_SSH` / `ONION_ROOT` / `USE_TORSOCKS` for your
+box. Hook it into the end of a release (see "Shipping a new build") and the
+onion always ships the current build, the current shell mirror, and the
+current CobraStrike bundle.
 
 ### 4. Advertising it
 
-Once the address exists, uncomment the `Onion-Location` line in `_headers` —
-Tor Browser then offers the onion automatically to clearnet visitors.
+Once the address exists, replace the `afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion` placeholders and uncomment
+the `Onion-Location` block in `_headers` — Tor Browser then offers the onion
+automatically to clearnet visitors:
+
+```
+/*
+  Onion-Location: http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion$request_uri
+```
 
 ## Serving clearnet from home: Cloudflare Tunnel
 
@@ -303,29 +373,20 @@ systemctl enable --now cloudflared
 ```
 
 The local server on `127.0.0.1:8080` is the same one the onion uses — one
-docroot, two front doors (Tunnel for clearnet, tor for onion).
+docroot, two front doors (Tunnel for clearnet, tor for onion). Keep the ISO
+out of the Tunnel path if you don't want multi-GB flowing through Cloudflare
+— the onion is the download host regardless.
 
 ### The trade-off
 
 Tunnel mode means **you** replicate what Pages did for free:
 
-- The `_headers` security policy must move into the local server config.
-  nginx equivalents of the Pages block:
-
-  ```nginx
-  add_header X-Frame-Options DENY always;
-  add_header X-Content-Type-Options nosniff always;
-  add_header Referrer-Policy no-referrer always;
-  add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()" always;
-  add_header Cross-Origin-Opener-Policy same-origin always;
-  add_header Cross-Origin-Resource-Policy same-origin always;
-  add_header Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests" always;
-  ```
-
-- The `_redirects` `/cobrashell.sh` rewrite becomes an nginx `location` /
-  `rewrite` rule.
+- The `_headers` security policy must live in the nginx config (the onion
+  block above already has it).
+- The `_redirects` `/cobrashell.sh` rewrite becomes the nginx `alias` rule
+  (also already in the block above).
 - Deploys stop being `git push` — the box needs the same rsync/git-pull sync
-  the onion uses.
+  the onion uses (`onion-sync.sh`).
 - The box is now on the clearnet critical path: if it's down, the site is
   down. Pages doesn't have that problem.
 

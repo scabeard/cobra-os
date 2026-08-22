@@ -1,12 +1,12 @@
 # Cloudflare Pages headers — hardened, like the OS.
 # https://developers.cloudflare.com/pages/configuration/headers/
 
-# Tor mirror: once the home-server hidden service exists (see README.md →
-# "The Tor mirror (.onion)"), uncomment this so Tor Browser auto-offers the
-# onion to clearnet visitors:
+# Tor mirror: the home-server hidden service is live (see README.md →
+# "The Tor mirror (.onion)"). Tor Browser auto-offers the onion to clearnet
+# visitors via this header:
 #
-# /*
-#   Onion-Location: http://<addr>.onion$request_uri
+/*
+  Onion-Location: http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion$request_uri
 
 /*
   X-Frame-Options: DENY
@@ -25,6 +25,16 @@
 # mirror tracks the repo, updates must propagate fast)
 /shell/*
   Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=300
+
+# the CobraStrike installer — plain text so `curl ... | bash` gets clean bytes
+/cobra/install.sh
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=300
+
+# the CobraStrike agent bundle — real JS so it can also be inspected in-browser
+/cobra/*/cobra.js
+  Content-Type: application/javascript; charset=utf-8
   Cache-Control: public, max-age=300
 
 /downloads/*

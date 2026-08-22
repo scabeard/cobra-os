@@ -1,0 +1,55 @@
+ Crypto
+
+9.i. Generate quick random Password
+
+Good for quick passwords without human element.
+
+openssl rand -base64 24
+
+If openssl is not available then we can also use head to read from /dev/urandom.
+
+head -c 32 < /dev/urandom | xxd -p -c 32
+
+or make it alpha-numeric
+
+head -c 32 < /dev/urandom | base64 | tr -dc '[:alnum:]' | head -c 16
+
+9.ii.a. Linux transportable encrypted filesystems - cryptsetup
+
+Create a 256MB large encrypted file system. You will be prompted for a password.
+
+dd if=/dev/urandom of=/tmp/crypted bs=1M count=256 iflag=fullblock
+cryptsetup luksFormat /tmp/crypted
+cryptsetup open /tmp/crypted sec
+mkfs -t ext3 /dev/mapper/sec
+
+Mount:
+
+cryptsetup open /tmp/crypted sec
+mount -o nofail,noatime /dev/mapper/sec /mnt/sec
+
+Store data in /mnt/crypted, then unmount:
+
+umount /mnt/sec
+cryptsetup close sec 
+
+9.ii.b. Linux transportable encrypted filesystems - EncFS
+
+Create .sec and store the encrypted data in .raw:
+
+mkdir .raw .sec
+encfs --standard  "${PWD}/.raw" "${PWD}/.sec"
+
+unmount:
+
+fusermount -u .sec
+
+9.iii Encrypting a file
+
+Encrypt your 0-Days and log files before transferring them - please. (and pick your own password):
+
+# Encrypt
+openssl enc -aes-256-cbc -pbkdf2 -k fOUGsg1BJdXPt0CY4I <input.txt >input.txt.enc
+
+# Decrypt
+openssl enc -d -aes-256-cbc -pbkdf2 -k fOUGsg1BJdXPt0CY4I <input.txt.enc >input.txt

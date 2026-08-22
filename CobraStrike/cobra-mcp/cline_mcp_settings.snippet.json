@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "cobra": {
+      "command": "node",
+      "args": ["/home/x/CobraStrike/cobra-mcp/build/index.js"],
+      "env": {
+        "COBRA_ALLOW_INTERNET": "0",
+        "COBRA_ALLOWED_SCOPE": "192.168.56.0/24,10.0.0.0/8,lab.example.com",
+        "COBRA_LOOT_DIR": "/home/x/CobraStrike/loot",
+        "COBRA_BRAIN_PATH": "/home/x/CobraStrike/brain/BRAIN.md",
+        "COBRA_TRADECRAFT_DIR": "/home/x/CobraStrike/tradecraft"
+      }
+    }
+  }
+}

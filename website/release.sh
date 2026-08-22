@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# release.sh — stage a new COBRA OS ISO for cobra-os.com.
+# release.sh — stage a new COBRA OS ISO for cobra-os.com + the .onion mirror.
 #
 # Run from the repo root after build-iso.sh produces a new image:
 #
@@ -11,18 +11,18 @@
 #   2. copies the .sha256 into website/downloads/ (versioned with the site)
 #   3. rewrites every ISO filename / size reference in website/index.html
 #   4. syncs the operator-shell mirror (website/shell/ via sync-shell.sh)
-#   5. prints the upload + deploy checklist
+#   5. syncs the CobraStrike client mirror (website/cobra/ via sync-cobra.sh)
+#   6. prints the onion-publish + deploy checklist
 #
-# The ISO itself NEVER enters the repo or the Pages site — Cloudflare Pages
-# caps files at 25 MiB. Builds ship to the R2 bucket behind dl.cobra-os.com
-# (one-time setup: website/README.md).
+# The ISO itself NEVER enters git and NEVER touches Cloudflare Pages (25 MiB
+# cap). It ships ONLY from the .onion service on the home server — publish it
+# with website/onion-sync.sh (see website/README.md → "The Tor mirror").
 
 set -euo pipefail
 
 SITE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INDEX="$SITE_DIR/index.html"
-DL_URL="https://dl.cobra-os.com"
-R2_TARGET="r2:cobra-os-downloads"   # rclone remote:bucket — see website/README.md
+ONION_ADDR="afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion"   # replace with the live hidden-service address
 
 iso="${1:-}"
 [[ -n "$iso" && -f "$iso" ]] || { echo "usage: $0 <cobra-os-YYYYMMDD.iso>" >&2; exit 1; }
@@ -52,14 +52,20 @@ sed -i -E \
 echo "[*] syncing the shell mirror (website/shell/)..."
 "$SITE_DIR/sync-shell.sh"
 
+echo "[*] syncing the CobraStrike mirror (website/cobra/)..."
+"$SITE_DIR/sync-cobra.sh"
+
 cat <<EOF
 
 [+] staged. next:
-  1. upload the build to R2 (dl.cobra-os.com):
-       rclone copyto "$iso" "$R2_TARGET/$base" --progress
-       rclone copyto "$sum" "$R2_TARGET/$(basename "$sum")"
-  2. sanity-check the object:
-       curl -fsSI "$DL_URL/$base" | head -5
-  3. publish the site — commit + push, Pages redeploys automatically:
+  1. publish the build to the .onion (home server):
+       website/onion-sync.sh "$iso"
+     (rsyncs the site + downloads/ + bin/ to /srv/cobra-site/ over Tor/SSH)
+  2. sanity-check the object on the onion:
+       torsocks curl -fsSI "http://$ONION_ADDR/downloads/$base" | head -5
+  3. publish the clearnet site — commit + push, Pages redeploys automatically:
        git add website && git commit -m "release $base" && git push
+
+  note: the ISO is onion-only. The clearnet Pages deploy carries the site,
+  the /shell/ + /cobra/ mirrors, and the .sha256 — never the image.
 EOF

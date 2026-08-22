@@ -1,0 +1,30 @@
+{
+  "name": "cobra-client",
+  "version": "0.1.0",
+  "description": "CobraStrike headless MCP client — self-contained AI agent for authorized red-team engagements",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "cobra": "build/index.js",
+    "cobra-client": "build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "bundle": "npm run build && node esbuild.config.mjs",
+    "start": "node build/index.js",
+    "dev": "tsc --watch",
+    "prepare": "npm run build"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

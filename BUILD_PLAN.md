@@ -19,10 +19,10 @@
 > mirrored at `/shell/` (synced from `shell/` by `website/sync-shell.sh`,
 > committed with the Pages deploy) so `source <(curl -fsSL
 > https://cobra-os.com/shell/cobrashell.sh)` loads cobrashell on any box;
-> gs-netcat static builds move from THC's GitHub to our R2 bucket
-> (`dl.cobra-os.com/bin/`) — `bin gs-netcat` + the `memexec` examples
-> follow suit; a VPS relay (`relay.cobra-os.com:7350`) and a `.onion`
-> address are planned. Site cleanup in the same pass: the "cobra palette"
+> gs-netcat static builds move from THC's GitHub to our own infrastructure
+> — `bin gs-netcat` + the `memexec` examples follow suit; a VPS relay
+> (`relay.cobra-os.com:7350`) and a `.onion` address are planned. Site
+> cleanup in the same pass: the "cobra palette"
 > section is gone (the theme row stays in the overview's base-layers card
 > where it belongs), infra trivia trimmed, and a "cobrashell, anywhere"
 > section documents the mirror. cobrashell's re-source hints are now
@@ -314,16 +314,26 @@ story (like upstream's gsocket.io / thc.org, but ours):
   `/cobrashell.sh` → the mirror for typing speed. cobrashell itself never
   remote-sources — the URL only ever appears in operator-facing hints
   (on the OS the hints still point at the local `/etc/cobra/` copy).
-- **Cloudflare R2** (`dl.cobra-os.com`) hosts the ISOs AND the static
-  gs-netcat builds under `/bin/` — cobrashell's `bin gs-netcat` and the
-  `memexec` examples fetch from there, not THC's GitHub. Object names must
-  match the upstream release names (`gs-netcat_linux-<arch>`); `.sha256`
-  sidecars ride along. Upload procedure: website/README.md.
+- **The `.onion` service** (a tor hidden service on the home server) hosts
+  the ISOs AND the static gs-netcat builds under `/bin/` — cobrashell's
+  `bin gs-netcat` and the `memexec` examples fetch from there over Tor, not
+  THC's GitHub and not any clearnet object store. Object names must match
+  the upstream release names (`gs-netcat_linux-<arch>`); `.sha256` sidecars
+  ride along. The onion serves the SAME tree Pages deploys, plus the heavy
+  bytes the clearnet never carries. Publish procedure: website/README.md →
+  "The Tor mirror". **No R2** — the earlier Cloudflare-R2 plan was dropped
+  in favour of fully self-hosting the downloads behind Tor.
+- **CobraStrike** (`/cobra/`): the self-contained AI operator (cobra-client)
+  is mirrored on the site like the shell — `website/sync-cobra.sh` syncs
+  `install.sh` + the bundled `latest/cobra.js` from `CobraStrike/cobra-client/`
+  (rebuilding the bundle when `src/` is newer). It installs on any box with
+  `curl -fsSL https://cobra-os.com/cobra/install.sh | bash` and runs on the
+  operator's OWN OpenRouter key — never the site's, never COBRA infra's.
 - **Relay** (`relay.cobra-os.com:7350`): a small VPS running the gsocket
   relay daemon. The `gs-*` tools stay relay-agnostic — nothing in the OS
   points at COBRA infrastructure by default; using it is an explicit
-  `GS_HOST`/`GS_PORT` export behind `xint`. A `.onion` address (Tor access
-  to the relay, optionally a site mirror) is planned on the same VPS.
+  `GS_HOST`/`GS_PORT` export behind `xint`. The `.onion` service (above)
+  lives on the same home server.
 - Defaults unchanged: no telemetry, no phone-home, no new package
   requirements — the site is static HTML/CSS/JS and the mirror is plain
-  text over HTTPS.
+  text over HTTPS (clearnet) / Tor (onion).

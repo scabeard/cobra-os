@@ -1,0 +1,27 @@
+{
+  "name": "cobra-mcp",
+  "version": "0.1.0",
+  "description": "CobraStrike MCP server — authorized red-team pentest automation",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "cobra-mcp": "build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js",
+    "dev": "tsc --watch",
+    "prepare": "npm run build"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

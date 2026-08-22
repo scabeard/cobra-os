@@ -1,3 +1,6 @@
-# ISOs never enter git (2.4+ GiB each) — they ship to R2 (dl.cobra-os.com).
+# ISOs never enter git (2.4+ GiB each) — they ship ONLY from the .onion
+# service on the home server (published with website/onion-sync.sh). They are
+# staged here locally just long enough to rsync up. Never on Cloudflare Pages
+# (25 MiB cap), never in a clearnet object store.
 # Only the .sha256 sidecars are versioned with the site.
 *.iso
