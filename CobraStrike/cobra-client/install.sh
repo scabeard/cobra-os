@@ -143,6 +143,19 @@ fetch "$SERVER_BUNDLE_URL" "$SERVER_TARGET" || die "Server download failed."
 chmod +x "$SERVER_TARGET"
 ok "MCP server bundle installed to $SERVER_TARGET"
 
+# Mark the install dir as ESM. Both bundles are built with esbuild format=esm
+# (import banner + import.meta), but installed as plain .js files. Without a
+# package.json#type here, Node parses .js as CommonJS and crashes with
+# "SyntaxError: Cannot use import statement outside a module" (seen on Node
+# v20.18.1, which predates unflagged ESM syntax detection). This marker makes
+# Node treat cobra.js and cobra-mcp.js as ES modules on any Node >= 18.
+cat > "${INSTALL_DIR}/package.json" <<'EOF'
+{
+  "type": "module"
+}
+EOF
+ok "Marked $INSTALL_DIR as an ES-module directory (package.json)"
+
 # Point the client at the installed server. The client defaults to a repo
 # checkout (../cobra-mcp/build/index.js) that doesn't exist on an installed
 # box, so override server.args via the file config (mode 0600).

@@ -26,7 +26,7 @@ SITE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # already reach it over a private/VPN path.
 ONION_SSH="${ONION_SSH:-cobra-site}"            # ssh host/alias (see ~/.ssh/config)
 ONION_ROOT="${ONION_ROOT:-/srv/cobra-site}"     # docroot the hidden service serves
-USE_TORSOCKS="${USE_TORSOCKS:-1}"               # 1 = wrap ssh/rsync in torsocks
+USE_TORSOCKS="${USE_TORSOCKS:-0}"               # 1 = wrap ssh/rsync in torsocks (LAN server: 0)
 
 iso="${1:-}"
 

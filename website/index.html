@@ -536,7 +536,7 @@ qemu-system-x86_64 -m 2G -cdrom cobra-os-*.iso</code></pre>
     network you don't have to? <a href="#build">Build it yourself</a> — same script, same image.</p>
     <div class="dl-grid">
       <div class="dl-card">
-        <h3 class="dl-title">cobra-os-20260816.iso</h3>
+        <h3 class="dl-title">cobra-os-20260822.iso</h3>
         <ul class="dl-meta">
           <li><span>size</span><strong>2.4 GiB</strong></li>
           <li><span>format</span><strong>iso-hybrid (BIOS + UEFI)</strong></li>
@@ -545,8 +545,8 @@ qemu-system-x86_64 -m 2G -cdrom cobra-os-*.iso</code></pre>
           <li><span>login</span><strong>console autologin — set the operator password on first login (replaces changeme)</strong></li>
         </ul>
         <div class="dl-actions">
-          <a class="btn btn-red" href="http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/downloads/cobra-os-20260816.iso">download iso · onion</a>
-          <a class="btn btn-ghost" href="downloads/cobra-os-20260816.iso.sha256" download>sha256</a>
+          <a class="btn btn-red" href="http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/downloads/cobra-os-20260822.iso">download iso · onion</a>
+          <a class="btn btn-ghost" href="downloads/cobra-os-20260822.iso.sha256" download>sha256</a>
         </div>
         <p class="dl-note">The <code>.iso</code> is served from the <code>.onion</code> only (multi-GB over
         Tor — resumable via HTTP range requests). The <code>.sha256</code> is on both the clearnet site and
@@ -557,20 +557,20 @@ qemu-system-x86_64 -m 2G -cdrom cobra-os-*.iso</code></pre>
         <h3>fetch over Tor, verify, then write</h3>
         <pre class="codeblock"><code><span class="t-dim"># pull the image down over Tor (resumable with -C -):</span>
 torsocks curl -fSLO -C - \
-    http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/downloads/cobra-os-20260816.iso
+    http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/downloads/cobra-os-20260822.iso
 
 <span class="t-dim"># verify the image</span>
-sha256sum -c cobra-os-20260816.iso.sha256
+sha256sum -c cobra-os-20260822.iso.sha256
 
 <span class="t-dim"># expected:</span>
-<span class="t-green">cobra-os-20260816.iso: OK</span>
+<span class="t-green">cobra-os-20260822.iso: OK</span>
 
 <span class="t-dim"># write to USB (replace sdX — careful)</span>
-sudo dd if=cobra-os-20260816.iso of=/dev/sdX \
+sudo dd if=cobra-os-20260822.iso of=/dev/sdX \
     bs=4M status=progress oflag=sync
 
 <span class="t-dim"># or smoke-test in a VM first</span>
-qemu-system-x86_64 -m 2G -cdrom cobra-os-20260816.iso</code></pre>
+qemu-system-x86_64 -m 2G -cdrom cobra-os-20260822.iso</code></pre>
         <div class="callout callout-red">
           <strong>change before deploying:</strong> the <code>changeme</code> operator password is a
           documented scaffold default. Review the tool list, <code>PARROT_SUITE</code>, and the nftables
