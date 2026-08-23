@@ -60,14 +60,18 @@ node_ok() {
 
 install_node_apt() {
   command -v apt-get >/dev/null 2>&1 || return 1
+  # dpkg's maintainer scripts call start-stop-daemon (in /usr/sbin). The
+  # operator's sudo secure_path can drop the sbin dirs, which makes dpkg fail
+  # with "start-stop-daemon not found" / error code 2 — so force a full PATH.
+  local FULLPATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   local SUDO=""
   if [ "$(id -u)" -ne 0 ]; then
     command -v sudo >/dev/null 2>&1 || return 1
     SUDO="sudo"
   fi
   say "Installing Node.js via apt…"
-  $SUDO apt-get update -y >/dev/null 2>&1 || true
-  $SUDO apt-get install -y --no-install-recommends nodejs >/dev/null 2>&1 || return 1
+  $SUDO env PATH="$FULLPATH" apt-get update -y >/dev/null 2>&1 || true
+  $SUDO env PATH="$FULLPATH" apt-get install -y --no-install-recommends nodejs >/dev/null 2>&1 || return 1
   node_ok
 }
 
@@ -79,7 +83,9 @@ install_node_tarball() {
     aarch64|arm64) arch="arm64" ;;
     *) return 1 ;;
   esac
-  url="https://nodejs.org/dist/${NODE_DIST_VERSION}/node-${NODE_DIST_VERSION}-linux-${arch}.tar.xz"
+  # .tar.gz, not .tar.xz: COBRA OS minbase ships gzip but NOT xz-utils, so
+  # `tar -xJ` fails with "xz: Cannot exec". gzip is always present.
+  url="https://nodejs.org/dist/${NODE_DIST_VERSION}/node-${NODE_DIST_VERSION}-linux-${arch}.tar.gz"
   say "Installing Node.js ${NODE_DIST_VERSION} (static tarball) into ${INSTALL_DIR}/node…"
   mkdir -p "$INSTALL_DIR"
   tmp="$(mktemp)"
@@ -92,7 +98,7 @@ install_node_tarball() {
   fi
   rm -rf "${INSTALL_DIR}/node"
   mkdir -p "${INSTALL_DIR}/node"
-  tar -xJf "$tmp" -C "${INSTALL_DIR}/node" --strip-components=1 || { rm -f "$tmp"; return 1; }
+  tar -xzf "$tmp" -C "${INSTALL_DIR}/node" --strip-components=1 || { rm -f "$tmp"; return 1; }
   rm -f "$tmp"
   export PATH="${INSTALL_DIR}/node/bin:$PATH"
   node_ok
