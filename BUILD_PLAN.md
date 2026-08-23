@@ -325,10 +325,18 @@ story (like upstream's gsocket.io / thc.org, but ours):
   in favour of fully self-hosting the downloads behind Tor.
 - **CobraStrike** (`/cobra/`): the self-contained AI operator (cobra-client)
   is mirrored on the site like the shell — `website/sync-cobra.sh` syncs
-  `install.sh` + the bundled `latest/cobra.js` from `CobraStrike/cobra-client/`
-  (rebuilding the bundle when `src/` is newer). It installs on any box with
+  `install.sh` + the bundled `latest/cobra.js` (client) and
+  `latest/cobra-mcp.js` (server) from `CobraStrike/`, rebuilding each bundle
+  when its `src/` is newer. It installs on any box with
   `curl -fsSL https://cobra-os.com/cobra/install.sh | bash` and runs on the
   operator's OWN OpenRouter key — never the site's, never COBRA infra's.
+  COBRA OS ships no Node runtime (minimal image), so `install.sh` self-installs
+  Node ≥ 18 when missing — `apt` (Debian/Parrot) first, then a static tarball
+  from nodejs.org into `~/.cobra/node/` — and downloads BOTH bundles, pointing
+  the client at the installed `cobra-mcp.js` via `~/.config/cobra/config.json`
+  (the client's built-in default expects a repo checkout that doesn't exist on
+  an installed box). No `chroot-setup.sh` change: the OS stays minimal, the
+  runtime arrives with the tool.
 - **Relay** (`relay.cobra-os.com:7350`): a small VPS running the gsocket
   relay daemon. The `gs-*` tools stay relay-agnostic — nothing in the OS
   points at COBRA infrastructure by default; using it is an explicit

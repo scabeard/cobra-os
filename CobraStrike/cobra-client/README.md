@@ -38,8 +38,12 @@ cobra models               # browse / pick a model
 cobra doctor               # verify everything
 ```
 
-> Requires **Node.js ≥ 18**. The installer drops the bundle in `~/.cobra/` and a
-> `cobra` launcher in `~/.local/bin/`.
+> **Node.js ≥ 18** is required. COBRA OS ships no Node runtime, so the installer
+> **installs it for you** if missing — via `apt` (Debian/Parrot) first, falling
+> back to a static tarball from nodejs.org into `~/.cobra/node/`. It drops the
+> client bundle **and** the `cobra-mcp` server bundle in `~/.cobra/`, a `cobra`
+> launcher in `~/.local/bin/`, and points the client at the installed server via
+> `~/.config/cobra/config.json` — so `cobra doctor` passes on a fresh box.
 
 ### Build from source instead
 
@@ -143,18 +147,20 @@ cobra run "…" --scope "10.10.10.0/24,lab.local" --loot-dir /dev/shm/cobra-loot
 
 ## Hosting on the COBRA OS site
 
-The site serves two static files from `cobra-os.com/cobra/` (and the `.onion`
+The site serves static files from `cobra-os.com/cobra/` (and the `.onion`
 mirror), synced from this repo by `website/sync-cobra.sh`:
 
 ```
-https://cobra-os.com/cobra/install.sh        # this repo's install.sh
-https://cobra-os.com/cobra/latest/cobra.js   # dist/cobra.js
+https://cobra-os.com/cobra/install.sh            # this repo's install.sh
+https://cobra-os.com/cobra/latest/cobra.js       # client:  cobra-client/dist/cobra.js
+https://cobra-os.com/cobra/latest/cobra-mcp.js   # server:  cobra-mcp/dist/cobra-mcp.js
 ```
 
-`install.sh` downloads `cobra.js` and wires up the `cobra` command. To ship an
-update, edit the client, then run `website/sync-cobra.sh` (it rebuilds the
-bundle if `src/` is newer) and commit the mirror — users re-run the installer
-to update.
+`install.sh` downloads **both** bundles and wires up the `cobra` command,
+configuring the client to spawn the installed `cobra-mcp.js` (no repo checkout
+needed). To ship an update, edit the client or server, then run
+`website/sync-cobra.sh` (it rebuilds each bundle if its `src/` is newer) and
+commit the mirror — users re-run the installer to update.
 
 ---
 

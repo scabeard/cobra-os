@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "bundle": "npm run build && node esbuild.config.mjs",
     "start": "node build/index.js",
     "dev": "tsc --watch",
     "prepare": "npm run build"
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "esbuild": "^0.24.0",
     "typescript": "^5.7.0"
   },
   "engines": {

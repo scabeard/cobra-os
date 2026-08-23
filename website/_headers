@@ -37,6 +37,11 @@
   Content-Type: application/javascript; charset=utf-8
   Cache-Control: public, max-age=300
 
+# the CobraStrike MCP server bundle (spawned by the client over stdio)
+/cobra/*/cobra-mcp.js
+  Content-Type: application/javascript; charset=utf-8
+  Cache-Control: public, max-age=300
+
 /downloads/*
   Cache-Control: public, max-age=3600
   Content-Disposition: attachment

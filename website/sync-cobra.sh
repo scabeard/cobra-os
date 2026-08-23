@@ -9,19 +9,21 @@
 # deployed mirror. Run this after editing the client or its installer —
 # release.sh calls it automatically, and the files are committed with the site.
 #
-# Mirrored: install.sh + the bundled dist/cobra.js (under latest/). The bundle
-# is ~600 KB — comfortably under the Cloudflare Pages 25 MiB per-file cap, so
-# it ships on BOTH the clearnet Pages site and the .onion mirror (unlike the
-# ISO, which is onion-only).
+# Mirrored: install.sh + the bundled dist/cobra.js AND dist/cobra-mcp.js (under
+# latest/). The client bundle is ~600 KB and the server bundle similar —
+# comfortably under the Cloudflare Pages 25 MiB per-file cap, so both ship on
+# the clearnet Pages site AND the .onion mirror (unlike the ISO, onion-only).
 
 set -euo pipefail
 
 SITE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLIENT_DIR="$(cd "$SITE_DIR/../CobraStrike/cobra-client" && pwd)"
+SERVER_DIR="$(cd "$SITE_DIR/../CobraStrike/cobra-mcp" && pwd)"
 MIRROR="$SITE_DIR/cobra"
 
 INSTALLER_SRC="$CLIENT_DIR/install.sh"
 BUNDLE_SRC="$CLIENT_DIR/dist/cobra.js"
+SERVER_BUNDLE_SRC="$SERVER_DIR/dist/cobra-mcp.js"
 
 changed=0
 
@@ -51,5 +53,20 @@ if ! cmp -s "$BUNDLE_SRC" "$MIRROR/latest/cobra.js"; then
     changed=1
 fi
 
+# --- server bundle (latest/cobra-mcp.js) -------------------------------------
+# The client spawns this server over stdio; on an installed box there's no repo
+# checkout, so the server must ship alongside the client. Rebuild when stale.
+if [[ ! -f "$SERVER_BUNDLE_SRC" ]] || [[ -n "$(find "$SERVER_DIR/src" -newer "$SERVER_BUNDLE_SRC" -print -quit 2>/dev/null)" ]]; then
+    echo "[*] (re)building the cobra-mcp.js bundle..."
+    ( cd "$SERVER_DIR" && npm run --silent bundle )
+fi
+[[ -f "$SERVER_BUNDLE_SRC" ]] || { echo "[!] bundle build produced no dist/cobra-mcp.js" >&2; exit 1; }
+
+if ! cmp -s "$SERVER_BUNDLE_SRC" "$MIRROR/latest/cobra-mcp.js"; then
+    install -m 0644 "$SERVER_BUNDLE_SRC" "$MIRROR/latest/cobra-mcp.js"
+    echo "[*] synced latest/cobra-mcp.js"
+    changed=1
+fi
+
 [[ $changed -eq 0 ]] && echo "[*] website/cobra/ already in sync"
-echo "[+] mirror ready: install.sh + latest/cobra.js -> website/cobra/"
+echo "[+] mirror ready: install.sh + latest/cobra.js + latest/cobra-mcp.js -> website/cobra/"
