@@ -116,6 +116,13 @@ EOF
 rm -f .build/chroot_install-packages* .build/chroot_package-lists* 2>/dev/null || true
 rm -f .build/chroot_hooks* 2>/dev/null || true   # our hook is idempotent — always re-run it
 rm -f .build/binary_* 2>/dev/null || true
+# CRITICAL (2026-08-23): clear the includes.chroot markers too. lb caches the
+# "includes copied" stage; on a reused tree the stale marker means our freshly
+# staged files (config/includes.chroot/root/cobra-stage/*) are NOT re-copied
+# into the chroot before the 9000-cobra hook runs — the hook then sees an empty
+# /root/cobra-stage and (for ai builds) silently skips the CobraStrike install,
+# shipping an ISO with nodejs but no cobra launcher. Force a re-copy every build.
+rm -f .build/chroot_includes* 2>/dev/null || true
 
 echo "[*] Staging COBRA files into config/includes.chroot ..."
 STAGE="config/includes.chroot/root/cobra-stage"
@@ -175,6 +182,15 @@ ${COBRA_HOSTNAME:+export COBRA_HOSTNAME='$COBRA_HOSTNAME'}
 ${OPERATOR_USER:+export OPERATOR_USER='$OPERATOR_USER'}
 ${COBRA_PROFILES:+export COBRA_PROFILES='$COBRA_PROFILES'}
 /root/cobra-stage/chroot-setup.sh
+# Fail loudly if an ai build didn't bake the CobraStrike launcher — the silent
+# "cobra: not installed" ISO happens when includes.chroot wasn't re-copied into
+# the chroot before this hook (stale .build marker). See build-iso.sh.
+if [[ " ${COBRA_PROFILES:-} " == *" ai "* ]]; then
+    if [[ ! -x /usr/local/bin/cobra ]]; then
+        echo "[!] COBRA_PROFILES=ai but /usr/local/bin/cobra is missing — the staged bundles never reached the chroot" >&2
+        exit 1
+    fi
+fi
 # live-build's live pass auto-adds live-config — it would create the default
 # "user" account (passwordless sudo) and force hostname "debian", fighting
 # the operator/hostname baked by chroot-setup.sh. Purge it.
