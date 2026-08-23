@@ -89,6 +89,21 @@ cp shell/cobra-ops.sh "$STAGE/cobra-ops.sh"
 cp shell/cobra-theme.sh "$STAGE/cobra-theme.sh"
 cp splash.png "$STAGE/splash.png"
 
+# CobraStrike AI operator (COBRA_PROFILES=ai): stage the pre-built bundles only
+# for ai builds so the minimal image never carries the Node stack. chroot-setup
+# installs them when the profile is active. Rebuild dist/ first if stale.
+if [[ " $COBRA_PROFILES " == *" ai "* ]]; then
+    for b in "CobraStrike/cobra-client/dist/cobra.js" "CobraStrike/cobra-mcp/dist/cobra-mcp.js"; do
+        if [[ ! -f "$b" ]]; then
+            echo "[!] COBRA_PROFILES=ai but $b is missing — run: (cd CobraStrike/cobra-client && npm run bundle) and (cd CobraStrike/cobra-mcp && npm run bundle)" >&2
+            exit 1
+        fi
+    done
+    cp CobraStrike/cobra-client/dist/cobra.js "$STAGE/cobra.js"
+    cp CobraStrike/cobra-mcp/dist/cobra-mcp.js "$STAGE/cobra-mcp.js"
+    echo "[*] staged CobraStrike bundles (ai profile)"
+fi
+
 chmod +x "$STAGE/chroot-setup.sh"
 
 echo "[*] Entering chroot to install Parrot tools + harden..."

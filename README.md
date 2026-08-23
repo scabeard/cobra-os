@@ -73,7 +73,17 @@ and hardening:
 sudo apt install live-build
 sudo ./build-iso.sh                                  # core toolset ISO
 sudo COBRA_PROFILES="wireless" ./build-iso.sh        # with extras
+sudo COBRA_PROFILES="ai" ./build-iso.sh              # bake in the CobraStrike AI operator
 ```
+
+> **`COBRA_PROFILES=ai`** bakes the CobraStrike AI operator into the image at
+> build time (managed `nodejs` + the pre-built `cobra.js`/`cobra-mcp.js` bundles
+> in `/etc/cobra/`, system launcher `/usr/local/bin/cobra`, and a `cobra`
+> operator command). No runtime `curl | bash`, no PATH fiddling — `cobra run
+> "<task>"` works on first login after `xint` and `cobra setup --save-key`
+> (your own OpenRouter key, stored 0600). The core build stays Node-free; the
+> generic site `install.sh` remains for non-COBRA boxes. The bundles are staged
+> from `CobraStrike/*/dist/` — run `npm run bundle` in each if they're stale.
 
 Produces `cobra-os-<date>.iso` (+ `.sha256`): iso-hybrid (BIOS+UEFI),
 live-boot with `noswap persistence` on the cmdline, LUKS persistence

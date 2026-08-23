@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 #
-# onion-sync.sh — publish the site + the ISO + the gs-netcat binaries to the
-# home server's Tor hidden service.
+# onion-sync.sh — publish the site + the gs-netcat binaries to the home
+# server's Tor hidden service.
 #
-# The .onion serves the SAME tree Cloudflare Pages deploys, PLUS the heavy
-# things the clearnet never carries: the ISO under downloads/ and the static
-# gs-netcat builds under bin/. Everything crosses to the home server over
-# SSH (optionally wrapped through Tor itself), so the box's IP never appears
-# in any clearnet record.
+# The .onion serves the SAME tree Cloudflare Pages deploys, PLUS the static
+# gs-netcat builds under bin/. Everything crosses to the home server over SSH
+# (optionally wrapped through Tor itself), so the box's IP never appears in
+# any clearnet record.
+#
+# COBRA OS ships NO prebuilt ISO (build-your-own — see website/README.md), so
+# there is no ISO staging here anymore. downloads/ carries only reference
+# .sha256 files (from release.sh) for hash-compare, and they ride along below.
 #
 # Usage:
-#   website/onion-sync.sh                      # sync site + bin/ (no ISO)
-#   website/onion-sync.sh cobra-os-YYYYMMDD.iso  # also stage + sync that ISO
+#   website/onion-sync.sh        # sync site + bin/ (+ any reference checksums)
 #
 # Configure the three vars below (or export them) for your home server.
 
@@ -28,8 +30,6 @@ ONION_SSH="${ONION_SSH:-cobra-site}"            # ssh host/alias (see ~/.ssh/con
 ONION_ROOT="${ONION_ROOT:-/srv/cobra-site}"     # docroot the hidden service serves
 USE_TORSOCKS="${USE_TORSOCKS:-0}"               # 1 = wrap ssh/rsync in torsocks (LAN server: 0)
 
-iso="${1:-}"
-
 # --- pick the transport ------------------------------------------------------
 RSYNC_RSH="ssh"
 if [[ "$USE_TORSOCKS" == "1" ]]; then
@@ -40,26 +40,14 @@ fi
 
 echo "[*] target: $ONION_SSH:$ONION_ROOT (torsocks=$USE_TORSOCKS)"
 
-# --- 1. stage the ISO locally (optional arg) ---------------------------------
-# The ISO never enters git; onion-sync copies it into website/downloads/ only
-# long enough to rsync it up, then leaves it in place (gitignored) for the
-# next sync. The .sha256 IS versioned — release.sh already staged it.
-if [[ -n "$iso" ]]; then
-    [[ -f "$iso" ]] || { echo "[!] no such ISO: $iso" >&2; exit 1; }
-    base="$(basename "$iso")"
-    echo "[*] staging $base into website/downloads/ for upload"
-    cp -f "$iso" "$SITE_DIR/downloads/$base"
-    [[ -f "$iso.sha256" ]] && cp -f "$iso.sha256" "$SITE_DIR/downloads/$base.sha256"
-fi
-
-# --- 2. sanity: never push a broken tree -------------------------------------
+# --- sanity: never push a broken tree ----------------------------------------
 bash -n "$SITE_DIR/sync-shell.sh"
 [[ -f "$SITE_DIR/index.html" ]] || { echo "[!] no index.html in $SITE_DIR" >&2; exit 1; }
 
-# --- 3. push the tree --------------------------------------------------------
+# --- push the tree -----------------------------------------------------------
 # -a --delete keeps the onion a faithful mirror of the deployable site.
-# Exclude VCS and any stray non-site files. downloads/*.iso rides along from
-# the staging step above (it's gitignored locally but IS the point, here).
+# Exclude VCS and any stray non-site files. No ISO: downloads/ holds only the
+# reference .sha256 files, which are small and ride along here.
 echo "[*] rsync site -> $ONION_ROOT"
 rsync -a --delete -e "$RSYNC_RSH" \
     --exclude '.git/' \
@@ -68,7 +56,7 @@ rsync -a --delete -e "$RSYNC_RSH" \
 
 echo "[+] onion mirror updated."
 echo "    site:      http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/"
-echo "    iso:       http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/downloads/<iso>"
 echo "    binaries:  http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/bin/gs-netcat_*"
 echo
+echo "    note:      no prebuilt ISO — users build their own (website/README.md)."
 echo "    verify:    torsocks curl -fsSI http://afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion/ | head -1"

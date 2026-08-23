@@ -28,6 +28,9 @@
 #             php-cli — ships in the webplus profile only)
 #   privesc -> /etc/cobra/linpeas.sh (vendored 2026-08-17 from PEASS-ng
 #             releases — NOT the THC repo; run LOCALLY, no network)
+#   cobra   -> /usr/local/bin/cobra (CobraStrike AI operator; baked in by the
+#             COBRA_PROFILES=ai profile — nodejs + /etc/cobra/cobra{,-mcp}.js.
+#             OpenRouter-touching subcommands are xint-gated.)
 #
 # $TARGET — per-shell state (like the TUI's reactive target).
 #   target <host>    sets $TARGET
@@ -118,6 +121,12 @@ ${R}Dashboards${N} ${Y}(console-only — there is no X server on COBRA)${N}:
   ${G}mon${N}                       btop ${F}(system monitor)${N}
   ${G}files${N}                     nnn ${F}(console file manager)${N}
   ${G}web [url]${N}                 links2 text browser ${F}(xint-gated; loopback is open)${N}
+
+${R}AI operator${N} ${Y}(COBRA_PROFILES=ai — CobraStrike; xint-gated, your OpenRouter key)${N}:
+  ${G}cobra run \"<task>\"${N}        headless agent task against the MCP server
+  ${G}cobra setup --save-key${N}    store your OpenRouter key ${F}(0600)${N}
+  ${G}cobra models${N}              list OpenRouter models ${F}(needs xint)${N}
+  ${G}cobra doctor${N}              sanity-check server + key
                             ${Y}over Tor: xint, then torify links2 <url>${N}
 
 HELP
@@ -444,6 +453,30 @@ web() {
     fi
     echo -e "\033[0;33m[web] links2 — deliberate internet use (tor: torify links2 <url>)\033[0m"
     links2 "$@"
+}
+
+# --- AI operator (CobraStrike; COBRA_PROFILES=ai) ------------------------
+# Wraps the system launcher (/usr/local/bin/cobra, baked in by the ai profile).
+# Network-touching subcommands (run/chat/models/mission — they call OpenRouter)
+# are gated behind cobrashell's xint, same deliberate-internet philosophy as
+# web/transfer/tb. Local subcommands (doctor/setup/tools — server over stdio)
+# run ungated. Uses YOUR OpenRouter key, never COBRA infra's.
+cobra() {
+    local launcher=/usr/local/bin/cobra
+    if [[ ! -x "$launcher" ]]; then
+        echo -e "\033[0;31m[cobra] CobraStrike not installed — rebuild with COBRA_PROFILES=\"ai\"\033[0m" >&2
+        return 1
+    fi
+    # First arg is the subcommand (default: run). Gate the ones that phone out.
+    local sub="${1:-run}"
+    case "$sub" in
+        run|chat|models|mission)
+            if declare -F _hs_internet_allowed >/dev/null 2>&1; then
+                _hs_internet_allowed || return 255
+            fi
+            ;;
+    esac
+    command "$launcher" "$@"
 }
 
 # --- stop (legacy — kept for muscle memory; Ctrl+C is the real way) ----

@@ -1,6 +1,11 @@
-# ISOs never enter git (2.4+ GiB each) — they ship ONLY from the .onion
-# service on the home server (published with website/onion-sync.sh). They are
-# staged here locally just long enough to rsync up. Never on Cloudflare Pages
-# (25 MiB cap), never in a clearnet object store.
-# Only the .sha256 sidecars are versioned with the site.
+# ISOs never enter git (2.4+ GiB each). COBRA OS ships NO prebuilt ISO —
+# users build their own with build-iso.sh (see website/README.md). This dir
+# carries only the reference .sha256 sidecars so operators can hash-compare
+# their own builds against ours. Never on Cloudflare Pages (25 MiB cap),
+# never in a clearnet object store.
 *.iso
+
+# Ignore everything except this .gitignore and the .sha256 sidecars.
+*
+!.gitignore
+!*.sha256

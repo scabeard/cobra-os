@@ -183,8 +183,20 @@ ghostip.sh/linpeas, `strace` for cobrashell `tit`).
 | `ad` | python3-impacket impacket-scripts responder netexec bloodhound.py | AD/Windows ops |
 | `exploit` | metasploit-framework | msfconsole is a TTY citizen (exploitdb/searchsploit is core — see §2) |
 | `webplus` | mitmproxy ffuf seclists wpscan php-cli | mitmproxy **replaces burpsuite** (Java GUI — dead weight without X); php-cli runs the vendored upload_server.php (`upserv`) |
+| `ai` | nodejs | CobraStrike AI operator, **baked in at build time** — pre-built `cobra.js`/`cobra-mcp.js` staged to `/etc/cobra/`, system launcher `/usr/local/bin/cobra`, `cobra()` cobra-ops function. No runtime curl; uses the operator's OWN OpenRouter key (0600), never COBRA infra's |
 
 Retired profiles: `headless` (obsolete — every build is headless now).
+
+> **`ai` profile detail (2026-08-23).** The CobraStrike agent runs against the
+> MCP server installed system-wide in `/etc/cobra/`; the launcher passes
+> `--server-command/--server-args` (the client's repo-checkout default doesn't
+> exist on an installed box, and it reads no system config). The `cobra()`
+> cobra-ops function gates the OpenRouter-touching subcommands
+> (`run`/`chat`/`models`/`mission`) behind cobrashell's `xint`; local
+> subcommands (`doctor`/`setup`/`tools`) run ungated. The core image stays
+> Node-free — `nodejs` and the bundles land only when `ai` is requested.
+> The generic `install.sh` (curl from the site) remains for **non-COBRA**
+> boxes; on COBRA OS the baked-in path wins.
 
 ## §3. Web access (console-only)
 
@@ -330,13 +342,15 @@ story (like upstream's gsocket.io / thc.org, but ours):
   when its `src/` is newer. It installs on any box with
   `curl -fsSL https://cobra-os.com/cobra/install.sh | bash` and runs on the
   operator's OWN OpenRouter key — never the site's, never COBRA infra's.
-  COBRA OS ships no Node runtime (minimal image), so `install.sh` self-installs
-  Node ≥ 18 when missing — `apt` (Debian/Parrot) first, then a static tarball
-  from nodejs.org into `~/.cobra/node/` — and downloads BOTH bundles, pointing
-  the client at the installed `cobra-mcp.js` via `~/.config/cobra/config.json`
+  On COBRA OS itself, the `ai` profile (§2a) bakes the operator in at build
+  time (managed `nodejs` + staged bundles in `/etc/cobra/`), so the site
+  `install.sh` is the path for **non-COBRA** boxes. The core image stays
+  Node-free (minimal); on a generic box `install.sh` self-installs Node ≥ 18
+  when missing — `apt` (Debian/Parrot) first, then a static tarball from
+  nodejs.org into `~/.cobra/node/` — and downloads BOTH bundles, pointing the
+  client at the installed `cobra-mcp.js` via `~/.config/cobra/config.json`
   (the client's built-in default expects a repo checkout that doesn't exist on
-  an installed box). No `chroot-setup.sh` change: the OS stays minimal, the
-  runtime arrives with the tool.
+  an installed box).
 - **Relay** (`relay.cobra-os.com:7350`): a small VPS running the gsocket
   relay daemon. The `gs-*` tools stay relay-agnostic — nothing in the OS
   points at COBRA infrastructure by default; using it is an explicit

@@ -200,6 +200,14 @@ for profile in $COBRA_PROFILES; do
             apt-get install -y --no-install-recommends \
                 mitmproxy ffuf seclists wpscan php-cli
             ;;
+        ai)
+            # CobraStrike AI operator, baked in at build time (no runtime curl).
+            # Managed node via apt; bundles are pre-built in CobraStrike/*/dist
+            # and staged into the rootfs below (system-wide /etc/cobra, no
+            # per-home files, no PATH hacks — launcher lands in /usr/local/bin).
+            echo "[*] Profile: ai (CobraStrike operator — nodejs + vendored bundles)..."
+            apt-get install -y --no-install-recommends nodejs
+            ;;
         *)
             echo "[!] Unknown COBRA_PROFILES entry: $profile (skipping)"
             ;;
@@ -224,6 +232,36 @@ install -m 0644 "$STAGE/upload_server.php" /etc/cobra/upload_server.php
 # vendored PEASS-ng linpeas.sh — run LOCALLY by the cobra-ops privesc()
 # enumerator (this box's own privesc paths; no network, no remote sourcing)
 install -m 0755 "$STAGE/linpeas.sh" /etc/cobra/linpeas.sh
+
+# --- CobraStrike AI operator (COBRA_PROFILES=ai) -----------------------------
+# Deterministic, build-time install — no runtime curl. The bundles were staged
+# by build-rootfs.sh only when the ai profile is active, so their presence is
+# the switch. nodejs was apt-installed by the ai case above.
+if [[ -f "$STAGE/cobra.js" && -f "$STAGE/cobra-mcp.js" ]]; then
+    echo "[*] Installing CobraStrike AI operator (system-wide, /etc/cobra)..."
+    install -m 0755 "$STAGE/cobra.js"     /etc/cobra/cobra.js
+    install -m 0755 "$STAGE/cobra-mcp.js" /etc/cobra/cobra-mcp.js
+    # ESM marker: bundles are esbuild format=esm; without this a .js file with
+    # no package.json#type is parsed as CommonJS and dies on the import banner.
+    printf '{ "type": "module" }\n' > /etc/cobra/package.json
+    # System launcher on the standard PATH — no ~/.local/bin, no PATH edits.
+    # The client only honors the server path via CLI flags or ~/.config/cobra/
+    # config.json (it does NOT read a system config), so pass --server-command/
+    # --server-args here. CLI flags always beat the client's repo-checkout
+    # default. The operator's OpenRouter key still goes to the per-user
+    # ~/.config/cobra/credentials (0600) via `cobra setup --save-key`.
+    cat > /usr/local/bin/cobra << 'EOF'
+#!/usr/bin/env bash
+# COBRA OS system launcher for the CobraStrike AI operator (ai profile).
+# Bundles + server live system-wide in /etc/cobra; the client is pointed at the
+# server via CLI flags (its config-file default expects a repo checkout).
+exec /usr/bin/node /etc/cobra/cobra.js \
+    --server-command /usr/bin/node \
+    --server-args /etc/cobra/cobra-mcp.js \
+    "$@"
+EOF
+    chmod 0755 /usr/local/bin/cobra
+fi
 
 echo "[*] Hooking cobrashell + cobra-ops into interactive bash shells (HUSH=1 fast mode)..."
 if ! grep -qF '# --- COBRA OS ---' /etc/bash.bashrc; then

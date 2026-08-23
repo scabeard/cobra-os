@@ -15,11 +15,10 @@ Cloudflare Pages ──────────────► cobra-os.com     
 
 Home server (gsocket relay) ───► relay.cobra-os.com  (gs-* rendezvous)
         └─ tor hidden service ─► afrt77bagg4l4r6k56kshbbxjb6oot6dg7gwt3g5jopk4pe7ddjv3zad.onion        (the SAME site + /shell/ +
-                                                      /cobra/  +  the ISO +
-                                                      bin/gs-netcat_* — over Tor)
+                                                      /cobra/  +  bin/gs-netcat_* — over Tor)
 ```
 
-Two front doors, one tree — plus the heavy bytes, Tor-only:
+Two front doors, one tree — plus the small binaries, Tor-only:
 
 - **Pages hosts the clearnet site AND the small mirrors.** Free, unlimited
   bandwidth, git-integrated — but a hard **25 MiB per-file limit**. The site,
@@ -28,22 +27,25 @@ Two front doors, one tree — plus the heavy bytes, Tor-only:
   server** — Cloudflare's edge holds the files, so no IP of ours ever appears
   in DNS or answers a connection. The clearnet is the brochure everyone can
   see.
-- **The .onion hosts everything the clearnet can't or shouldn't.** A tor
-  hidden service on the home server serves the **same tree Pages deploys**,
-  **plus** the two things that never touch the clearnet: the multi-GB **ISO**
-  (`/downloads/`) and the static **gs-netcat binaries** (`/bin/`). Onion
-  services hide the host's IP by design, so this is the one place serving
-  from home is safe — and it's where the actual download happens, end to end
-  over Tor.
+- **The .onion hosts the bytes the clearnet shouldn't.** A tor hidden service
+  on the home server serves the **same tree Pages deploys**, **plus** the
+  static **gs-netcat binaries** (`/bin/`). Onion services hide the host's IP
+  by design, so this is the one place serving from home is safe.
 - **The home server also runs the gsocket relay.** It is our own hardware on
   our own network — so **nothing clearnet ever points at it** except the
   single outbound-reachable `relay.cobra-os.com` port. Everything else it
   serves is Tor-only. See "The gsocket relay" below.
 
-**No R2, no object storage, no third-party download host.** The ISO and the
-binaries are fully self-hosted on the onion. If you'd rather not pull a
-multi-GB image over Tor at all, the answer is the same as it's always been:
-build it yourself with `build-iso.sh` — same script, same image.
+**No hosted ISO — build it yourself.** COBRA OS no longer ships a prebuilt
+live image. A hardened red-team OS shouldn't ask operators to trust someone
+else's build machine, onion key, or Tor path for a multi-GB binary — and with
+the `COBRA_PROFILES` matrix (core, wireless, ad, exploit, webplus, ai) there's
+no single "default" image worth hosting. Everyone builds from the same
+`build-iso.sh` we run, on their own host, in their chosen profile. We publish
+the **reference build's `.sha256`** (`downloads/`) so you can compare your
+build's hash against ours. What stays hosted are the small, one-command
+installs: the shell mirror, the CobraStrike operator, and the `gs-netcat`
+binaries. **No R2, no object storage, no third-party download host.**
 
 ## Layout
 
