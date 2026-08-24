@@ -55,9 +55,17 @@ Scope: ${"${SCOPE}"}
 - session_list                 active sessions
 - session_output <id>          tail session output
 - session_kill <id>            stop session
+- brain_write <md>             replace the brain (read cobra://brain first)
+- brain_append <note>          append a dated note to the brain
+
+## Missions
+- Missions are markdown files in the missions dir (next to the brain).
+- cobra://missions shows the exact directory, the template path, and the
+  run command; cobra://missions/{file} reads one.
+- Run one: cobra mission <path-to-file.mission.md> (xint first on COBRA OS).
 
 All tool output → loot files. Read summaries; pull detail from files only as needed.
-Update brain/BRAIN.md after every phase.
+Update the brain after every phase (brain_write / brain_append).
 `;
 
 export function registerResources(server: McpServer): void {
@@ -87,6 +95,50 @@ export function registerResources(server: McpServer): void {
 
   server.resource("buildplan", "cobra://buildplan", async (uri) =>
     textResource(uri.href, readFileSafe(path.join(CONFIG.repoRoot, "BUILD_PLAN.md")))
+  );
+
+  // Mission files — the agent must know where they live to tell the operator.
+  // dir = dirname(brainPath)/missions: the brain always sits next to missions/
+  // (repo: brain/missions/; COBRA OS: /etc/cobra/brain/missions/; install.sh:
+  // ~/.cobra/brain/missions/). cobra://missions lists them; {file} reads one.
+  const missionsDir = path.join(path.dirname(CONFIG.brainPath), "missions");
+  server.resource("missions", "cobra://missions", async (uri) => {
+    let files: string[] = [];
+    try {
+      files = fs.readdirSync(missionsDir).filter((f) => f.endsWith(".mission.md")).sort();
+    } catch { /* no missions dir */ }
+    const body = [
+      `Mission directory: ${missionsDir}`,
+      `Template: ${path.join(missionsDir, "TEMPLATE.mission.md")}`,
+      `Run one: cobra mission ${path.join(missionsDir, "<name>.mission.md")}`,
+      "",
+      files.length ? files.map((f) => `- ${f}`).join("\n") : "- (no missions yet — copy the template)",
+    ].join("\n");
+    return textResource(uri.href, body);
+  });
+  server.resource(
+    "mission",
+    new ResourceTemplate("cobra://missions/{file}", {
+      list: async () => {
+        try {
+          const files = fs.readdirSync(missionsDir).filter((f) => f.endsWith(".md"));
+          return {
+            resources: files.map((f) => ({
+              uri: `cobra://missions/${f}`,
+              name: f,
+              mimeType: "text/markdown",
+            })),
+          };
+        } catch {
+          return { resources: [] };
+        }
+      },
+    }),
+    async (uri, vars) => {
+      const p = path.join(missionsDir, String(vars.file));
+      if (!p.startsWith(missionsDir)) return textResource(uri.href, "(access denied)");
+      return textResource(uri.href, readFileSafe(p));
+    }
   );
 
   // loot file tree + individual files

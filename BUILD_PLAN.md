@@ -220,6 +220,14 @@ Retired profiles: `headless` (obsolete — every build is headless now).
 > `COBRA_*` env (loot at `/dev/shm/cobra-loot`). Non-COBRA boxes get the full
 > doctrine tree from the site — same as the baked image.
 >
+> **Agent self-knowledge (2026-08-24, follow-up).** The agent had no way to know
+> where missions/the brain lived on an installed box — and no tool to update the
+> brain at all, despite the doctrine requiring it every phase. Added
+> `cobra://missions` (+`{file}`) resources (absolute missions dir, template
+> path, exact `cobra mission` command — injected into the client system prompt),
+> `brain_write`/`brain_append` tools (33 tools total), and a Missions section in
+> `cobra://opshelp`.
+>
 > **Optional operator-key bake (2026-08-23).** If `secrets/openrouter.key`
 > (gitignored, host-local; override the path with `COBRA_OPENROUTER_KEY_FILE`)
 > exists at build time, the build scripts stage it (`build-iso.sh` for the

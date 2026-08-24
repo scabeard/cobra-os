@@ -124,6 +124,7 @@ ${R}Dashboards${N} ${Y}(console-only — there is no X server on COBRA)${N}:
 
 ${R}AI operator${N} ${Y}(COBRA_PROFILES=ai — CobraStrike; xint-gated, your OpenRouter key)${N}:
   ${G}cobra run \"<task>\"${N}        headless agent task against the MCP server
+  ${G}cobra mission <file>${N}      execute a mission file ${F}(template: /etc/cobra/brain/missions/)${N}
   ${G}cobra setup --save-key${N}    store your OpenRouter key ${F}(0600 — or bake at build: secrets/openrouter.key)${N}
   ${G}cobra models${N}              list OpenRouter models ${F}(needs xint)${N}
   ${G}cobra doctor${N}              sanity-check server + key

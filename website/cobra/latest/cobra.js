@@ -16585,20 +16585,21 @@ async function safe(fn, fallback) {
   }
 }
 async function gatherContext(mcp) {
-  const [engagement, opshelp, brain, target] = await Promise.all([
+  const [engagement, opshelp, brain, target, missions] = await Promise.all([
     safe(() => mcp.getPrompt("authorized-engagement"), ""),
     safe(() => mcp.readResource("cobra://opshelp"), ""),
     safe(() => mcp.readResource("cobra://brain"), "(no brain)"),
-    safe(() => mcp.readResource("cobra://target"), "(no target)")
+    safe(() => mcp.readResource("cobra://target"), "(no target)"),
+    safe(() => mcp.readResource("cobra://missions"), "(no missions)")
   ]);
-  return { scope: "", target, brain, opshelp, engagement };
+  return { scope: "", target, brain, missions, opshelp, engagement };
 }
 function buildSystemPrompt(ctx, missionText) {
   const parts = [];
   parts.push("You are CobraStrike \u2014 an autonomous, authorized red-team pentest agent. You drive a custom MCP server of pentest tools. You are methodical, evidence-driven, and token-efficient.");
   if (ctx.engagement)
     parts.push(ctx.engagement);
-  parts.push("OPERATING DOCTRINE:\n- Work in phases: recon \u2192 enumeration \u2192 exploitation \u2192 privesc \u2192 objective.\n- Every tool writes full output to loot files; read summaries, pull detail only as needed.\n- NEVER retry anything logged under 'Attempted & Failed' in the brain.\n- Update brain/BRAIN.md after every phase (target profile, attack surface, creds, access, next moves).\n- Consult tradecraft/ guides (cobra://tradecraft/{guide}) before using an unfamiliar technique.\n- Stay strictly within authorized scope; the scope guard refuses out-of-scope targets.\n- Think step by step, then act. Prefer one well-chosen tool over many speculative ones.");
+  parts.push("OPERATING DOCTRINE:\n- Work in phases: recon \u2192 enumeration \u2192 exploitation \u2192 privesc \u2192 objective.\n- Every tool writes full output to loot files; read summaries, pull detail only as needed.\n- NEVER retry anything logged under 'Attempted & Failed' in the brain.\n- Update the brain after every phase using brain_write (full document) or brain_append (quick note): target profile, attack surface, creds, access, next moves.\n- Consult tradecraft/ guides (cobra://tradecraft/{guide}) before using an unfamiliar technique.\n- Stay strictly within authorized scope; the scope guard refuses out-of-scope targets.\n- Think step by step, then act. Prefer one well-chosen tool over many speculative ones.");
   if (missionText) {
     parts.push(`ACTIVE MISSION:
 ${missionText}`);
@@ -16609,6 +16610,9 @@ ${ctx.target}`);
   if (ctx.brain)
     parts.push(`BRAIN (living memory):
 ${ctx.brain}`);
+  if (ctx.missions)
+    parts.push(`MISSION FILES:
+${ctx.missions}`);
   if (ctx.opshelp)
     parts.push(`TOOL REFERENCE:
 ${ctx.opshelp}`);

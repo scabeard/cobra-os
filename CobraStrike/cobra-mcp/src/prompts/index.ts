@@ -22,12 +22,12 @@ export function registerPrompts(server: McpServer): void {
           `- The scope guard enforces this in code; do not attempt to bypass it.\n` +
           `- Every action must be consistent with the engagement's rules of engagement.\n\n` +
           `WORKFLOW:\n` +
-          `1. Read the mission file (brain/missions/*.mission.md).\n` +
+          `1. Read the mission file — cobra://missions shows the missions dir, template, and run command.\n` +
           `2. Set the target (target_set) — it must be in scope.\n` +
           `3. Run standard tools; all output goes to loot files.\n` +
           `4. Read loot summaries; pull detail only as needed.\n` +
-          `5. Update brain/BRAIN.md after every phase.\n` +
-          `6. Consult tradecraft/ guides for techniques.\n` +
+          `5. Update the brain after every phase (brain_write / brain_append).\n` +
+          `6. Consult tradecraft/ guides for techniques (cobra://tradecraft/{guide}).\n` +
           `7. Plan the next move from evidence toward the mission objective.`
       )
   );

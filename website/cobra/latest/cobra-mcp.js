@@ -3227,8 +3227,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path6) {
-      let input = path6;
+    function removeDotSegments(path7) {
+      let input = path7;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3480,8 +3480,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path6, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path6 && path6 !== "/" ? path6 : void 0;
+        const [path7, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path7 && path7 !== "/" ? path7 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -4339,7 +4339,7 @@ var require_core = __commonJS({
       errorsText(errors = this.errors, { separator = ", ", dataVar = "data" } = {}) {
         if (!errors || errors.length === 0)
           return "No errors";
-        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text8, msg) => text8 + separator + msg);
+        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text9, msg) => text9 + separator + msg);
       }
       $dataMetaSchema(metaSchema, keywordsJsonPointers) {
         const rules = this.RULES.all;
@@ -6900,12 +6900,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs4, exportName) {
+    function addFormats(ajv, list, fs5, exportName) {
       var _a3;
       var _b;
       (_a3 = (_b = ajv.opts.code).formats) !== null && _a3 !== void 0 ? _a3 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs4[f]);
+        ajv.addFormat(f, fs5[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -7272,8 +7272,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path6, errorMaps, issueData } = params;
-  const fullPath = [...path6, ...issueData.path || []];
+  const { data, path: path7, errorMaps, issueData } = params;
+  const fullPath = [...path7, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7388,11 +7388,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path6, key) {
+  constructor(parent, value, path7, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path6;
+    this._path = path7;
     this._key = key;
   }
   get path() {
@@ -11313,10 +11313,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path6) {
-  if (!path6)
+function getElementAtPath(obj, path7) {
+  if (!path7)
     return obj;
-  return path6.reduce((acc, key) => acc?.[key], obj);
+  return path7.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -11725,11 +11725,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path6, issues) {
+function prefixIssues(path7, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path6);
+    iss.path.unshift(path7);
     return iss;
   });
 }
@@ -11876,16 +11876,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path6 = []) => {
+  const processError = (error52, path7 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path7, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else {
-        const fullpath = [...path6, ...issue2.path];
+        const fullpath = [...path7, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -11912,17 +11912,17 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path6 = []) => {
+  const processError = (error52, path7 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path7, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else {
-        const fullpath = [...path6, ...issue2.path];
+        const fullpath = [...path7, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -11954,8 +11954,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path6 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path6) {
+  const path7 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path7) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -18185,8 +18185,8 @@ function ko_default() {
 }
 
 // node_modules/zod/v4/locales/lt.js
-var capitalizeFirstCharacter = (text8) => {
-  return text8.charAt(0).toUpperCase() + text8.slice(1);
+var capitalizeFirstCharacter = (text9) => {
+  return text9.charAt(0).toUpperCase() + text9.slice(1);
 };
 function getUnitTypeFromNumber(number4) {
   const abs = Math.abs(number4);
@@ -23067,11 +23067,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path6) {
-  if (path6.length === 0) {
+function getDotPath(path7) {
+  if (path7.length === 0) {
     return "object root";
   }
-  return path6.reduce((acc, seg, index) => {
+  return path7.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -25096,13 +25096,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path6 = ref.slice(1).split("/").filter(Boolean);
-  if (path6.length === 0) {
+  const path7 = ref.slice(1).split("/").filter(Boolean);
+  if (path7.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path6[0] === defsKey) {
-    const key = path6[1];
+  if (path7[0] === defsKey) {
+    const key = path7[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -31892,15 +31892,46 @@ function registerCaptureTools(server) {
   server.tool("listen_stop", "Stop a listener session by ID.", { id: external_exports.string() }, async ({ id }) => text7(stopSession(id) ? `\u{1F6D1} Listener ${id} stopped.` : `No such session: ${id}`));
 }
 
-// build/resources/index.js
+// build/tools/brain.js
 import fs3 from "node:fs";
 import path5 from "node:path";
-function textResource(uri, text8) {
-  return { contents: [{ uri, text: text8 }] };
+function text8(s) {
+  return { content: [{ type: "text", text: s }] };
+}
+function registerBrainTools(server) {
+  server.tool("brain_write", "Replace the ENTIRE brain file with new markdown. Read cobra://brain first, fold in your updates, then write the complete document back. Use after every phase (target profile, attack surface, creds, access, next moves).", {
+    content: external_exports.string().describe("Full new brain markdown \u2014 the complete document, not a diff")
+  }, async ({ content }) => {
+    if (!content.trim()) {
+      return text8("\u26A0\uFE0F brain_write refused: empty content would wipe the brain. Send the full document.");
+    }
+    fs3.mkdirSync(path5.dirname(CONFIG.brainPath), { recursive: true });
+    fs3.writeFileSync(CONFIG.brainPath, content, "utf8");
+    return text8(`\u{1F9E0} Brain written (${content.length} bytes) \u2192 ${CONFIG.brainPath}`);
+  });
+  server.tool("brain_append", "Append a terse dated note to the end of the brain (Lessons Learned lives last). For structured section updates use brain_write instead.", {
+    note: external_exports.string().describe("One-line markdown note to append")
+  }, async ({ note }) => {
+    if (!note.trim())
+      return text8("\u26A0\uFE0F brain_append refused: empty note");
+    fs3.mkdirSync(path5.dirname(CONFIG.brainPath), { recursive: true });
+    const stamp = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    fs3.appendFileSync(CONFIG.brainPath, `
+- ${note.trim()} (${stamp})
+`, "utf8");
+    return text8(`\u{1F9E0} Note appended \u2192 ${CONFIG.brainPath}`);
+  });
+}
+
+// build/resources/index.js
+import fs4 from "node:fs";
+import path6 from "node:path";
+function textResource(uri, text9) {
+  return { contents: [{ uri, text: text9 }] };
 }
 function readFileSafe(p) {
   try {
-    return fs3.readFileSync(p, "utf8");
+    return fs4.readFileSync(p, "utf8");
   } catch {
     return `(not found: ${p})`;
   }
@@ -31938,9 +31969,17 @@ Scope: ${"${SCOPE}"}
 - session_list                 active sessions
 - session_output <id>          tail session output
 - session_kill <id>            stop session
+- brain_write <md>             replace the brain (read cobra://brain first)
+- brain_append <note>          append a dated note to the brain
+
+## Missions
+- Missions are markdown files in the missions dir (next to the brain).
+- cobra://missions shows the exact directory, the template path, and the
+  run command; cobra://missions/{file} reads one.
+- Run one: cobra mission <path-to-file.mission.md> (xint first on COBRA OS).
 
 All tool output \u2192 loot files. Read summaries; pull detail from files only as needed.
-Update brain/BRAIN.md after every phase.
+Update the brain after every phase (brain_write / brain_append).
 `;
 function registerResources(server) {
   server.resource("opshelp", "cobra://opshelp", async (uri) => textResource(uri.href, OPSHELP.replace("${SCOPE}", scopeSummary())));
@@ -31952,11 +31991,48 @@ function registerResources(server) {
     return textResource(uri.href, body);
   });
   server.resource("brain", "cobra://brain", async (uri) => textResource(uri.href, readFileSafe(CONFIG.brainPath)));
-  server.resource("buildplan", "cobra://buildplan", async (uri) => textResource(uri.href, readFileSafe(path5.join(CONFIG.repoRoot, "BUILD_PLAN.md"))));
+  server.resource("buildplan", "cobra://buildplan", async (uri) => textResource(uri.href, readFileSafe(path6.join(CONFIG.repoRoot, "BUILD_PLAN.md"))));
+  const missionsDir = path6.join(path6.dirname(CONFIG.brainPath), "missions");
+  server.resource("missions", "cobra://missions", async (uri) => {
+    let files = [];
+    try {
+      files = fs4.readdirSync(missionsDir).filter((f) => f.endsWith(".mission.md")).sort();
+    } catch {
+    }
+    const body = [
+      `Mission directory: ${missionsDir}`,
+      `Template: ${path6.join(missionsDir, "TEMPLATE.mission.md")}`,
+      `Run one: cobra mission ${path6.join(missionsDir, "<name>.mission.md")}`,
+      "",
+      files.length ? files.map((f) => `- ${f}`).join("\n") : "- (no missions yet \u2014 copy the template)"
+    ].join("\n");
+    return textResource(uri.href, body);
+  });
+  server.resource("mission", new ResourceTemplate("cobra://missions/{file}", {
+    list: async () => {
+      try {
+        const files = fs4.readdirSync(missionsDir).filter((f) => f.endsWith(".md"));
+        return {
+          resources: files.map((f) => ({
+            uri: `cobra://missions/${f}`,
+            name: f,
+            mimeType: "text/markdown"
+          }))
+        };
+      } catch {
+        return { resources: [] };
+      }
+    }
+  }), async (uri, vars) => {
+    const p = path6.join(missionsDir, String(vars.file));
+    if (!p.startsWith(missionsDir))
+      return textResource(uri.href, "(access denied)");
+    return textResource(uri.href, readFileSafe(p));
+  });
   server.resource("loot", new ResourceTemplate("cobra://loot/{path}", {
     list: async () => {
       try {
-        const files = fs3.readdirSync(CONFIG.lootDir);
+        const files = fs4.readdirSync(CONFIG.lootDir);
         return {
           resources: files.map((f) => ({
             uri: `cobra://loot/${f}`,
@@ -31969,7 +32045,7 @@ function registerResources(server) {
       }
     }
   }), async (uri, vars) => {
-    const p = path5.join(CONFIG.lootDir, String(vars.path));
+    const p = path6.join(CONFIG.lootDir, String(vars.path));
     if (!p.startsWith(CONFIG.lootDir))
       return textResource(uri.href, "(access denied)");
     return textResource(uri.href, readFileSafe(p));
@@ -31977,7 +32053,7 @@ function registerResources(server) {
   server.resource("tradecraft", new ResourceTemplate("cobra://tradecraft/{guide}", {
     list: async () => {
       try {
-        const files = fs3.readdirSync(CONFIG.tradecraftDir).filter((f) => f.endsWith(".md"));
+        const files = fs4.readdirSync(CONFIG.tradecraftDir).filter((f) => f.endsWith(".md"));
         return {
           resources: files.map((f) => ({
             uri: `cobra://tradecraft/${f}`,
@@ -31990,7 +32066,7 @@ function registerResources(server) {
       }
     }
   }), async (uri, vars) => {
-    const p = path5.join(CONFIG.tradecraftDir, String(vars.guide));
+    const p = path6.join(CONFIG.tradecraftDir, String(vars.guide));
     if (!p.startsWith(CONFIG.tradecraftDir))
       return textResource(uri.href, "(access denied)");
     return textResource(uri.href, readFileSafe(p));
@@ -32010,12 +32086,12 @@ AUTHORIZATION FRAMING:
 - Every action must be consistent with the engagement's rules of engagement.
 
 WORKFLOW:
-1. Read the mission file (brain/missions/*.mission.md).
+1. Read the mission file \u2014 cobra://missions shows the missions dir, template, and run command.
 2. Set the target (target_set) \u2014 it must be in scope.
 3. Run standard tools; all output goes to loot files.
 4. Read loot summaries; pull detail only as needed.
-5. Update brain/BRAIN.md after every phase.
-6. Consult tradecraft/ guides for techniques.
+5. Update the brain after every phase (brain_write / brain_append).
+6. Consult tradecraft/ guides for techniques (cobra://tradecraft/{guide}).
 7. Plan the next move from evidence toward the mission objective.`));
   server.prompt("recon-triage", "Pick scan depth from fscan \u2192 portscan \u2192 svcscan progression.", { target: external_exports.string().optional() }, async ({ target }) => promptText(`Run recon triage${target ? ` against ${target}` : " against the active target"} (must be in scope: ${scopeSummary()}).
 
@@ -32068,6 +32144,7 @@ async function main() {
   registerExploitTools(server);
   registerPayloadTools(server);
   registerCaptureTools(server);
+  registerBrainTools(server);
   registerResources(server);
   registerPrompts(server);
   const cleanup = () => {

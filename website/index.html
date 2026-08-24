@@ -369,6 +369,10 @@ cobra run "…" --scope "10.10.10.0/24,lab.local"</code></pre>
           <tr><td><code>target_get</code></td><td class="dim">— state —</td><td>show active target</td></tr>
           <tr><td><code>loot_path</code></td><td class="dim">— state —</td><td>show loot directory</td></tr>
 
+          <tr><td class="ops-cat" rowspan="2">brain</td>
+              <td><code>brain_write</code></td><td class="dim">— state —</td><td>rewrite the whole brain (every phase)</td></tr>
+          <tr><td><code>brain_append</code></td><td class="dim">— state —</td><td>append a dated note (lessons learned)</td></tr>
+
           <tr><td class="ops-cat" rowspan="8">recon</td>
               <td><code>recon_fast_scan</code></td><td class="dim">nmap -T4 -F</td><td>cheap first look, top ports</td></tr>
           <tr><td><code>recon_full_scan</code></td><td class="dim">nmap -p-</td><td>full TCP scan</td></tr>
@@ -412,7 +416,8 @@ cobra run "…" --scope "10.10.10.0/24,lab.local"</code></pre>
       <h3 class="strip-title">+ the read-side: resources &amp; prompts</h3>
       <p>The agent also reads <strong>resources</strong> — <code>cobra://opshelp</code> (tool registry),
       <code>capabilities</code>, <code>target</code>, <code>sessions</code>, <code>brain</code>,
-      <code>buildplan</code>, <code>loot/{path}</code>, <code>tradecraft/{guide}</code> — and follows
+      <code>missions</code> (mission dir + template + run command), <code>buildplan</code>,
+      <code>loot/{path}</code>, <code>tradecraft/{guide}</code> — and follows
       <strong>prompts</strong> (<code>authorized-engagement</code>, <code>recon-triage</code>,
       <code>web-assessment</code>, <code>credential-attack</code>) that put common engagements on rails.
       Authoritative reference: <code>CobraStrike/BUILD_PLAN.md</code> §2 (tool↔package manifest) &amp; §4.</p>

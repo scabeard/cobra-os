@@ -122,6 +122,7 @@ The capability probe maps each MCP tool to the binary it needs and the package t
 - **Exploit/privesc (offline-safe):** `exploit_search`, `local_privesc`
 - **Payload/exfil:** `payload_egg_build`, `exfil_upserv_start`, `payload_serve`
 - **Capture/listen (session-managed):** `capture_sniff_start/stop`, `capture_pcap_start/stop`, `listen_start/stop`, `session_list`, `session_output`, `session_kill`
+- **Brain (write side):** `brain_write` (full-document replace — the doctrine's "update the brain every phase" is impossible without it), `brain_append` (dated note; Lessons Learned)
 
 ### Resources
 - `cobra://opshelp` — tool usage registry (self-discovery)
@@ -130,6 +131,8 @@ The capability probe maps each MCP tool to the binary it needs and the package t
 - `cobra://loot/{path}` — loot file tree
 - `cobra://sessions` — active capture/listen sessions
 - `cobra://brain` — current brain state
+- `cobra://missions` — missions dir (absolute), template path, exact run command, mission list
+- `cobra://missions/{file}` — read one mission file
 - `cobra://tradecraft/{guide}` — tradecraft guides
 - `cobra://buildplan` — this file
 

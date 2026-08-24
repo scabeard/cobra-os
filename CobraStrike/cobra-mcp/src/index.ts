@@ -14,6 +14,7 @@ import { registerCredsTools } from "./tools/creds.js";
 import { registerExploitTools } from "./tools/exploit.js";
 import { registerPayloadTools } from "./tools/payload.js";
 import { registerCaptureTools } from "./tools/capture.js";
+import { registerBrainTools } from "./tools/brain.js";
 import { registerResources } from "./resources/index.js";
 import { registerPrompts } from "./prompts/index.js";
 import { stopAllSessions } from "./lib/sessions.js";
@@ -36,6 +37,7 @@ async function main(): Promise<void> {
   registerExploitTools(server);
   registerPayloadTools(server);
   registerCaptureTools(server);
+  registerBrainTools(server);
 
   // Read-side
   registerResources(server);
