@@ -115,7 +115,7 @@ EXAMPLES
   cobra setup --save-key
   cobra models --filter claude
   cobra run "Recon triage the active target and update the brain"
-  cobra mission brain/missions/htb-blue.mission.md --model anthropic/claude-3.5-sonnet
+  cobra mission brain/missions/htb-blue.mission.md --model kwaipilot/kat-coder-pro-v2.5
   cobra chat
 `;
 

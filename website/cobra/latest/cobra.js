@@ -7425,7 +7425,7 @@ import readline2 from "node:readline";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-var DEFAULT_MODEL = "anthropic/claude-3.5-sonnet";
+var DEFAULT_MODEL = "kwaipilot/kat-coder-pro-v2.5";
 var DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
 var HERE = path.dirname(new URL(import.meta.url).pathname);
 var REPO_ROOT = path.resolve(HERE, "..", "..");
@@ -7437,6 +7437,10 @@ function defaultServer() {
     // node
     args: [serverEntry],
     env: {
+      // The MCP SDK spawns the server with a WHITELISTED inherited env plus
+      // exactly this map — nothing else from the client's environment crosses
+      // over, so every COBRA_* knob must be forwarded here explicitly.
+      COBRA_REPO_ROOT: process.env.COBRA_REPO_ROOT ?? REPO_ROOT,
       COBRA_ALLOW_INTERNET: process.env.COBRA_ALLOW_INTERNET ?? "0",
       COBRA_ALLOWED_SCOPE: process.env.COBRA_ALLOWED_SCOPE ?? "",
       COBRA_LOOT_DIR: process.env.COBRA_LOOT_DIR ?? path.join(REPO_ROOT, "loot"),
@@ -16778,7 +16782,7 @@ EXAMPLES
   cobra setup --save-key
   cobra models --filter claude
   cobra run "Recon triage the active target and update the brain"
-  cobra mission brain/missions/htb-blue.mission.md --model anthropic/claude-3.5-sonnet
+  cobra mission brain/missions/htb-blue.mission.md --model kwaipilot/kat-coder-pro-v2.5
   cobra chat
 `;
 async function connectMcp(overrides) {

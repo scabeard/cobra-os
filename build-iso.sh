@@ -40,7 +40,12 @@ DEBIAN_SUITE="${DEBIAN_SUITE:-trixie}"
 # live-boot params: `persistence` enables LUKS sticks (BUILD_PLAN §5),
 # `noswap` keeps RAM-only semantics. `toram` is deliberately NOT default
 # (doubles RAM use) — TAB-edit it in at the boot menu when wanted.
-BOOTAPPEND="${BOOTAPPEND:-boot=live noswap persistence quiet}"
+# Serial console (2026-08-24): console=tty0 keeps the local screen live,
+# console=ttyS0 (LAST console= wins /dev/console) makes systemd auto-start
+# serial-getty@ttyS0 — the VM is drivable over COM1 (VirtualBox Host Pipe /
+# QEMU -serial) with no per-boot TAB-edit. Local console, not a network
+# listener, so no hardening default moves. BOOTAPPEND=... overrides all of it.
+BOOTAPPEND="${BOOTAPPEND:-boot=live noswap persistence quiet console=tty0 console=ttyS0,115200}"
 
 require_root() {
   if [[ $EUID -ne 0 ]]; then
@@ -155,7 +160,42 @@ if [[ " ${COBRA_PROFILES:-} " == *" ai "* ]]; then
     done
     cp "$PROJECT_DIR/CobraStrike/cobra-client/dist/cobra.js" "$STAGE/cobra.js"
     cp "$PROJECT_DIR/CobraStrike/cobra-mcp/dist/cobra-mcp.js" "$STAGE/cobra-mcp.js"
-    echo "[*] staged CobraStrike bundles (ai profile)"
+    # Doctrine tree the agent reads at runtime: brain (living memory + mission
+    # template + playbooks), tradecraft guides, the CobraStrike mkegg variant
+    # (payload_egg_build), and the build plan (cobra://buildplan resource).
+    # Without these the server's repo-relative path defaults resolve to "/" on
+    # an installed box and every knowledge lookup comes back "(not found)".
+    cp -r "$PROJECT_DIR/CobraStrike/brain" "$STAGE/brain"
+    cp -r "$PROJECT_DIR/CobraStrike/tradecraft" "$STAGE/tradecraft"
+    mkdir -p "$STAGE/cobra-scripts"
+    cp "$PROJECT_DIR/CobraStrike/scripts/mkegg.sh" "$STAGE/cobra-scripts/mkegg.sh"
+    cp "$PROJECT_DIR/CobraStrike/BUILD_PLAN.md" "$STAGE/cobra-buildplan.md"
+    echo "[*] staged CobraStrike bundles + doctrine tree (ai profile)"
+    # Optional operator-key bake (2026-08-23): same mechanism as the rootfs
+    # build — the local, gitignored key file (secrets/openrouter.key, relative
+    # to the project dir; override with COBRA_OPENROUTER_KEY_FILE) rides the
+    # stage dir so chroot-setup.sh installs it as the operator's
+    # ~/.config/cobra/credentials (0600) — no typing/pasting long keys into
+    # console VMs. Self-built, self-used images ONLY: the squashfs embeds the
+    # key in plaintext, so a keyed image must never be distributed. The key's
+    # content is never logged. NB: $PROJECT_DIR prefix is mandatory — this
+    # script cd's into $LB_DIR.
+    COBRA_KEY_FILE="${COBRA_OPENROUTER_KEY_FILE:-$PROJECT_DIR/secrets/openrouter.key}"
+    if [[ -f "$COBRA_KEY_FILE" ]]; then
+        if grep -q '[^[:space:]]' "$COBRA_KEY_FILE"; then
+            install -m 0600 "$COBRA_KEY_FILE" "$STAGE/openrouter.key"
+            echo "[*] staged operator OpenRouter key ($COBRA_KEY_FILE)"
+            echo "[!] baking a live OpenRouter key into this image — do NOT distribute it" >&2
+        else
+            echo "[!] $COBRA_KEY_FILE is empty — ignoring (the image will prompt for a key instead)" >&2
+        fi
+    else
+        echo "[*] no operator key staged ($COBRA_KEY_FILE absent) — the image will prompt on first cobra run"
+    fi
+else
+    if [[ -f "${COBRA_OPENROUTER_KEY_FILE:-$PROJECT_DIR/secrets/openrouter.key}" ]]; then
+        echo "[!] ${COBRA_OPENROUTER_KEY_FILE:-$PROJECT_DIR/secrets/openrouter.key} exists but COBRA_PROFILES lacks 'ai' — key NOT staged (no CobraStrike in this image)" >&2
+    fi
 fi
 chmod +x "$STAGE/chroot-setup.sh"
 
@@ -188,6 +228,12 @@ ${COBRA_PROFILES:+export COBRA_PROFILES='$COBRA_PROFILES'}
 if [[ " ${COBRA_PROFILES:-} " == *" ai "* ]]; then
     if [[ ! -x /usr/local/bin/cobra ]]; then
         echo "[!] COBRA_PROFILES=ai but /usr/local/bin/cobra is missing — the staged bundles never reached the chroot" >&2
+        exit 1
+    fi
+    # Same fail-loudly for the optional operator-key bake: if a key was
+    # staged, it must have landed as the operator's credentials file.
+    if [[ -f /root/cobra-stage/openrouter.key && ! -s /home/${OPERATOR_USER:-operator}/.config/cobra/credentials ]]; then
+        echo "[!] staged OpenRouter key did not land in /home/${OPERATOR_USER:-operator}/.config/cobra/credentials" >&2
         exit 1
     fi
 fi
@@ -325,6 +371,49 @@ EOCFG
 fi
 EOF
 chmod +x config/hooks/normal/9010-cobra-theme.hook.binary
+
+echo "[*] Writing the COBRA serial-console hook (BIOS+UEFI boot menus over COM1)..."
+# Pairs with the console=ttyS0 in BOOTAPPEND: the KERNEL gets a serial console
+# via the boot line, but the BOOTLOADERS need their own serial directives or
+# the boot menu is invisible/unusable over the wire (headless VMs can't pick
+# an entry or type a LUKS passphrase). Same rules as the theme hook: binary
+# stage, cwd = binary/, lb regenerates the cfgs every build so we rewrite
+# them every build, and guards make cosmetics never fail the build.
+mkdir -p config/hooks/normal
+cat > config/hooks/normal/9020-cobra-serial.hook.binary << 'EOF'
+#!/bin/bash
+# COBRA OS — binary-stage serial hook: drive the boot menus over COM1.
+set -e
+
+# --- isolinux (BIOS) -------------------------------------------------------
+# SERIAL <port> <baud>: bios/efi boot prompt + vesamenu I/O on ttyS0 while
+# keeping the VGA console. Port 0 = COM1 (0x3F8), 115200 8N1.
+if [ -d isolinux ]; then
+    if grep -q '^SERIAL' isolinux/isolinux.cfg 2>/dev/null; then
+        sed -i 's/^SERIAL.*/SERIAL 0 115200/' isolinux/isolinux.cfg
+    else
+        sed -i '1i SERIAL 0 115200' isolinux/isolinux.cfg
+    fi
+fi
+
+# --- GRUB (BIOS + UEFI) ----------------------------------------------------
+# lb's grub.cfg starts with `source /boot/grub/config.cfg`, so a prepended
+# serial+terminal block there applies to every entry (live, failsafe,
+# verify-checksums). Both terminals stay live: screen AND serial.
+if [ -d boot/grub ]; then
+    if [ -f boot/grub/config.cfg ]; then
+        grep -q '^serial ' boot/grub/config.cfg || \
+            sed -i '1i serial --unit=0 --speed=115200 --word=8 --parity=no --stop=1\nterminal_input serial console\nterminal_output serial console' \
+                boot/grub/config.cfg
+    else
+        printf '%s\n' \
+            'serial --unit=0 --speed=115200 --word=8 --parity=no --stop=1' \
+            'terminal_input serial console' \
+            'terminal_output serial console' > boot/grub/config.cfg
+    fi
+fi
+EOF
+chmod +x config/hooks/normal/9020-cobra-serial.hook.binary
 
 # On reruns, lb marks chroot_includes complete and skips it — leaving the
 # chroot with a stale (or missing) stage dir. Copy the stage directly into

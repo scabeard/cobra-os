@@ -10,7 +10,9 @@
 # release.sh calls it automatically, and the files are committed with the site.
 #
 # Mirrored: install.sh + the bundled dist/cobra.js AND dist/cobra-mcp.js (under
-# latest/). The client bundle is ~600 KB and the server bundle similar —
+# latest/) + a doctrine tarball (brain + tradecraft + mkegg + BUILD_PLAN.md) that
+# install.sh fetches into ~/.cobra/. The client bundle is ~600 KB, the server
+# bundle similar, and the doctrine tree is a few dozen KB of Markdown —
 # comfortably under the Cloudflare Pages 25 MiB per-file cap, so both ship on
 # the clearnet Pages site AND the .onion mirror (unlike the ISO, onion-only).
 
@@ -68,5 +70,41 @@ if ! cmp -s "$SERVER_BUNDLE_SRC" "$MIRROR/latest/cobra-mcp.js"; then
     changed=1
 fi
 
+# --- doctrine tree (latest/cobra-doctrine.tar.gz) -----------------------------
+# install.sh extracts this into ~/.cobra/ so the installed MCP server resolves
+# brain/tradecraft/missions/mkegg/build-plan (its repo-relative defaults derive
+# to $HOME there). Repack whenever any source file is newer than the tarball —
+# mtime-compare like the bundles above. Deterministic enough for a mirror:
+# sorted file list, -C into the CobraStrike root so paths land at brain/… etc.
+COBRA_ROOT="$(cd "$SITE_DIR/../CobraStrike" && pwd)"
+DOCTRINE_OUT="$MIRROR/latest/cobra-doctrine.tar.gz"
+DOCTRINE_SOURCES=(
+    "$COBRA_ROOT/brain"
+    "$COBRA_ROOT/tradecraft"
+    "$COBRA_ROOT/scripts/mkegg.sh"
+    "$COBRA_ROOT/BUILD_PLAN.md"
+)
+repack=0
+if [[ ! -f "$DOCTRINE_OUT" ]]; then
+    repack=1
+else
+    for s in "${DOCTRINE_SOURCES[@]}"; do
+        if [[ -n "$(find "$s" -newer "$DOCTRINE_OUT" -print -quit 2>/dev/null)" ]]; then
+            repack=1
+            break
+        fi
+    done
+fi
+if [[ $repack -eq 1 ]]; then
+    echo "[*] (re)packing the doctrine tree (brain + tradecraft + mkegg + BUILD_PLAN.md)..."
+    tar -czf "$DOCTRINE_OUT" -C "$COBRA_ROOT" \
+        brain \
+        tradecraft \
+        scripts/mkegg.sh \
+        BUILD_PLAN.md
+    echo "[*] packed latest/cobra-doctrine.tar.gz"
+    changed=1
+fi
+
 [[ $changed -eq 0 ]] && echo "[*] website/cobra/ already in sync"
-echo "[+] mirror ready: install.sh + latest/cobra.js + latest/cobra-mcp.js -> website/cobra/"
+echo "[+] mirror ready: install.sh + latest/cobra.js + latest/cobra-mcp.js + latest/cobra-doctrine.tar.gz -> website/cobra/"

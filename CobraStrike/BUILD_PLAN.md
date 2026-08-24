@@ -10,7 +10,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  AI (Cline / KAT-Coder-2 via OpenRouter)                    │
+│  AI (KAT-Coder Pro v2.5 via OpenRouter — cobra-client)                    │
 │  ├── reads mission file (brain/missions/*.mission.md)       │
 │  ├── drives cobra-mcp tools                                 │
 │  ├── reads scan output from loot files (token-efficient)    │
@@ -108,6 +108,7 @@ The capability probe maps each MCP tool to the binary it needs and the package t
 | `COBRA_LOOT_DIR` | `./loot` | Where all tool output lands |
 | `COBRA_BRAIN_PATH` | `./brain/BRAIN.md` | Brain file location |
 | `COBRA_TRADECRAFT_DIR` | `./tradecraft` | Tradecraft guides location |
+| `COBRA_REPO_ROOT` | *(repo root)* | Root for `scripts/` + `BUILD_PLAN.md` lookups. Set to `/etc/cobra` on baked COBRA OS images, or to `~/.cobra` by the generic `install.sh` launcher (the bundle's derived default would be `/` / `$HOME`). The client forwards it to the server (the MCP SDK spawns with a whitelisted env — nothing crosses unless the client passes it). |
 
 ---
 

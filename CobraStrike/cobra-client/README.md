@@ -42,8 +42,13 @@ cobra doctor               # verify everything
 > **installs it for you** if missing — via `apt` (Debian/Parrot) first, falling
 > back to a static tarball from nodejs.org into `~/.cobra/node/`. It drops the
 > client bundle **and** the `cobra-mcp` server bundle in `~/.cobra/`, a `cobra`
-> launcher in `~/.local/bin/`, and points the client at the installed server via
-> `~/.config/cobra/config.json` — so `cobra doctor` passes on a fresh box.
+> launcher in `~/.local/bin/`, the doctrine tree (`brain/` + mission template +
+> playbooks, `tradecraft/`, `scripts/mkegg.sh`, `BUILD_PLAN.md`) in `~/.cobra/`,
+> and points the client at the installed server via `~/.config/cobra/config.json`
+> — so `cobra doctor` passes on a fresh box. The launcher exports
+> `COBRA_REPO_ROOT`/`COBRA_BRAIN_PATH`/`COBRA_TRADECRAFT_DIR` at the install dir
+> (server path defaults would otherwise derive to `$HOME`) and `COBRA_LOOT_DIR`
+> at `/dev/shm/cobra-loot` (RAM).
 
 ### Build from source instead
 
@@ -76,7 +81,7 @@ cobra <command> [options]
 
 | Flag | Default | Purpose |
 |---|---|---|
-| `--model <id>` | `anthropic/claude-3.5-sonnet` | OpenRouter model id |
+| `--model <id>` | `kwaipilot/kat-coder-pro-v2.5` | OpenRouter model id |
 | `--api-key <key>` | — | Key (else env / saved / hidden prompt) |
 | `--base-url <url>` | `https://openrouter.ai/api/v1` | Override endpoint (proxy/gateway) |
 | `--scope <cidrs>` | — | Set `COBRA_ALLOWED_SCOPE` on the server |
@@ -93,7 +98,7 @@ cobra <command> [options]
 cobra run "Recon triage the active target and update the brain"
 
 # Execute a mission file with a specific model
-cobra mission brain/missions/htb-blue.mission.md --model anthropic/claude-3.5-sonnet
+cobra mission brain/missions/htb-blue.mission.md --model kwaipilot/kat-coder-pro-v2.5
 
 # Interactive session
 cobra chat
@@ -151,15 +156,20 @@ The site serves static files from `cobra-os.com/cobra/` (and the `.onion`
 mirror), synced from this repo by `website/sync-cobra.sh`:
 
 ```
-https://cobra-os.com/cobra/install.sh            # this repo's install.sh
-https://cobra-os.com/cobra/latest/cobra.js       # client:  cobra-client/dist/cobra.js
-https://cobra-os.com/cobra/latest/cobra-mcp.js   # server:  cobra-mcp/dist/cobra-mcp.js
+https://cobra-os.com/cobra/install.sh                  # this repo's install.sh
+https://cobra-os.com/cobra/latest/cobra.js             # client:  cobra-client/dist/cobra.js
+https://cobra-os.com/cobra/latest/cobra-mcp.js         # server:  cobra-mcp/dist/cobra-mcp.js
+https://cobra-os.com/cobra/latest/cobra-doctrine.tar.gz # brain/ + tradecraft/ + scripts/mkegg.sh + BUILD_PLAN.md
 ```
 
-`install.sh` downloads **both** bundles and wires up the `cobra` command,
-configuring the client to spawn the installed `cobra-mcp.js` (no repo checkout
-needed). To ship an update, edit the client or server, then run
-`website/sync-cobra.sh` (it rebuilds each bundle if its `src/` is newer) and
+`install.sh` downloads **both** bundles **and the doctrine tree** (extracted to
+`~/.cobra/`, wired in by the launcher's `COBRA_*` env exports — the server's
+repo-relative path defaults derive to `$HOME` on an installed box), and wires
+up the `cobra` command, configuring the client to spawn the installed
+`cobra-mcp.js` (no repo checkout needed). To ship an update, edit the client,
+server, brain, or tradecraft, then run
+`website/sync-cobra.sh` (it rebuilds each bundle if its `src/` is newer, and
+repacks the doctrine tarball when any brain/tradecraft/script file changes) and
 commit the mirror — users re-run the installer to update.
 
 ---

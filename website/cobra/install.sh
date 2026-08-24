@@ -17,9 +17,13 @@
 #      then a static tarball from nodejs.org into ~/.cobra/node).
 #   2. Downloads the client bundle (cobra.js) AND the MCP server bundle
 #      (cobra-mcp.js) to ~/.cobra/.
-#   3. Drops a `cobra` launcher into ~/.local/bin and points the client at the
+#   3. Downloads the doctrine tree (brain/BRAIN.md + mission template +
+#      playbooks, tradecraft/ guides, scripts/mkegg.sh, BUILD_PLAN.md) into
+#      ~/.cobra/ — the server's repo-relative path defaults derive to ~/ on
+#      an installed box, so these make brain/tradecraft/missions/eggs work.
+#   4. Drops a `cobra` launcher into ~/.local/bin and points the client at the
 #      installed server via ~/.config/cobra/config.json.
-#   4. Verifies the install with `cobra doctor`.
+#   5. Verifies the install with `cobra doctor`.
 #
 # The OpenRouter API key is NOT handled here — run `cobra setup` after install.
 
@@ -30,12 +34,16 @@ set -euo pipefail
 # bundle is fetched over HTTPS from cobra-os.com/cobra/ — or, on the onion,
 # set COBRA_BASE_URL to the onion address and fetch over Tor.
 COBRA_BASE_URL="${COBRA_BASE_URL:-https://cobra-os.com/cobra}"
-COBRA_VERSION="${COBRA_VERSION:-latest}"
+# Bundle URLs are FIXED (latest/ path pinned) so operators can override
+# COBRA_BASE_URL with the onion address without reconstructing /latest/ on a
+# plain-HTTP hidden service.
+BUNDLE_URL="${COBRA_BASE_URL}/latest/cobra.js"
+SERVER_BUNDLE_URL="${COBRA_BASE_URL}/latest/cobra-mcp.js"
+# Doctrine tree (brain + tradecraft + mkegg + build plan) — same origin.
+DOCTRINE_URL="${COBRA_BASE_URL}/latest/cobra-doctrine.tar.gz"
 INSTALL_DIR="${COBRA_INSTALL_DIR:-$HOME/.cobra}"
 BUNDLE_NAME="cobra.js"
 SERVER_BUNDLE_NAME="cobra-mcp.js"
-BUNDLE_URL="${COBRA_BASE_URL}/${COBRA_VERSION}/${BUNDLE_NAME}"
-SERVER_BUNDLE_URL="${COBRA_BASE_URL}/${COBRA_VERSION}/${SERVER_BUNDLE_NAME}"
 # Static Node fallback (used only if apt has no nodejs). LTS line.
 NODE_DIST_VERSION="${COBRA_NODE_VERSION:-v20.18.1}"
 
@@ -143,6 +151,21 @@ fetch "$SERVER_BUNDLE_URL" "$SERVER_TARGET" || die "Server download failed."
 chmod +x "$SERVER_TARGET"
 ok "MCP server bundle installed to $SERVER_TARGET"
 
+# --- 2b. Doctrine tree (brain, tradecraft, mkegg, build plan) ----------------
+# The server's repo-relative path defaults derive to $HOME on an installed box
+# (bundle at ~/.cobra/cobra-mcp.js → ../.. = ~), which makes cobra://brain,
+# cobra://tradecraft/*, cobra://buildplan, and payload_egg_build useless. The
+# client forwards COBRA_REPO_ROOT/COBRA_BRAIN_PATH/COBRA_TRADECRAFT_DIR to the
+# server — the launcher below exports them at the install dir, and this
+# tarball fills it. Brain/loot stay operator-writable (agent rewrites both).
+DOCTRINE_TMP="$(mktemp)"
+say "Fetching ${DOCTRINE_URL} …"
+fetch "$DOCTRINE_URL" "$DOCTRINE_TMP" || die "Doctrine tree download failed."
+mkdir -p "$INSTALL_DIR"
+tar -xzf "$DOCTRINE_TMP" -C "$INSTALL_DIR" || { rm -f "$DOCTRINE_TMP"; die "Doctrine tree extract failed (corrupt tarball?)."; }
+rm -f "$DOCTRINE_TMP"
+ok "Doctrine tree installed to ${INSTALL_DIR}/ (brain, tradecraft, scripts)"
+
 # Mark the install dir as ESM. Both bundles are built with esbuild format=esm
 # (import banner + import.meta), but installed as plain .js files. Without a
 # package.json#type here, Node parses .js as CommonJS and crashes with
@@ -181,6 +204,16 @@ fi
 LAUNCHER="${LAUNCHER_DIR}/cobra"
 cat > "$LAUNCHER" <<EOF
 #!/usr/bin/env bash
+# CobraStrike installed launcher. Point the server at the doctrine tree
+# installed here — the MCP SDK spawns the server with a whitelisted env plus
+# the client's explicit map, and server defaults are repo-relative (they'd
+# resolve to \$HOME from ~/.cobra/cobra-mcp.js). Operator-set env always wins.
+# Loot defaults to RAM (/dev/shm) — gone on reboot.
+export COBRA_REPO_ROOT="\${COBRA_REPO_ROOT:-$INSTALL_DIR}"
+export COBRA_BRAIN_PATH="\${COBRA_BRAIN_PATH:-$INSTALL_DIR/brain/BRAIN.md}"
+export COBRA_TRADECRAFT_DIR="\${COBRA_TRADECRAFT_DIR:-$INSTALL_DIR/tradecraft}"
+export COBRA_LOOT_DIR="\${COBRA_LOOT_DIR:-/dev/shm/cobra-loot}"
+mkdir -p "\$COBRA_LOOT_DIR" 2>/dev/null || true
 # Resolve node: prefer PATH, fall back to the installer's static tarball.
 if command -v node >/dev/null 2>&1; then
   exec node "$TARGET" "\$@"
@@ -214,3 +247,5 @@ say "Next steps:"
 say "  1. cobra setup --save-key     # store your OpenRouter key (0600)"
 say "  2. cobra models               # pick a model"
 say "  3. cobra run \"Recon triage the active target\""
+say "  4. cp $INSTALL_DIR/brain/missions/TEMPLATE.mission.md $INSTALL_DIR/brain/missions/<op>.mission.md"
+say "     cobra mission $INSTALL_DIR/brain/missions/<op>.mission.md"

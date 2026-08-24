@@ -92,7 +92,7 @@ cp splash.png "$STAGE/splash.png"
 # CobraStrike AI operator (COBRA_PROFILES=ai): stage the pre-built bundles only
 # for ai builds so the minimal image never carries the Node stack. chroot-setup
 # installs them when the profile is active. Rebuild dist/ first if stale.
-if [[ " $COBRA_PROFILES " == *" ai "* ]]; then
+if [[ " ${COBRA_PROFILES:-} " == *" ai "* ]]; then
     for b in "CobraStrike/cobra-client/dist/cobra.js" "CobraStrike/cobra-mcp/dist/cobra-mcp.js"; do
         if [[ ! -f "$b" ]]; then
             echo "[!] COBRA_PROFILES=ai but $b is missing — run: (cd CobraStrike/cobra-client && npm run bundle) and (cd CobraStrike/cobra-mcp && npm run bundle)" >&2
@@ -101,7 +101,40 @@ if [[ " $COBRA_PROFILES " == *" ai "* ]]; then
     done
     cp CobraStrike/cobra-client/dist/cobra.js "$STAGE/cobra.js"
     cp CobraStrike/cobra-mcp/dist/cobra-mcp.js "$STAGE/cobra-mcp.js"
-    echo "[*] staged CobraStrike bundles (ai profile)"
+    # Doctrine tree the agent reads at runtime: brain (living memory + mission
+    # template + playbooks), tradecraft guides, the CobraStrike mkegg variant
+    # (payload_egg_build), and the build plan (cobra://buildplan resource).
+    # Without these the server's repo-relative path defaults resolve to "/" on
+    # an installed box and every knowledge lookup comes back "(not found)".
+    cp -r CobraStrike/brain "$STAGE/brain"
+    cp -r CobraStrike/tradecraft "$STAGE/tradecraft"
+    mkdir -p "$STAGE/cobra-scripts"
+    cp CobraStrike/scripts/mkegg.sh "$STAGE/cobra-scripts/mkegg.sh"
+    cp CobraStrike/BUILD_PLAN.md "$STAGE/cobra-buildplan.md"
+    echo "[*] staged CobraStrike bundles + doctrine tree (ai profile)"
+    # Optional operator-key bake (2026-08-23): a local, gitignored key file
+    # (secrets/openrouter.key; override with COBRA_OPENROUTER_KEY_FILE) rides
+    # the stage dir so chroot-setup.sh can install it as the operator's
+    # ~/.config/cobra/credentials (0600) — no typing/pasting long keys into
+    # console VMs. Self-built, self-used images ONLY: the squashfs embeds the
+    # key in plaintext, so a keyed image must never be distributed. The key's
+    # content is never logged.
+    COBRA_KEY_FILE="${COBRA_OPENROUTER_KEY_FILE:-secrets/openrouter.key}"
+    if [[ -f "$COBRA_KEY_FILE" ]]; then
+        if grep -q '[^[:space:]]' "$COBRA_KEY_FILE"; then
+            install -m 0600 "$COBRA_KEY_FILE" "$STAGE/openrouter.key"
+            echo "[*] staged operator OpenRouter key ($COBRA_KEY_FILE)"
+            echo "[!] baking a live OpenRouter key into this image — do NOT distribute it" >&2
+        else
+            echo "[!] $COBRA_KEY_FILE is empty — ignoring (the image will prompt for a key instead)" >&2
+        fi
+    else
+        echo "[*] no operator key staged ($COBRA_KEY_FILE absent) — the image will prompt on first cobra run"
+    fi
+else
+    if [[ -f "${COBRA_OPENROUTER_KEY_FILE:-secrets/openrouter.key}" ]]; then
+        echo "[!] ${COBRA_OPENROUTER_KEY_FILE:-secrets/openrouter.key} exists but COBRA_PROFILES lacks 'ai' — key NOT staged (no CobraStrike in this image)" >&2
+    fi
 fi
 
 chmod +x "$STAGE/chroot-setup.sh"

@@ -79,9 +79,18 @@ sudo COBRA_PROFILES="ai" ./build-iso.sh              # bake in the CobraStrike A
 > **`COBRA_PROFILES=ai`** bakes the CobraStrike AI operator into the image at
 > build time (managed `nodejs` + the pre-built `cobra.js`/`cobra-mcp.js` bundles
 > in `/etc/cobra/`, system launcher `/usr/local/bin/cobra`, and a `cobra`
-> operator command). No runtime `curl | bash`, no PATH fiddling — `cobra run
+> operator command). The full doctrine tree ships too: `/etc/cobra/brain/`
+> (living memory — operator-owned, plus `missions/TEMPLATE.mission.md` and
+> playbooks), `/etc/cobra/tradecraft/`, and `/etc/cobra/scripts/mkegg.sh`; the
+> launcher wires the server to them via `COBRA_*` env and drops loot in
+> `/dev/shm/cobra-loot` (RAM). Run a mission with `cobra mission
+> /etc/cobra/brain/missions/<name>.mission.md`. No runtime `curl | bash`, no
+> PATH fiddling — `cobra run
 > "<task>"` works on first login after `xint` and `cobra setup --save-key`
-> (your own OpenRouter key, stored 0600). The core build stays Node-free; the
+> (your own OpenRouter key, stored 0600) — or skip key entry entirely by
+> dropping your key in the gitignored `secrets/openrouter.key` before
+> building (self-built, self-used images only: **never distribute a keyed
+> image**, and use a dedicated, credit-capped key). The core build stays Node-free; the
 > generic site `install.sh` remains for non-COBRA boxes. The bundles are staged
 > from `CobraStrike/*/dist/` — run `npm run bundle` in each if they're stale.
 
@@ -101,6 +110,14 @@ Smoke test (no /dev/kvm needed, just slower):
 ```bash
 qemu-system-x86_64 -m 2G -cdrom cobra-os-*.iso
 ```
+
+Serial console is baked in: the boot line carries `console=tty0
+console=ttyS0,115200` and the bootloaders (isolinux + GRUB) are on COM1
+too, so the whole boot — menu, LUKS passphrase, login — is drivable over
+serial. QEMU: add `-serial mon:stdio`. VirtualBox: Settings → Serial
+Ports → COM1 → Host Pipe (server), and point a second VM's COM1 (client)
+at the same pipe for VM-to-VM control. Autologin is tty1-only, so the
+serial getty asks for the operator password.
 
 Quick rootfs test meanwhile: `sudo chroot ./rootfs /bin/bash`
 

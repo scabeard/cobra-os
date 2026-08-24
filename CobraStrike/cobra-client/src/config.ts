@@ -25,7 +25,7 @@ export interface ServerSpec {
 export interface ClientConfig {
   /** OpenRouter secret key — in-memory only. */
   apiKey: string;
-  /** OpenRouter model id, e.g. "anthropic/claude-3.5-sonnet". */
+  /** OpenRouter model id, e.g. "kwaipilot/kat-coder-pro-v2.5". */
   model: string;
   /** OpenRouter base URL (override for proxies/gateways). */
   baseUrl: string;
@@ -43,7 +43,7 @@ export interface ClientConfig {
   siteName?: string;
 }
 
-export const DEFAULT_MODEL = "anthropic/claude-3.5-sonnet";
+export const DEFAULT_MODEL = "kwaipilot/kat-coder-pro-v2.5";
 export const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
 
 /** Repo root = cobra-client/build/.. → ../.. (i.e. the CobraStrike checkout). */
@@ -57,6 +57,10 @@ function defaultServer(): ServerSpec {
     command: process.execPath, // node
     args: [serverEntry],
     env: {
+      // The MCP SDK spawns the server with a WHITELISTED inherited env plus
+      // exactly this map — nothing else from the client's environment crosses
+      // over, so every COBRA_* knob must be forwarded here explicitly.
+      COBRA_REPO_ROOT: process.env.COBRA_REPO_ROOT ?? REPO_ROOT,
       COBRA_ALLOW_INTERNET: process.env.COBRA_ALLOW_INTERNET ?? "0",
       COBRA_ALLOWED_SCOPE: process.env.COBRA_ALLOWED_SCOPE ?? "",
       COBRA_LOOT_DIR:

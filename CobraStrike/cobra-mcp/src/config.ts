@@ -37,7 +37,10 @@ export function loadConfig(): CobraConfig {
     lootDir: process.env.COBRA_LOOT_DIR ?? path.join(REPO_ROOT, "loot"),
     brainPath: process.env.COBRA_BRAIN_PATH ?? path.join(REPO_ROOT, "brain", "BRAIN.md"),
     tradecraftDir: process.env.COBRA_TRADECRAFT_DIR ?? path.join(REPO_ROOT, "tradecraft"),
-    repoRoot: REPO_ROOT,
+    // Installed COBRA OS images set COBRA_REPO_ROOT=/etc/cobra (the bundle lives
+    // in /etc/cobra, so the derived default would be "/" — scripts/ + BUILD_PLAN
+    // lookups would break).
+    repoRoot: process.env.COBRA_REPO_ROOT ?? REPO_ROOT,
   };
 }
 

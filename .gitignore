@@ -11,3 +11,7 @@
 # (website/downloads/*.sha256 stays tracked — see website/downloads/.gitignore.)
 /*.iso
 /*.iso.sha256
+
+# Local operator secrets (e.g. secrets/openrouter.key — optionally baked into
+# self-built, self-used images at build time; NEVER commit). See BUILD_PLAN.md 2a.
+/secrets/

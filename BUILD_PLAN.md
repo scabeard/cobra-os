@@ -183,7 +183,7 @@ ghostip.sh/linpeas, `strace` for cobrashell `tit`).
 | `ad` | python3-impacket impacket-scripts responder netexec bloodhound.py | AD/Windows ops |
 | `exploit` | metasploit-framework | msfconsole is a TTY citizen (exploitdb/searchsploit is core — see §2) |
 | `webplus` | mitmproxy ffuf seclists wpscan php-cli | mitmproxy **replaces burpsuite** (Java GUI — dead weight without X); php-cli runs the vendored upload_server.php (`upserv`) |
-| `ai` | nodejs | CobraStrike AI operator, **baked in at build time** — pre-built `cobra.js`/`cobra-mcp.js` staged to `/etc/cobra/`, system launcher `/usr/local/bin/cobra`, `cobra()` cobra-ops function. No runtime curl; uses the operator's OWN OpenRouter key (0600), never COBRA infra's |
+| `ai` | nodejs | CobraStrike AI operator, **baked in at build time** — pre-built `cobra.js`/`cobra-mcp.js` + the doctrine tree (brain/missions/playbooks, tradecraft, `scripts/mkegg.sh`, CobraStrike `BUILD_PLAN.md`) staged to `/etc/cobra/`, system launcher `/usr/local/bin/cobra` (exports `COBRA_REPO_ROOT`/`COBRA_BRAIN_PATH`/`COBRA_TRADECRAFT_DIR`/`COBRA_LOOT_DIR`), `cobra()` cobra-ops function. No runtime curl; uses the operator's OWN OpenRouter key (0600), never COBRA infra's |
 
 Retired profiles: `headless` (obsolete — every build is headless now).
 
@@ -197,6 +197,41 @@ Retired profiles: `headless` (obsolete — every build is headless now).
 > Node-free — `nodejs` and the bundles land only when `ai` is requested.
 > The generic `install.sh` (curl from the site) remains for **non-COBRA**
 > boxes; on COBRA OS the baked-in path wins.
+>
+> **Doctrine tree fix (2026-08-24).** Earlier ai builds staged only the two
+> bundles — the server's repo-relative path defaults then resolved to `/` on
+> the installed box, so `cobra://brain`, `cobra://tradecraft/*`,
+> `cobra://buildplan`, and `payload_egg_build` (scripts/mkegg.sh) were all
+> broken. Now: `brain/` (+ `missions/TEMPLATE.mission.md`, `playbooks/`),
+> `tradecraft/`, `scripts/mkegg.sh`, and the CobraStrike `BUILD_PLAN.md` are
+> installed under `/etc/cobra/`; the launcher exports `COBRA_REPO_ROOT`
+> (`/etc/cobra`), `COBRA_BRAIN_PATH`, `COBRA_TRADECRAFT_DIR`, and
+> `COBRA_LOOT_DIR` (default `/dev/shm/cobra-loot` — RAM, gone on reboot).
+> `COBRA_REPO_ROOT` is a new server env knob forwarded by the client (the MCP
+> SDK spawns the server with a whitelisted env — nothing crosses unless the
+> client passes it).
+> `/etc/cobra/brain` is chowned to the operator — the agent rewrites BRAIN.md
+> every phase; everything else stays root-owned read-only. Missions run as
+> `cobra mission /etc/cobra/brain/missions/<name>.mission.md` (copy the
+> template first). The generic `install.sh` path got the same treatment the same
+> day: `website/sync-cobra.sh` now also packs `latest/cobra-doctrine.tar.gz`
+> (brain + tradecraft + `scripts/mkegg.sh` + the CobraStrike `BUILD_PLAN.md`),
+> `install.sh` extracts it into `~/.cobra/`, and its launcher exports the same
+> `COBRA_*` env (loot at `/dev/shm/cobra-loot`). Non-COBRA boxes get the full
+> doctrine tree from the site — same as the baked image.
+>
+> **Optional operator-key bake (2026-08-23).** If `secrets/openrouter.key`
+> (gitignored, host-local; override the path with `COBRA_OPENROUTER_KEY_FILE`)
+> exists at build time, the build scripts stage it (`build-iso.sh` for the
+> ISO, `build-rootfs.sh` for the bare rootfs) and `chroot-setup.sh`
+> installs it as the operator's `~/.config/cobra/credentials` (0600, plus
+> `/etc/skel` for future users) — the client's saved-key resolver picks it up
+> before any prompt, so console-VM testing needs zero key entry (no clipboard
+> exists on a tty). The key's content is never logged or committed. **Never
+> distribute a keyed image**: the squashfs embeds the key in plaintext and
+> LUKS persistence doesn't cover the read-only image. Use a dedicated,
+> credit-capped OpenRouter key for baked images. No key file at build time →
+> the interactive `cobra setup --save-key` flow is unchanged.
 
 ## §3. Web access (console-only)
 
@@ -246,9 +281,13 @@ Applied in `chroot-setup.sh` (idempotent):
   `chroot-setup.sh` with `COBRA_ISO=1`, then purges `live-config*` (its
   passwordless-sudo `user` / `debian` hostname would fight the baked
   operator/hostname).
-- Boot params: `boot=live noswap persistence quiet`. `persistence` +
-  cryptsetup = LUKS persistence sticks; `noswap` keeps RAM-only semantics;
-  `toram` is a deliberate TAB-edit (doubles RAM use).
+- Boot params: `boot=live noswap persistence quiet console=tty0
+  console=ttyS0,115200`. `persistence` + cryptsetup = LUKS persistence
+  sticks; `noswap` keeps RAM-only semantics; `toram` is a deliberate
+  TAB-edit (doubles RAM use). The two `console=` entries give a dual
+  console: the local screen stays live (tty0) while the LAST one wins
+  `/dev/console` (ttyS0), so systemd auto-starts `serial-getty@ttyS0` —
+  the VM is controllable over COM1 with zero per-boot edits.
 - LUKS persistence stick recipe: create a second partition on the USB,
   `cryptsetup luksFormat` + `mkfs.ext4 -L persistence`, and an
   `persistence.conf` of `/ union` inside it — live-boot unlocks/mounts it
@@ -260,6 +299,26 @@ Applied in `chroot-setup.sh` (idempotent):
   the project dir has one). Rebuilt ISO lands back in the project dir with
   a `.sha256`.
 - Smoke test: `qemu-system-x86_64 -m 2G -cdrom cobra-os-*.iso`.
+- Serial console (2026-08-24): baked in, no per-boot TAB-edit. The boot
+  line carries `console=tty0 console=ttyS0,115200` (kernel messages +
+  auto `serial-getty@ttyS0`), and binary hook
+  `9020-cobra-serial.hook.binary` puts the BOOTLOADERS on serial too —
+  isolinux gets `SERIAL 0 115200`, GRUB gets `serial` +
+  `terminal_input/output serial console` prepended into `config.cfg`
+  (sourced first by grub.cfg). BIOS and UEFI boot menus are therefore
+  drivable over COM1: pick entries, TAB-edit, type the LUKS passphrase
+  headless. Both screens stay live (dual console). Attach with QEMU
+  `-serial mon:stdio`, or VirtualBox Settings → Serial Ports → COM1 →
+  Host Pipe (server) — point a second VM's COM1 (client) at the same
+  pipe for VM-to-VM control. Autologin is tty1-only: the serial getty
+  wants the operator password, and the first-login forced `passwd` fires
+  on the serial path too. Override the whole line with `BOOTAPPEND=...`.
+- OpenRouter key in VM tests: bake it at build time (§2a — gitignored
+  `secrets/openrouter.key`) and boots need no key entry at all. For images
+  built WITHOUT a baked key, paste over the serial console instead of the
+  QEMU window: add `-serial mon:stdio` and the console lands in your host
+  terminal where clipboard paste works (autologin is tty1-only — the
+  serial getty wants the operator password).
 - Boot theme: `splash.png` overlays `isolinux/splash.png` +
   `boot/grub/splash.png` via `config/includes.binary` (the exact paths lb's
   own templates reference), and binary hook `9010-cobra-theme.hook.binary`

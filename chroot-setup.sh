@@ -244,17 +244,48 @@ if [[ -f "$STAGE/cobra.js" && -f "$STAGE/cobra-mcp.js" ]]; then
     # ESM marker: bundles are esbuild format=esm; without this a .js file with
     # no package.json#type is parsed as CommonJS and dies on the import banner.
     printf '{ "type": "module" }\n' > /etc/cobra/package.json
+    # Doctrine tree (2026-08-24): brain (living memory + mission template +
+    # playbooks), tradecraft guides, the CobraStrike mkegg variant
+    # (payload_egg_build runs it), and the CobraStrike build plan
+    # (cobra://buildplan resource). The server resolves all of these via the
+    # COBRA_* env exported by the launcher below — its repo-relative defaults
+    # don't exist on an installed box. Brain is chowned to the operator later
+    # (below the account creation) — the agent rewrites it every phase.
+    install -d -m 0755 /etc/cobra/brain /etc/cobra/brain/missions \
+        /etc/cobra/brain/playbooks /etc/cobra/tradecraft /etc/cobra/scripts
+    install -m 0644 "$STAGE/brain/BRAIN.md" /etc/cobra/brain/BRAIN.md
+    install -m 0644 "$STAGE/brain/missions/TEMPLATE.mission.md" \
+        /etc/cobra/brain/missions/TEMPLATE.mission.md
+    for f in "$STAGE/brain/playbooks/"*.md; do
+        install -m 0644 "$f" /etc/cobra/brain/playbooks/
+    done
+    for f in "$STAGE/tradecraft/"*.md; do
+        install -m 0644 "$f" /etc/cobra/tradecraft/
+    done
+    install -m 0755 "$STAGE/cobra-scripts/mkegg.sh" /etc/cobra/scripts/mkegg.sh
+    install -m 0644 "$STAGE/cobra-buildplan.md" /etc/cobra/BUILD_PLAN.md
     # System launcher on the standard PATH — no ~/.local/bin, no PATH edits.
     # The client only honors the server path via CLI flags or ~/.config/cobra/
     # config.json (it does NOT read a system config), so pass --server-command/
-    # --server-args here. CLI flags always beat the client's repo-checkout
-    # default. The operator's OpenRouter key still goes to the per-user
+    # --server-args here; the server's on-disk paths (brain, tradecraft, mkegg,
+    # build plan) come from the COBRA_* env below — repo-relative defaults
+    # resolve to "/" from /etc/cobra/cobra-mcp.js. CLI flags and operator-set
+    # env always win. The operator's OpenRouter key still goes to the per-user
     # ~/.config/cobra/credentials (0600) via `cobra setup --save-key`.
     cat > /usr/local/bin/cobra << 'EOF'
 #!/usr/bin/env bash
 # COBRA OS system launcher for the CobraStrike AI operator (ai profile).
-# Bundles + server live system-wide in /etc/cobra; the client is pointed at the
-# server via CLI flags (its config-file default expects a repo checkout).
+# Bundles + doctrine tree live system-wide in /etc/cobra. The client is
+# pointed at the server via CLI flags (its config-file default expects a repo
+# checkout); the server's file paths come from the COBRA_* env here (the MCP
+# SDK only forwards whitelisted env + the client's explicit map, and server
+# defaults are repo-relative). Operator-set env always wins. Loot defaults to
+# RAM (/dev/shm) — gone on reboot, matching the live-OS amnesiac posture.
+export COBRA_REPO_ROOT="${COBRA_REPO_ROOT:-/etc/cobra}"
+export COBRA_BRAIN_PATH="${COBRA_BRAIN_PATH:-/etc/cobra/brain/BRAIN.md}"
+export COBRA_TRADECRAFT_DIR="${COBRA_TRADECRAFT_DIR:-/etc/cobra/tradecraft}"
+export COBRA_LOOT_DIR="${COBRA_LOOT_DIR:-/dev/shm/cobra-loot}"
+mkdir -p "$COBRA_LOOT_DIR" 2>/dev/null || true
 exec /usr/bin/node /etc/cobra/cobra.js \
     --server-command /usr/bin/node \
     --server-args /etc/cobra/cobra-mcp.js \
@@ -505,6 +536,48 @@ if [ -t 0 ] && [ "\$(id -un 2>/dev/null)" = "${OPERATOR_USER}" ] && [ ! -e "\$HO
     fi
 fi
 EOF
+
+# --- Baked operator OpenRouter key (optional, build-time opt-in) ------------
+# build-rootfs.sh stages $STAGE/openrouter.key (from the gitignored, host-local
+# secrets/openrouter.key) only for ai-profile builds. Install it as the
+# per-user CobraStrike credentials file so the operator never types/pastes a
+# long key into a console VM — the client's readSavedKey() picks it up before
+# any prompt. /etc/skel gets a copy so future users inherit it via useradd -m;
+# the operator home gets it directly (covers SKIP_DEBOOTSTRAP=1 warm builds).
+# The key's content is never logged; the staged copy dies with $STAGE.
+if [[ -f "$STAGE/openrouter.key" ]]; then
+    echo "[*] Installing baked operator OpenRouter key (per-user, 0600)..."
+    COBRA_KEY="$(tr -d '[:space:]' < "$STAGE/openrouter.key")"
+    if [[ -z "$COBRA_KEY" ]]; then
+        echo "[!] staged openrouter.key is empty — skipping (cobra setup --save-key still works)" >&2
+    else
+        if [[ "$COBRA_KEY" != sk-or-* ]]; then
+            echo "[!] staged key lacks the usual sk-or- prefix — installing anyway" >&2
+        fi
+        install -d -m 0700 /etc/skel/.config /etc/skel/.config/cobra
+        printf 'OPENROUTER_API_KEY=%s\n' "$COBRA_KEY" > /etc/skel/.config/cobra/credentials
+        chmod 0600 /etc/skel/.config/cobra/credentials
+        if [[ -d "/home/$OPERATOR_USER" ]]; then
+            mkdir -p "/home/$OPERATOR_USER/.config/cobra"
+            printf 'OPENROUTER_API_KEY=%s\n' "$COBRA_KEY" > "/home/$OPERATOR_USER/.config/cobra/credentials"
+            chmod 0700 "/home/$OPERATOR_USER/.config/cobra"
+            chmod 0600 "/home/$OPERATOR_USER/.config/cobra/credentials"
+            chown -R "$OPERATOR_USER:$OPERATOR_USER" "/home/$OPERATOR_USER/.config"
+        fi
+        unset COBRA_KEY
+        echo "[!] this image contains a live OpenRouter key — do NOT distribute it" >&2
+    fi
+fi
+
+# CobraStrike brain ownership (ai profile): the brain is the agent's living
+# memory — the operator (who runs the agent) rewrites it on every phase, so
+# the tree must be operator-owned. Bundles, tradecraft guides, mkegg, and the
+# build plan stay root-owned (0644/0755, read-only for the agent). No-op on
+# non-ai builds (the dir only exists when the doctrine tree was installed).
+if [[ -d /etc/cobra/brain ]]; then
+    echo "[*] chown CobraStrike brain -> $OPERATOR_USER (agent rewrites it)..."
+    chown -R "$OPERATOR_USER:$OPERATOR_USER" /etc/cobra/brain
+fi
 
 echo "[*] Hardening: locking root account (sudo-only access)..."
 passwd -l root
