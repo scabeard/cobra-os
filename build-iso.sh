@@ -435,6 +435,34 @@ if [[ -d chroot ]]; then
   chmod +x chroot/root/cobra-stage/chroot-setup.sh
 fi
 
+# Pre-flight: fail fast if the filesystem can't hold the image. The failure we
+# are guarding against (2026-08-24): xorriso is the LAST step of `lb build` and
+# refuses to write unless its whole estimated image fits on the destination fs —
+# a near-full disk (old ISO still sitting in the project dir, same fs) makes the
+# entire long build abort at the very end with "Image size exceeds free space on
+# media". Check BOTH filesystems involved: $LB_DIR (where xorriso writes the
+# live-image-*.hybrid.iso) and $ISO_OUT's dir (where the finished ISO is moved).
+# Need >= the known-good image size with headroom for the estimate being low.
+# Override with ISO_NEED_BYTES / ISO_HEADROOM_BYTES if a profile grows the image.
+ISO_KNOWN_GOOD_BYTES="${ISO_KNOWN_GOOD_BYTES:-2609577984}"   # 2026-08-24 ai build
+ISO_HEADROOM_BYTES="${ISO_HEADROOM_BYTES:-536870912}"        # 512M safety margin
+ISO_NEED_BYTES=$(( ISO_KNOWN_GOOD_BYTES + ISO_HEADROOM_BYTES ))
+_iso_check_space() { # <dir> <label>
+    local dir="$1" label="$2" avail
+    mkdir -p "$dir" 2>/dev/null || true
+    avail=$(df -B1 --output=avail "$dir" 2>/dev/null | tail -1 | tr -d '[:space:]')
+    if [[ -n "$avail" && "$avail" =~ ^[0-9]+$ && "$avail" -lt "$ISO_NEED_BYTES" ]]; then
+        echo "[-] Not enough space for the ISO on $label ($dir):" >&2
+        echo "      free:  $(( avail / 1024 / 1024 )) MiB" >&2
+        echo "      needs: $(( ISO_NEED_BYTES / 1024 / 1024 )) MiB (image + headroom)" >&2
+        echo "    Free space (e.g. remove an old cobra-os-*.iso) and re-run." >&2
+        exit 1
+    fi
+    echo "[*] disk check: $label ($dir) has $(( ${avail:-0} / 1024 / 1024 )) MiB free (need $(( ISO_NEED_BYTES / 1024 / 1024 )) MiB)"
+}
+_iso_check_space "$LB_DIR" "build tree"
+_iso_check_space "$(dirname "$ISO_OUT")" "ISO output"
+
 echo "[*] lb build — fresh chroot + full toolset install; this is the long one..."
 lb build
 
@@ -444,6 +472,9 @@ if [[ -z "$ISO_SRC" ]]; then
   exit 1
 fi
 
+# ISO_OUT is on the same fs as the project dir (default). Ensure IT can hold the
+# image too — xorriso already guaranteed LB_DIR, but mv across the same fs is a
+# rename; if ISO_OUT pointed at another fs it'd be a copy needing its own room.
 mv -f "$ISO_SRC" "$ISO_OUT"
 # Record the hash with the bare filename so `sha256sum -c` works from the
 # ISO's directory (the absolute path also contains a space).
