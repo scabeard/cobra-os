@@ -116,6 +116,12 @@ cobra setup --save-key     # stored 0600, never sent here
 cobra run "Recon triage the active target"
 ```
 
+The `#cobrastrike` section of `index.html` is the human reference: it documents
+the full operator CLI (7 subcommands + flags) and the agent's 27 MCP tools
+(grouped by category), alongside the resources/prompts read-side. Keep it in
+sync with `../CobraStrike/BUILD_PLAN.md` §2/§4 (the authoritative tool
+manifest) whenever the client CLI or the `cobra-mcp` tool set changes.
+
 Mirrored files: `install.sh` + `latest/cobra.js` (the esbuild single-file
 bundle, ~600 KB — well under the Pages cap, so it ships on **both** the
 clearnet site and the onion). `_headers` serves `install.sh` as `text/plain`

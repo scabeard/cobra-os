@@ -327,6 +327,96 @@ cobra run "…" --scope "10.10.10.0/24,lab.local"</code></pre>
         needs it — token-efficient by design. The brain updates after every phase.</p>
       </div>
     </div>
+
+    <h3 class="strip-title">the operator CLI — <code>cobra &lt;subcommand&gt;</code></h3>
+    <p class="sec-lede">The launcher takes seven subcommands. On COBRA OS the <code>cobra()</code> function
+    gates the four that call OpenRouter (<code>run</code>/<code>chat</code>/<code>models</code>/<code>mission</code>)
+    behind <code>xint</code>; the local ones (<code>setup</code>/<code>tools</code>/<code>doctor</code>) run ungated.</p>
+    <div class="ops-table-wrap">
+      <table class="ops-table">
+        <thead>
+          <tr><th>subcommand</th><th>what it does</th><th>network</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>run [task]</code></td><td>one-shot headless task (interactive chat if no task given)</td><td class="dim">OpenRouter — xint-gated</td></tr>
+          <tr><td><code>mission &lt;file&gt;</code></td><td>execute a <code>brain/missions/*.mission.md</code> file</td><td class="dim">OpenRouter — xint-gated</td></tr>
+          <tr><td><code>chat</code></td><td>interactive REPL with the agent</td><td class="dim">OpenRouter — xint-gated</td></tr>
+          <tr><td><code>models</code></td><td>list / pick OpenRouter models (<code>--filter</code>)</td><td class="dim">OpenRouter — xint-gated</td></tr>
+          <tr><td><code>setup</code></td><td>configure model + store your key (<code>--save-key</code>, 0600)</td><td class="dim">local</td></tr>
+          <tr><td><code>tools</code></td><td>list the tools the MCP server exposes</td><td class="dim">local (stdio)</td></tr>
+          <tr><td><code>doctor</code></td><td>sanity-check server, API key, connectivity</td><td class="dim">local</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="sec-lede" style="margin-top:14px">Flags: <code>--model</code> <code>--api-key</code>
+    <code>--base-url</code> <code>--scope</code> <code>--loot-dir</code> <code>--max-turns</code>
+    <code>--temperature</code> <code>--max-tokens</code> <code>--save-key</code>
+    <code>--server-command</code>/<code>--server-args</code> <code>--verbose</code>.</p>
+    <h3 class="strip-title" style="margin-top:34px">the agent's tools — what the AI can call</h3>
+    <p class="sec-lede">The model never runs raw shell. It calls these tools on the <code>cobra-mcp</code>
+    server over stdio, and the server enforces the scope guard in code. The set is
+    <strong>self-discovered at runtime</strong> — the client pulls it via <code>listTools()</code> and the
+    <code>cobra://opshelp</code> resource, so <code>cobra tools</code> always shows the live list. Every
+    network-touching tool validates its target against <code>COBRA_ALLOWED_SCOPE</code>.</p>
+    <div class="ops-table-wrap">
+      <table class="ops-table">
+        <thead>
+          <tr><th>category</th><th>MCP tool</th><th>runs</th><th>purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="ops-cat" rowspan="3">session</td>
+              <td><code>target_set &lt;host&gt;</code></td><td class="dim">— state —</td><td>set active target (must be in scope)</td></tr>
+          <tr><td><code>target_get</code></td><td class="dim">— state —</td><td>show active target</td></tr>
+          <tr><td><code>loot_path</code></td><td class="dim">— state —</td><td>show loot directory</td></tr>
+
+          <tr><td class="ops-cat" rowspan="8">recon</td>
+              <td><code>recon_fast_scan</code></td><td class="dim">nmap -T4 -F</td><td>cheap first look, top ports</td></tr>
+          <tr><td><code>recon_full_scan</code></td><td class="dim">nmap -p-</td><td>full TCP scan</td></tr>
+          <tr><td><code>recon_service_scan</code></td><td class="dim">nmap -sV -sC</td><td>service/version on discovered ports</td></tr>
+          <tr><td><code>recon_vuln_scan</code></td><td class="dim">nmap vulners</td><td>⚠️ slow + noisy</td></tr>
+          <tr><td><code>recon_udp_scan</code></td><td class="dim">nmap -sU top-100</td><td>UDP (sudo)</td></tr>
+          <tr><td><code>recon_dns</code></td><td class="dim">dig any</td><td>DNS lookup</td></tr>
+          <tr><td><code>recon_whois</code></td><td class="dim">whois</td><td>WHOIS lookup</td></tr>
+          <tr><td><code>recon_smb_enum</code></td><td class="dim">nmap smb NSE</td><td>SMB OS / shares / users</td></tr>
+
+          <tr><td class="ops-cat" rowspan="3">web</td>
+              <td><code>web_dir_brute</code></td><td class="dim">ffuf / gobuster</td><td>directory brute-force</td></tr>
+          <tr><td><code>web_vuln_scan</code></td><td class="dim">nikto</td><td>⚠️ noisy web scan</td></tr>
+          <tr><td><code>web_sql_inject</code></td><td class="dim">sqlmap --batch</td><td>SQL injection</td></tr>
+
+          <tr><td class="ops-cat" rowspan="3">creds</td>
+              <td><code>creds_brute</code></td><td class="dim">hydra -t4 -f</td><td>⚠️ loud online brute (throttled)</td></tr>
+          <tr><td><code>creds_crack_john</code></td><td class="dim">john</td><td>CPU hash cracking</td></tr>
+          <tr><td><code>creds_crack_hashcat</code></td><td class="dim">hashcat -m</td><td>GPU hash cracking</td></tr>
+
+          <tr><td class="ops-cat" rowspan="2">exploit</td>
+              <td><code>exploit_search</code></td><td class="dim">searchsploit</td><td>offline exploit-db (always safe)</td></tr>
+          <tr><td><code>local_privesc</code></td><td class="dim">linpeas</td><td>local privesc paths</td></tr>
+
+          <tr><td class="ops-cat" rowspan="3">payload</td>
+              <td><code>payload_egg_build</code></td><td class="dim">mkegg.sh</td><td>self-extracting implant</td></tr>
+          <tr><td><code>exfil_upserv_start</code></td><td class="dim">python3 http.server</td><td>HTTP up/download server (session)</td></tr>
+          <tr><td><code>payload_serve</code></td><td class="dim">python3 http.server</td><td>serve loot dir for delivery (session)</td></tr>
+
+          <tr><td class="ops-cat" rowspan="6">capture</td>
+              <td><code>listen_start</code></td><td class="dim">nc -lvnp</td><td>reverse-shell listener (session)</td></tr>
+          <tr><td><code>capture_sniff_start</code></td><td class="dim">tcpdump</td><td>live sniff (session)</td></tr>
+          <tr><td><code>capture_pcap_start</code></td><td class="dim">tshark -w</td><td>pcap capture (session)</td></tr>
+          <tr><td><code>session_list</code></td><td class="dim">— sessions —</td><td>list active capture/listen sessions</td></tr>
+          <tr><td><code>session_output</code></td><td class="dim">— sessions —</td><td>tail a session's output</td></tr>
+          <tr><td><code>session_kill</code></td><td class="dim">— sessions —</td><td>stop a session (+ <code>*_stop</code> aliases)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="cobrashell-strip">
+      <h3 class="strip-title">+ the read-side: resources &amp; prompts</h3>
+      <p>The agent also reads <strong>resources</strong> — <code>cobra://opshelp</code> (tool registry),
+      <code>capabilities</code>, <code>target</code>, <code>sessions</code>, <code>brain</code>,
+      <code>buildplan</code>, <code>loot/{path}</code>, <code>tradecraft/{guide}</code> — and follows
+      <strong>prompts</strong> (<code>authorized-engagement</code>, <code>recon-triage</code>,
+      <code>web-assessment</code>, <code>credential-attack</code>) that put common engagements on rails.
+      Authoritative reference: <code>CobraStrike/BUILD_PLAN.md</code> §2 (tool↔package manifest) &amp; §4.</p>
+    </div>
     <div class="callout callout-red">
       <strong>authorized use only.</strong> The scope guard is baked into the MCP server, not the client —
       every network-touching tool validates its target against <code>COBRA_ALLOWED_SCOPE</code> and refuses
