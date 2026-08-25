@@ -73,7 +73,9 @@ cat > /etc/apt/apt.conf.d/90cobra-noninteractive << 'EOF'
 // COBRA OS: fully non-interactive dpkg/apt — a build or upgrade must never
 // stop on a conffile question. Keep the locally-modified config (our hardening
 // edits win); default to the package version only when unmodified.
-DPkg::Options { "--force-confold"; "--force-confdef"; "--assume-yes"; };
+DPkg::Options { "--force-confold"; "--force-confdef"; };
+// --assume-yes is an APT option only; putting it in DPkg::Options makes dpkg
+// abort with "unknown option" (seen in the 2026-08-25 binary_syslinux phase).
 APT::Get::Assume-Yes "true";
 APT::Listchanges::Frontend "none";
 EOF
