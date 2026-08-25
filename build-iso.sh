@@ -437,6 +437,20 @@ chmod +x config/hooks/normal/9020-cobra-serial.hook.binary
 # chroot with a stale (or missing) stage dir. Copy the stage directly into
 # an existing chroot so the hook always runs the CURRENT chroot-setup.sh.
 if [[ -d chroot ]]; then
+  # CRITICAL (2026-08-25): a reused chroot built by the pre-fix chroot-setup.sh
+  # carries a poisoned /etc/apt/apt.conf.d/90cobra-noninteractive with
+  # "--assume-yes" inside DPkg::Options. --assume-yes is an APT-only option;
+  # apt forwards it to dpkg, which aborts EVERY package pass with
+  # "dpkg: error: unknown option --assume-yes". The hook rewrites this file
+  # correctly at hook stage, but lb runs chroot_package-lists BEFORE
+  # chroot_hooks — so a stale tree dies before it can self-heal. Scrub the
+  # poisoned snippet here whenever we touch an existing chroot (the hook
+  # recreates it correctly later).
+  if [[ -f chroot/etc/apt/apt.conf.d/90cobra-noninteractive ]] \
+    && grep -q '"--assume-yes"' chroot/etc/apt/apt.conf.d/90cobra-noninteractive; then
+    echo "[*] Scrubbing stale poisoned apt snippet (90cobra-noninteractive: --assume-yes in DPkg::Options)..."
+    rm -f chroot/etc/apt/apt.conf.d/90cobra-noninteractive
+  fi
   rm -rf chroot/root/cobra-stage   # same staleness hazard as includes.chroot
   mkdir -p chroot/root/cobra-stage
   cp "$PROJECT_DIR/chroot-setup.sh" chroot/root/cobra-stage/chroot-setup.sh
