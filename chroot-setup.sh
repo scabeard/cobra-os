@@ -80,7 +80,11 @@ BASE_PKGS=(
     network-manager
     openssh-client
     sudo
-    vim-tiny
+    # nano: the operator's text editor (2026-08-24) — console-native, ~1 MB.
+    # Replacing vim-tiny after the first ai build found no usable editor for
+    # on-box file work (missions, brain, configs). vim was already shipped —
+    # this is an editor swap, not a stack-up; justification in BUILD_PLAN.md §2.
+    nano
     python3 python3-pip python3-venv
     curl
     iproute2

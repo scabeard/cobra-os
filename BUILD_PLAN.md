@@ -1,5 +1,13 @@
 # COBRA OS — build plan & decision log
 
+> **2026-08-24: editor swap — nano replaces vim-tiny in BASE_PKGS.** The first
+> ai-profile boot exposed that the minimal image had no usable on-box editor
+> (mission files, the brain, configs): `vim.tiny` shipped but `vi` is hostile
+> to casual editing. Swapped `vim-tiny` → `nano` in BASE_PKGS (~1 MiB,
+> console-only, zero new dependencies); justification row added in §2. This is
+> an editor *swap*, not a stack-up — one text editor per image, operator-facing.
+> Every other default unchanged.
+
 > **2026-08-20: login-flow fix pass.** The VM boot→login sequence was
 > fighting over the screen: `agetty --noclear` printed `/etc/issue` (red
 > ASCII banner), then cobrashell's figlet banner re-printed on EVERY shell
@@ -168,6 +176,7 @@ Registry rule: **function in `shell/cobra-ops.sh` ↔ package in
 | — | macchanger | MAC ops |
 | — | wireguard-tools | wg tunnels (`ghostdev`) |
 | — (dashboard) | tmux (BASE) | panes/splits; `xtmux` hidden socket |
+| — (editing) | nano (BASE) | operator text editor — console-native, ~1 MiB. Swapped in for vim-tiny 2026-08-24: every image already had *an* editor, but `vi` was unusable for on-box work (missions, brain, configs). Editor swap, not a new layer. |
 
 Base system packages (init, network, shell plumbing) are listed in
 `BASE_PKGS` with inline justifications in `chroot-setup.sh` — including the
