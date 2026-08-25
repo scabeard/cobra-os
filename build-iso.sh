@@ -76,6 +76,14 @@ fi
 mkdir -p "$LB_DIR"
 cd "$LB_DIR"
 
+# Stale-lock / state cleanup (2026-08-25): a build killed mid-way (C-c, OOM,
+# or any earlier E: exit) leaves live-build's lock held and every subsequent
+# run dies instantly with "lb chroot_devpts already locked" / similar. rm -f
+# the lock + state file before ANY lb invocation so every build starts clean.
+# This sits BEFORE the marker-clearing block below — a stale lock would make
+# even that harmless prep fail.
+rm -f .build/lock .build/state 2>/dev/null || true
+
 if [[ -d config ]]; then
   echo "[*] Reusing existing live-build tree at $LB_DIR"
   echo "    (rm -rf '$LB_DIR' to reconfigure from scratch)"
