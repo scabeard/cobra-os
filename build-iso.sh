@@ -78,11 +78,11 @@ cd "$LB_DIR"
 
 # Stale-lock / state cleanup (2026-08-25): a build killed mid-way (C-c, OOM,
 # or any earlier E: exit) leaves live-build's lock held and every subsequent
-# run dies instantly with "lb chroot_devpts already locked" / similar. rm -f
-# the lock + state file before ANY lb invocation so every build starts clean.
-# This sits BEFORE the marker-clearing block below — a stale lock would make
-# even that harmless prep fail.
-rm -f .build/lock .build/state 2>/dev/null || true
+# run dies instantly with "lb chroot_devpts already locked" / similar. The
+# lock file is live-build's own `Acquire_lockfile` helper and defaults to
+# `.lock` at the build ROOT ($LB_DIR), not under .build/ — clear the right
+# file. (`.build/lock`+`.build/state` were my earlier wrong guesses.)
+rm -f .lock 2>/dev/null || true
 
 if [[ -d config ]]; then
   echo "[*] Reusing existing live-build tree at $LB_DIR"
