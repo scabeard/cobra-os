@@ -152,7 +152,15 @@ CORE_PKGS=(
     whois
     dnsutils
     sqlmap
+    # nikto 2.6 hard-requires the JSON + XML::Writer perl modules at startup
+    # (nikto.pl load_modules() prints "ERROR: Required module not found" and
+    # exits 1), but the Parrot package only Depends: perl:any +
+    # libnet-ssleay-perl — on minbase + --no-install-recommends nothing else
+    # pulls them in, so nikto died at launch on the first ISO (2026-08-25).
+    # libjson-perl/libxml-writer-perl are pure perl, Depends: perl:any (~1 MB).
     nikto
+    libjson-perl
+    libxml-writer-perl
     gobuster
     tshark
     dirb

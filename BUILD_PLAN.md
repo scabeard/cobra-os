@@ -154,7 +154,7 @@ Registry rule: **function in `shell/cobra-ops.sh` ↔ package in
 | `smbenum` | enum4linux-ng | SMB/Windows null-session enum (shares, users, policy) |
 | `webdir` | gobuster | directory brute-force |
 | `webdir` (wordlist) | dirb, wordlists | `common.txt`, `rockyou.txt` |
-| `webvuln` | nikto | web server scan |
+| `webvuln` | nikto, libjson-perl, libxml-writer-perl | web server scan (the two perl modules are nikto 2.6 startup hard-requirements the Parrot package under-declares — without them nikto exits 1 with "Required module not found"; see `chroot-setup.sh` CORE_PKGS) |
 | `sql` | sqlmap | SQL injection (python3 runtime) |
 | `brute` | hydra | service brute-force + rockyou |
 | `crack` | john | hash cracking |
