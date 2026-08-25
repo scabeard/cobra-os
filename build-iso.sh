@@ -128,6 +128,16 @@ rm -f .build/binary_* 2>/dev/null || true
 # /root/cobra-stage and (for ai builds) silently skips the CobraStrike install,
 # shipping an ISO with nodejs but no cobra launcher. Force a re-copy every build.
 rm -f .build/chroot_includes* 2>/dev/null || true
+# CRITICAL (2026-08-24): clear the kernel-stage marker too. We clear binary_*,
+# hooks, and includes so our staged files/hook always re-run — but a surviving
+# .build/chroot_linux-image marker makes lb SKIP the chroot kernel install,
+# then binary_linux-image does `cp chroot/boot/vmlinuz-*` against an empty
+# /boot and aborts: "cannot stat 'chroot/boot/vmlinuz-*'". Force a re-install
+# whenever we re-run the chroot (idempotent; initramfs rebuilds need a kernel).
+rm -f .build/chroot_linux-image* 2>/dev/null || true
+# NOTE: the dpkg conffile non-interactivity (2026-08-24 /etc/issue prompt) is
+# handled INSIDE the chroot by chroot-setup.sh's /etc/apt/apt.conf.d/90cobra-*
+# drop-in — env vars here don't reliably cross into live-build's chroot'd apt.
 
 echo "[*] Staging COBRA files into config/includes.chroot ..."
 STAGE="config/includes.chroot/root/cobra-stage"

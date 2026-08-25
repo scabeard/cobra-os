@@ -63,6 +63,21 @@ cat > /etc/apt/apt.conf.d/90cobra-no-cache << 'EOF'
 APT::Keep-Downloaded-Packages "false";
 EOF
 
+echo "[*] Apt hygiene: never prompt on conffile changes (builds + upgrades)..."
+# 2026-08-24: a Parrot base-files upgrade shipped an /etc/issue conffile change
+# and dpkg stopped the ISO build on an interactive prompt despite
+# DEBIAN_FRONTEND=noninteractive. This drop-in lives in the chroot, so it
+# covers live-build's package phases AND the operator's own apt runs later:
+# keep our edited configs, never block, never ask.
+cat > /etc/apt/apt.conf.d/90cobra-noninteractive << 'EOF'
+// COBRA OS: fully non-interactive dpkg/apt — a build or upgrade must never
+// stop on a conffile question. Keep the locally-modified config (our hardening
+// edits win); default to the package version only when unmodified.
+DPkg::Options { "--force-confold"; "--force-confdef"; "--assume-yes"; };
+APT::Get::Assume-Yes "true";
+APT::Listchanges::Frontend "none";
+EOF
+
 echo "[*] Importing Parrot signing key..."
 wget -qO- https://deb.parrot.sh/parrot/misc/parrotsec.gpg \
   | gpg --batch --yes --dearmor -o /usr/share/keyrings/parrot-archive-keyring.gpg
