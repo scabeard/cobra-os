@@ -25,16 +25,46 @@ export interface TunnelInfo {
   via: string;
 }
 
+/**
+ * Multi-target registry (Phase 7). `activeTarget` is the most recently set
+ * target (backward compatible with the single-target API); `targets` is the
+ * full engagement set, most-recent-first. Concurrent targets are first-class:
+ * recon on one foothold doesn't clobber the operator's focus on another.
+ */
 let activeTarget: string | null = null;
+const targets: string[] = [];
 const sessions = new Map<string, SessionInfo>();
 let sessionCounter = 0;
 
 export function setTarget(t: string): void {
   activeTarget = t;
+  const i = targets.indexOf(t);
+  if (i !== -1) targets.splice(i, 1);
+  targets.unshift(t); // most-recent-first
 }
 
 export function getTarget(): string | null {
   return activeTarget;
+}
+
+/** All registered targets, most-recent-first. */
+export function listTargets(): string[] {
+  return [...targets];
+}
+
+/** Remove a target; clears activeTarget if it was the active one. */
+export function removeTarget(t: string): boolean {
+  const i = targets.indexOf(t);
+  if (i === -1) return false;
+  targets.splice(i, 1);
+  if (activeTarget === t) activeTarget = targets[0] ?? null;
+  return true;
+}
+
+/** Drop all targets. */
+export function clearTargets(): void {
+  targets.length = 0;
+  activeTarget = null;
 }
 
 export function nextSessionId(kind: string): string {

@@ -8,9 +8,27 @@ import { assertInScope } from "../scope.js";
 import { requireCapability } from "../capabilities.js";
 import { runToLoot, resultText, resolveExecPrefix, assertNotUnroutedOnion } from "../lib/exec.js";
 import { getTarget } from "../state.js";
+import { CONFIG } from "../config.js";
 
 function text(s: string) {
   return { content: [{ type: "text" as const, text: s }] };
+}
+
+/**
+ * Egress gate (Phase 7) for tools that reach the PUBLIC internet even when the
+ * target itself is in scope — whois (public whois servers) and the vulners.nse
+ * script (CVE API lookups). Refuse unless COBRA_ALLOW_INTERNET=1, or the call
+ * is tor-routed (the operator already opted into exit-node egress via
+ * COBRA_ENABLE_PROXY + tor=1).
+ */
+function assertEgressOk(tool: string, tor?: boolean): void {
+  if (tor) return; // tor route is its own deliberate egress decision
+  if (!CONFIG.allowInternet) {
+    throw new Error(
+      `EGRESS DENIED: ${tool} reaches the public internet (not just the in-scope target). ` +
+        `Set COBRA_ALLOW_INTERNET=1, or route through tor (tor=1 + COBRA_ENABLE_PROXY=1).`
+    );
+  }
 }
 
 function resolveTarget(t?: string, tor?: boolean): string {
@@ -79,6 +97,7 @@ export function registerReconTools(server: McpServer): void {
     { ...targetArg, ...viaArg },
     async ({ target, via, tor }) => {
       const t = resolveTarget(target, tor);
+      assertEgressOk("recon_vuln_scan", tor);
       const nmap = requireCapability("nmap");
       const prefix = resolveExecPrefix({ via, tor });
       const r = await runToLoot("recon_vuln_scan", [...prefix, nmap, "-Pn", "-sV", "--script", "vulners.nse", t], { timeoutMs: 30 * 60 * 1000 });
@@ -115,12 +134,20 @@ export function registerReconTools(server: McpServer): void {
 
   server.tool(
     "recon_whois",
-    "WHOIS lookup. Output to loot file.",
-    { target: z.string().describe("IP or domain") },
-    async ({ target }) => {
+    "WHOIS lookup. Reaches public whois servers — egress-gated (COBRA_ALLOW_INTERNET=1 or tor=1). Output to loot file.",
+    {
+      target: z.string().describe("IP or domain"),
+      tor: z.boolean().optional().describe(
+        "true = route through the system tor daemon (COBRA_PROXY, COBRA_ENABLE_PROXY=1). Satisfies the egress gate."
+      ),
+    },
+    async ({ target, tor }) => {
+      assertNotUnroutedOnion(target, tor);
       assertInScope(target);
+      assertEgressOk("recon_whois", tor);
       const whois = requireCapability("whois");
-      const r = await runToLoot("recon_whois", [whois, target]);
+      const prefix = resolveExecPrefix({ tor });
+      const r = await runToLoot("recon_whois", [...prefix, whois, target]);
       return text(resultText("recon_whois", r));
     }
   );
