@@ -21,8 +21,10 @@ root flag or whatever the mission demands.
   lateral movement (scope-gated `exec_ssh` + SOCKS tunnel routing), and relay C2 tools
   (gs-netcat beacons, shell-through-relay, NAT-proof SOCKS pivots) and a gated
   local-shell toolbox (`shell_run` on its own `COBRA_ENABLE_SHELL` knob), and
-  Tor/.onion routing (`tor=1` via system tor, its own `COBRA_ENABLE_PROXY` axis)
-  over stdio with a hard scope guard
+  Tor/.onion routing (`tor=1` via system tor, its own `COBRA_ENABLE_PROXY` axis),
+  and read-only `COBRA_PROFILES` discovery (`profile_list` / `profile_check`)
+  over stdio with a hard scope guard. Multi-target registry + egress gates on
+  the inherently-internet tools (whois, vulners)
 - **Capability-aware** — probes the runtime box at startup and reports which tools exist
   (and what to install for the ones that don't)
 

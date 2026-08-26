@@ -7,7 +7,7 @@ import path from "node:path";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CONFIG } from "../config.js";
 import { getTarget, listSessions } from "../state.js";
-import { capabilitiesMarkdown } from "../capabilities.js";
+import { capabilitiesMarkdown, profilesMarkdown } from "../capabilities.js";
 import { scopeSummary } from "../scope.js";
 
 function textResource(uri: string, text: string) {
@@ -27,8 +27,10 @@ const OPSHELP = `# cobra-mcp opshelp
 Scope: ${"${SCOPE}"}
 
 ## Tools
-- target_set <host>            set active target (must be in scope)
-- target_get                   show active target
+- target_set <host>            register + activate a target (must be in scope)
+- target_get                   show active target (most recently set)
+- target_list                  all registered targets, active marked
+- target_clear [host]          remove one target (or all)
 - loot_path                    show loot directory
 - recon_fast_scan [t]          nmap -T4 -F (top ports)
 - recon_full_scan [t]          nmap -p- (all TCP)
@@ -36,7 +38,7 @@ Scope: ${"${SCOPE}"}
 - recon_vuln_scan [t]          ⚠️ slow/noisy vulners
 - recon_udp_scan [t]           UDP top-100 (sudo)
 - recon_dns <name>             dig any
-- recon_whois <target>         whois
+- recon_whois <target>         whois — egress-gated (COBRA_ALLOW_INTERNET=1 or tor=1)
 - recon_smb_enum [t]           smb NSE enum
 - web_dir_brute <url> [wl]     ffuf/gobuster
 - web_vuln_scan <url>          ⚠️ nikto
@@ -66,6 +68,8 @@ Scope: ${"${SCOPE}"}
 - c2_gs_list                   beacons + tunnels dashboard (with cleanup commands)
 - shell_run <cmd> [target]     local bash -c on the OPERATOR box (COBRA_ENABLE_SHELL=1)
 - shell_xhome_probe            xhome-bastion env report (ungated, read-only)
+- profile_list                 COBRA_PROFILES tool groups: installed vs missing (read-only)
+- profile_check <name>         one group's binaries + rebuild hint (wireless|ad|exploit|webplus)
 - session_list                 active sessions
 - session_output <id>          tail session output
 - session_kill <id>            stop session
@@ -88,7 +92,7 @@ export function registerResources(server: McpServer): void {
   );
 
   server.resource("capabilities", "cobra://capabilities", async (uri) =>
-    textResource(uri.href, capabilitiesMarkdown())
+    textResource(uri.href, capabilitiesMarkdown() + "\n" + profilesMarkdown())
   );
 
   server.resource("target", "cobra://target", async (uri) =>

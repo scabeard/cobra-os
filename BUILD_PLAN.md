@@ -176,6 +176,8 @@ Registry rule: **function in `shell/cobra-ops.sh` ↔ package in
 | — (cobra-mcp c2_gs_* tools, **ai** profile) | gs-netcat (static via cobrashell `bin gs-netcat`) | relay C2: beacon deploy, shell-through-relay, SOCKS pivot (secret via `-k` keyfile/`GSOCKET_ARGS`, never argv; gated on `COBRA_ENABLE_TUNNELS` + relay-egress rule) |
 | — (cobra-mcp shell toolbox, **ai** profile) | bash (core; cobrashell read-only for shell_xhome_probe) | Phase 4 local exec: `shell_run` (`bash -c`, sentinel exit code, output → loot) on its own gate `COBRA_ENABLE_SHELL` (default off) with optional `target=` scope check; `shell_xhome_probe` reports xhome-bastion visibility |
 | — (cobra-mcp tor routing, **ai** profile) | tor + proxychains4 (already core) | Phase 5 `.onion`/Tor: `tor=1` on recon/web/creds via generated proxychains4 conf (`COBRA_PROXY`, default system tor 9050); `c2_gs_*` via gs-netcat native `-T`. Own gate `COBRA_ENABLE_PROXY` (default off), independent axis from `COBRA_ALLOW_INTERNET` |
+| — (cobra-mcp profile wrappers, **ai** profile) | none (read-only probe of profile binaries) | Phase 6: `profile_list` / `profile_check` surface the OS `COBRA_PROFILES` groups (wireless/ad/exploit/webplus) to the agent — installed vs missing + rebuild hint. Read-only; the agent never auto-installs a profile |
+| — (cobra-mcp multi-target + egress, **ai** profile) | none (state + gate logic) | Phase 7: multi-target registry (`target_list`/`target_clear`); egress gate — `recon_whois` + `recon_vuln_scan` now need `COBRA_ALLOW_INTERNET=1` or `tor=1` (they reach the public internet even for in-scope targets) |
 | — | aircrack-ng | 802.11 auditing base |
 | — | macchanger | MAC ops |
 | — | wireguard-tools | wg tunnels (`ghostdev`) |

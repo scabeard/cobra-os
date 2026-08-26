@@ -45,6 +45,54 @@ const TOOL_MAP: Record<string, [string, string?]> = {
   wget: ["wget", "wget"],
   perl: ["perl", "perl"],
   git: ["git", "git"],
+  /* --- profile binaries (Phase 6): probed so profile_check can report --- */
+  bettercap: ["bettercap (profile: wireless)", "bettercap"],
+  hcxdumptool: ["hcxdumptool (profile: wireless)", "hcxdumptool"],
+  reaver: ["reaver (profile: wireless)", "reaver"],
+  bully: ["bully (profile: wireless)", "bully"],
+  kismet: ["kismet (profile: wireless)", "kismet"],
+  airodump: ["aircrack-ng (profile: wireless)", "aircrack-ng"],
+  impacket: ["python3-impacket + impacket-scripts (profile: ad)", "impacket"],
+  responder: ["responder (profile: ad)", "responder"],
+  netexec: ["netexec (profile: ad)", "netexec"],
+  nxc: ["netexec (profile: ad)", "netexec"],
+  bloodhound: ["bloodhound.py (profile: ad)", "bloodhound"],
+  msfconsole: ["metasploit-framework (profile: exploit)", "metasploit"],
+  wpscan: ["wpscan (profile: webplus)", "wpscan"],
+  mitmproxy: ["mitmproxy (profile: webplus)", "mitmproxy"],
+};
+
+/**
+ * COBRA_PROFILES cases (Phase 6) — the OS-side optional tool groups, mirrored
+ * here so the agent can discover what's available and what to ask the operator
+ * to rebuild with. `ai` is a build-time profile (bundles + launcher), not a
+ * runtime tool set, so it isn't listed. Packages match chroot-setup.sh.
+ */
+export const PROFILE_MAP: Record<string, { desc: string; binaries: string[]; packages: string; note?: string }> = {
+  wireless: {
+    desc: "Wireless assessment (802.11 + WPS)",
+    binaries: ["bettercap", "hcxdumptool", "reaver", "bully", "kismet", "airodump"],
+    packages: "bettercap hcxtools hcxdumptool reaver bully kismet aircrack-ng",
+    note: "Needs a wireless adapter + monitor mode; usually run on the operator box, not the target.",
+  },
+  ad: {
+    desc: "Active Directory (impacket, responder, netexec, bloodhound)",
+    binaries: ["impacket", "responder", "netexec", "nxc", "bloodhound"],
+    packages: "python3-impacket impacket-scripts responder netexec bloodhound.py",
+    note: "Scope-gate every DC/KDC target; responder/netexec are LOUD on the wire.",
+  },
+  exploit: {
+    desc: "Metasploit framework (msfconsole)",
+    binaries: ["msfconsole"],
+    packages: "metasploit-framework",
+    note: "searchsploit/exploitdb is CORE (offline); this profile adds msf only. Heavy.",
+  },
+  webplus: {
+    desc: "Web extras (wpscan, mitmproxy, seclists)",
+    binaries: ["wpscan", "mitmproxy"],
+    packages: "mitmproxy ffuf seclists wpscan php-cli",
+    note: "ffuf is already core; this adds wpscan + mitmproxy (TTY proxy) + seclists wordlists.",
+  },
 };
 
 let cache: Capability[] | null = null;
@@ -109,5 +157,61 @@ export function capabilitiesMarkdown(): string {
     "| Binary | Present | Path | Debian pkg | Brew pkg |",
     "|---|---|---|---|---|",
     ...rows,
+  ].join("\n");
+}
+
+/* --- Phase 6: profile wrappers -------------------------------------------- */
+
+export interface ProfileStatus {
+  name: string;
+  desc: string;
+  packages: string;
+  note?: string;
+  installed: string[];
+  missing: string[];
+  /** true when at least one of the profile's binaries is present */
+  partial: boolean;
+  /** true when every binary is present */
+  full: boolean;
+}
+
+/** Read-only probe of each COBRA_PROFILES case against the probed cache. */
+export function probeProfiles(): ProfileStatus[] {
+  return Object.entries(PROFILE_MAP).map(([name, p]) => {
+    const installed = p.binaries.filter((b) => hasCapability(b));
+    const missing = p.binaries.filter((b) => !hasCapability(b));
+    return {
+      name,
+      desc: p.desc,
+      packages: p.packages,
+      note: p.note,
+      installed,
+      missing,
+      partial: installed.length > 0,
+      full: missing.length === 0,
+    };
+  });
+}
+
+/** One profile by name, or undefined. */
+export function profileStatus(name: string): ProfileStatus | undefined {
+  return probeProfiles().find((p) => p.name === name);
+}
+
+/** Markdown table of profile availability (appended to cobra://capabilities). */
+export function profilesMarkdown(): string {
+  const rows = probeProfiles().map(
+    (p) =>
+      `| ${p.name} | ${p.full ? "✅ full" : p.partial ? "🟡 partial" : "❌ absent"} | ${p.installed.join(", ") || "—"} | ${p.missing.join(", ") || "—"} |`
+  );
+  return [
+    "",
+    "## COBRA_PROFILES (OS tool groups)",
+    "",
+    "| Profile | Status | Installed | Missing |",
+    "|---|---|---|---|",
+    ...rows,
+    "",
+    "_Rebuild the OS with `COBRA_PROFILES=\\\"<name>\\\"` to add a missing group. Profiles are never auto-installed._",
   ].join("\n");
 }

@@ -80,12 +80,14 @@ The capability probe maps each MCP tool to the binary it needs and the package t
 
 ### 2b. Deferred to profiles
 
+Surfaced to the agent at runtime by the Phase-6 profile wrappers (`profile_list` / `profile_check`, read-only). Packages below match `chroot-setup.sh`.
+
 | Profile | Tools | Packages |
 |---|---|---|
-| `ad` | impacket-*, responder, netexec (nxc) | `impacket-scripts` `responder` `netexec` |
-| `exploit` | msfconsole (RPC) | `metasploit-framework` |
-| `webplus` | ffuf, wpscan, mitmproxy | `ffuf` `wpscan` `mitmproxy` |
-| `wireless` | aircrack-ng suite | `aircrack-ng` |
+| `ad` | impacket-*, responder, netexec (nxc), bloodhound.py | `python3-impacket` `impacket-scripts` `responder` `netexec` `bloodhound.py` |
+| `exploit` | msfconsole | `metasploit-framework` |
+| `webplus` | wpscan, mitmproxy, seclists (ffuf is core) | `mitmproxy` `ffuf` `seclists` `wpscan` `php-cli` |
+| `wireless` | bettercap, hcxtools, reaver, bully, kismet, aircrack-ng | `bettercap` `hcxtools` `hcxdumptool` `reaver` `bully` `kismet` `aircrack-ng` |
 
 ---
 
@@ -136,6 +138,8 @@ The capability probe maps each MCP tool to the binary it needs and the package t
 - **Brain (write side):** `brain_write` (full-document replace — the doctrine's "update the brain every phase" is impossible without it), `brain_append` (dated note; Lessons Learned)
 - **Local shell (operator box):** `shell_run` (arbitrary `bash -c`, sentinel exit-code parsing, full output → loot; gated by `COBRA_ENABLE_SHELL=1` — its own knob; optional `target=` scope-checks an IP/host literal appearing in the args) and `shell_xhome_probe` (ungated, read-only: reports cobrashell xhome-bastion visibility from the server env + the exact PATH/mark-running plumbing to use it as a bastion cwd)
 - **Tor / .onion (Phase 5):** `tor=1` arg on recon/web/creds tools routes through the system tor daemon via a generated proxychains4 conf (`COBRA_PROXY`); `c2_gs_shell`/`c2_gs_socks_start` use gs-netcat's native `-T` (`GSOCKET_TOR`). Gated by `COBRA_ENABLE_PROXY=1` — its own axis, independent of `COBRA_ALLOW_INTERNET`. A `.onion` target without `tor=1` is refused pre-spawn; `tor` and `via` are mutually exclusive. Add `.onion` to `COBRA_ALLOWED_SCOPE` to scope-gate onion services
+- **Profiles (Phase 6):** `profile_list` / `profile_check` — read-only discovery of the OS `COBRA_PROFILES` tool groups (wireless / ad / exploit / webplus): installed vs missing binaries on this box, the exact rebuild command + package list for an absent group, and scope/OPSEC notes. The agent reports and recommends; it NEVER auto-installs a profile (minimalism prime directive). Also appended to the `cobra://capabilities` resource
+- **Multi-target + egress (Phase 7):** targets are now a registry — `target_set` appends (most-recent-first, active = most recent), `target_list` shows all (active marked), `target_clear` removes one or all. Concurrent targets are first-class. **Egress gate:** `recon_whois` (public whois servers) and `recon_vuln_scan` (vulners.nse CVE API) reach the public internet even for in-scope targets, so they require `COBRA_ALLOW_INTERNET=1` — or a `tor=1` route (the operator's deliberate exit-node decision). `recon_whois` gained a `tor` arg
 
 ### Resources
 - `cobra://opshelp` — tool usage registry (self-discovery)
@@ -220,6 +224,6 @@ gates, scope, or tool registration.**
 - **Phase 3 — gs-netcat C2/SOCKS ✅** — `tools/c2.ts`: `c2_gs_secret` / `c2_gs_deploy` / `c2_gs_shell` / `c2_gs_socks_start` / `c2_gs_list`; beacon registry in `state.ts`; egress rule (relay outside scope ⇒ `COBRA_ALLOW_INTERNET=1`); `GS_HOST`/`GS_PORT` client forwarding; c2-gsocket playbook; root BUILD_PLAN gs-netcat row.
 - **Phase 4 — local shell ✅** — `tools/shell.ts`: `shell_run` (`bash -c`, sentinel exit-code parsing, full output → loot; own gate `COBRA_ENABLE_SHELL`, default off) + `shell_xhome_probe` (ungated env report for cobrashell xhome-bastion plumbing). Optional `target=` reuses `assertInScope`. Client/server launcher plumbing (`cobra-client/src/config.ts`, `/usr/local/bin/cobra` in the OS `chroot-setup.sh`) forwards the new knob. Harness: scenarios F–J, EXPECTED_TOOLS=45.
 - **Phase 5 — `.onion` / Tor access ✅** — `COBRA_PROXY` (default `socks5h://127.0.0.1:9050`) + own gate `COBRA_ENABLE_PROXY` (independent axis from `COBRA_ALLOW_INTERNET`). `torPrefix()`/`resolveExecPrefix()`/`assertNotUnroutedOnion()` in the exec layer; `tor=1` on recon/web/creds via a generated proxychains4 conf; `c2_gs_shell`/`c2_gs_socks_start` via gs-netcat native `-T` (`GSOCKET_TOR`). `.onion` scope entry (wildcard) in `scope.ts`; `.onion` target without `tor=1` refused pre-spawn. Client + `/usr/local/bin/cobra` launcher forward the knob. Harness: scenarios K–N, EXPECTED_TOOLS=45.
-- **Phase 6 — profile wrappers** — OS `COBRA_PROFILES` cases surfaced as MCP tools; new categories land as `chroot-setup.sh` profile cases, never in the core package list.
-- **Phase 7 — multi-target state + egress gates** — `state.ts` refactor for concurrent targets; extend the Phase-3 egress rule to `recon_vuln_scan` / `recon_whois` (whois is inherently internet-touching and currently ungated).
+- **Phase 6 — profile wrappers ✅** — `tools/profiles.ts`: `profile_list` + `profile_check` (read-only). `PROFILE_MAP` in `capabilities.ts` mirrors the OS `COBRA_PROFILES` cases (wireless / ad / exploit / webplus) with their real binaries + packages from `chroot-setup.sh`; profile binaries added to `TOOL_MAP` so the startup probe reports them. `probeProfiles()`/`profilesMarkdown()`; the `cobra://capabilities` resource appends the profile matrix. New categories land as `chroot-setup.sh` profile cases, never in the core package list. Harness: scenarios O–P, EXPECTED_TOOLS=47.
+- **Phase 7 — multi-target state + egress gates ✅** — `state.ts`: target registry (`listTargets`/`removeTarget`/`clearTargets`; `setTarget` appends most-recent-first, `getTarget` = active = most recent — backward compatible). New `target_list` / `target_clear` tools. Egress gate in `recon.ts` (`assertEgressOk`): `recon_whois` + `recon_vuln_scan` now require `COBRA_ALLOW_INTERNET=1` or a `tor=1` route — they reach the public internet (whois servers, vulners CVE API) even for in-scope targets. `recon_whois` gained a `tor` arg. Harness: scenarios Q–S, EXPECTED_TOOLS=49.
 
