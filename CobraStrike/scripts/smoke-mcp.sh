@@ -29,6 +29,11 @@
 #      must NOT be in the summary
 #   I  gate fires before spawn even with a target
 #   J  xhome probe with fake XHOME → reports it live + exact plumbing
+# Phase 5 (tor proxy, gate COBRA_ENABLE_PROXY):
+#   K  proxy gate OFF → tor=1 refused TOR PROXY DISABLED
+#   L  proxy gate ON → tor=1 with no tor daemon → fails at proxychains (gate passed)
+#   M  .onion target without tor=1 → ONION ROUTING REQUIRED (before any spawn)
+#   N  c2_gs_shell tor=1 with gate OFF → TOR PROXY DISABLED (gs -T hook gated)
 #
 # Usage: scripts/smoke-mcp.sh [--verbose]
 # Exit:  0 all pass · 1 failures (work dir kept for debugging) · 2 setup error
@@ -84,7 +89,7 @@ start_server() {  # args: extra env KEY=VAL... (scenario knobs)
   stop_server
   SCEN=$((SCEN + 1))
   mkfifo "$WORK/in" "$WORK/out"
-  env -u GS_HOST -u GS_PORT -u COBRA_ENABLE_TUNNELS -u COBRA_ALLOW_INTERNET -u COBRA_ENABLE_SHELL -u XHOME \
+  env -u GS_HOST -u GS_PORT -u COBRA_ENABLE_TUNNELS -u COBRA_ALLOW_INTERNET -u COBRA_ENABLE_SHELL -u COBRA_ENABLE_PROXY -u COBRA_PROXY -u XHOME \
     COBRA_LOOT_DIR="$COBRA_LOOT_DIR" \
     COBRA_ALLOWED_SCOPE="$COBRA_ALLOWED_SCOPE" \
     "$@" node "$DIST" <"$WORK/in" >"$WORK/out" 2>"$WORK/server-$SCEN.log" &
@@ -268,6 +273,37 @@ call_tool "shell_xhome_probe" '{}' || true
 check "J1 probe sees XHOME live" "$LAST" "XHOME live: yes"
 check "J2 probe gives exact plumbing" "$LAST" "Plumbing for bastion cwd"
 check "J3 response is valid tool text" "$LAST" '"type":"text"'
+
+# --- K: tor proxy gate OFF ----------------------------------------------------
+scenario "K: tor proxy gate OFF (default deny)"
+start_server
+handshake || true
+call_tool "recon_fast_scan" "{\"target\":\"$IN_SCOPE_IP\",\"tor\":true}" || true
+check "K1 tor=1 refused when proxy gate off" "$LAST" "TOR PROXY DISABLED"
+check_absent "K2 refusal is its own axis (not the internet gate)" "$LAST" "COBRA_ALLOW_INTERNET=1 on the server and restart"
+
+# --- L: tor proxy gate ON, no tor daemon --------------------------------------
+scenario "L: tor proxy gate ON, no tor daemon on 9050"
+start_server COBRA_ENABLE_PROXY=1
+handshake || true
+call_tool "recon_fast_scan" "{\"target\":\"$IN_SCOPE_IP\",\"tor\":true}" || true
+check_absent "L1 proxy gate passes (no TOR PROXY DISABLED)" "$LAST" "TOR PROXY DISABLED"
+check "L2 reaches proxychains/nmap (fails at connect, not at gate)" "$LAST" "recon_fast_scan"
+
+# --- M: .onion target without tor ---------------------------------------------
+scenario "M: .onion target without tor=1"
+start_server COBRA_ENABLE_PROXY=1
+handshake || true
+call_tool "recon_fast_scan" '{"target":"examplev3onionaddress7abcde2fghijklmnopqrstuvwxyz234567ab.onion"}' || true
+check "M1 .onion without tor refused with routing hint" "$LAST" "ONION ROUTING REQUIRED"
+check_absent "M2 refusal before any scan output" "$LAST" "## recon_fast_scan"
+
+# --- N: c2_gs_shell tor hook gated --------------------------------------------
+scenario "N: c2_gs_shell tor=1 with proxy gate OFF"
+start_server COBRA_ENABLE_TUNNELS=1 COBRA_ALLOW_INTERNET=1
+handshake || true
+call_tool "c2_gs_shell" '{"beacon":"n0-such","command":"id","tor":true}' || true
+check "N1 gs -T hook gated when proxy off" "$LAST" "TOR PROXY DISABLED"
 
 # --- summary --------------------------------------------------------------------
 stop_server
