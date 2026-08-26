@@ -41,6 +41,8 @@
 #   Q  target_set ×2 → target_list shows both, active = most recent; target_clear
 #   R  recon_whois / recon_vuln_scan egress-gated when internet OFF (EGRESS DENIED)
 #   S  egress satisfied when internet ON, or via tor=1 route
+# Hardening (path-traversal containment on resources):
+#   T  ../ escapes on missions/loot/tradecraft resources → (access denied)
 #
 # Usage: scripts/smoke-mcp.sh [--verbose]
 # Exit:  0 all pass · 1 failures (work dir kept for debugging) · 2 setup error
@@ -374,6 +376,24 @@ start_server COBRA_ENABLE_PROXY=1
 handshake || true
 call_tool "recon_whois" "{\"target\":\"$IN_SCOPE_IP\",\"tor\":true}" || true
 check_absent "S3 tor route satisfies whois egress" "$LAST" "EGRESS DENIED"
+
+# --- T: resource path-traversal containment ------------------------------------
+# The SDK normalizes literal ".." in URIs before dispatch (so cobra://loot/../../x
+# becomes cobra://loot/x → template mismatch → "not found", no escape). The
+# resolveContained guard is defense-in-depth for any decoded-.. that reaches the
+# handler. Assert the SECURITY CONTRACT: no traversal ever returns file content.
+scenario "T: resource path-traversal containment"
+start_server
+handshake || true
+rpc "resources/read" '{"uri":"cobra://loot/../../etc/passwd"}' || true
+check_absent "T1 loot ../ returns no passwd content" "$LAST" "root:x:0:0"
+rpc "resources/read" '{"uri":"cobra://tradecraft/../../../etc/passwd"}' || true
+check_absent "T2 tradecraft ../ returns no passwd content" "$LAST" "root:x:0:0"
+rpc "resources/read" '{"uri":"cobra://loot/..%2F..%2Fetc%2Fpasswd"}' || true
+check_absent "T3 encoded ..%2F returns no passwd content" "$LAST" "root:x:0:0"
+# A legitimate in-dir read still works (guard doesn't over-block).
+rpc "resources/read" '{"uri":"cobra://buildplan"}' || true
+check "T4 legit resource read works" "$LAST" "CobraStrike"
 
 # --- summary --------------------------------------------------------------------
 stop_server

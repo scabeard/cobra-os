@@ -22,6 +22,22 @@ function readFileSafe(p: string): string {
   }
 }
 
+/**
+ * Containment guard (hardening): resolve `p` against `base` and require the
+ * canonical result to be `base` itself or strictly under it. A textual
+ * `startsWith(base)` is NOT sufficient — `path.join(base, "../../etc/passwd")`
+ * collapses the `..` but can still share a string prefix with `base`.
+ * `path.resolve` canonicalizes; the `base + sep` boundary prevents a sibling
+ * like `/etc/cobra-secret` from matching a `/etc/cobra` base.
+ */
+function resolveContained(base: string, p: string): string | null {
+  const resolved = path.resolve(base, p);
+  const baseResolved = path.resolve(base);
+  if (resolved === baseResolved) return resolved;
+  if (resolved.startsWith(baseResolved + path.sep)) return resolved;
+  return null;
+}
+
 const OPSHELP = `# cobra-mcp opshelp
 
 Scope: ${"${SCOPE}"}
@@ -153,8 +169,8 @@ export function registerResources(server: McpServer): void {
       },
     }),
     async (uri, vars) => {
-      const p = path.join(missionsDir, String(vars.file));
-      if (!p.startsWith(missionsDir)) return textResource(uri.href, "(access denied)");
+      const p = resolveContained(missionsDir, String(vars.file));
+      if (!p) return textResource(uri.href, "(access denied)");
       return textResource(uri.href, readFileSafe(p));
     }
   );
@@ -179,9 +195,9 @@ export function registerResources(server: McpServer): void {
       },
     }),
     async (uri, vars) => {
-      const p = path.join(CONFIG.lootDir, String(vars.path));
-      // prevent path escape
-      if (!p.startsWith(CONFIG.lootDir)) return textResource(uri.href, "(access denied)");
+      // canonical containment — prevents path escape via ../
+      const p = resolveContained(CONFIG.lootDir, String(vars.path));
+      if (!p) return textResource(uri.href, "(access denied)");
       return textResource(uri.href, readFileSafe(p));
     }
   );
@@ -206,8 +222,8 @@ export function registerResources(server: McpServer): void {
       },
     }),
     async (uri, vars) => {
-      const p = path.join(CONFIG.tradecraftDir, String(vars.guide));
-      if (!p.startsWith(CONFIG.tradecraftDir)) return textResource(uri.href, "(access denied)");
+      const p = resolveContained(CONFIG.tradecraftDir, String(vars.guide));
+      if (!p) return textResource(uri.href, "(access denied)");
       return textResource(uri.href, readFileSafe(p));
     }
   );
