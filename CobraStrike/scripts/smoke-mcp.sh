@@ -34,18 +34,25 @@
 #   L  proxy gate ON → tor=1 with no tor daemon → fails at proxychains (gate passed)
 #   M  .onion target without tor=1 → ONION ROUTING REQUIRED (before any spawn)
 #   N  c2_gs_shell tor=1 with gate OFF → TOR PROXY DISABLED (gs -T hook gated)
+# Phase 6 (profile wrappers, read-only):
+#   O  profile_list works ungated; lists all 4 groups
+#   P  profile_check <name> reports status + rebuild hint; bad name handled
+# Phase 7 (multi-target state + egress gates):
+#   Q  target_set ×2 → target_list shows both, active = most recent; target_clear
+#   R  recon_whois / recon_vuln_scan egress-gated when internet OFF (EGRESS DENIED)
+#   S  egress satisfied when internet ON, or via tor=1 route
 #
 # Usage: scripts/smoke-mcp.sh [--verbose]
 # Exit:  0 all pass · 1 failures (work dir kept for debugging) · 2 setup error
 #
-# NOTE: EXPECTED_TOOLS pins the registry size (45 at Phase 4). Bump it when a
+# NOTE: EXPECTED_TOOLS pins the registry size (49 at Phase 7). Bump it when a
 # phase adds or removes tools.
 
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIST="$HERE/../cobra-mcp/dist/cobra-mcp.js"
-EXPECTED_TOOLS=45
+EXPECTED_TOOLS=49
 VERBOSE=0
 [ "${1:-}" = "--verbose" ] && VERBOSE=1
 
@@ -304,6 +311,69 @@ start_server COBRA_ENABLE_TUNNELS=1 COBRA_ALLOW_INTERNET=1
 handshake || true
 call_tool "c2_gs_shell" '{"beacon":"n0-such","command":"id","tor":true}' || true
 check "N1 gs -T hook gated when proxy off" "$LAST" "TOR PROXY DISABLED"
+
+# --- O: profile_list (read-only, ungated) --------------------------------------
+scenario "O: profile_list surfaces COBRA_PROFILES groups"
+start_server
+handshake || true
+call_tool "profile_list" '{}' || true
+check "O1 profile_list works ungated" "$LAST" "COBRA_PROFILES tool groups"
+check "O2 lists wireless group" "$LAST" "wireless"
+check "O3 lists ad group" "$LAST" "exploit"
+check "O4 read-only (operator rebuilds, not the agent)" "$LAST" "operator rebuilds"
+
+# --- P: profile_check ----------------------------------------------------------
+scenario "P: profile_check reports one group"
+start_server
+handshake || true
+call_tool "profile_check" '{"name":"exploit"}' || true
+check "P1 profile_check returns the group" "$LAST" "profile: exploit"
+check "P2 reports status line" "$LAST" "status:"
+call_tool "profile_check" '{"name":"ad"}' || true
+check "P3 ad group reports packages" "$LAST" "impacket"
+call_tool "profile_check" '{"name":"webplus"}' || true
+check "P4 webplus group reports note" "$LAST" "mitmproxy"
+
+# --- Q: multi-target state -----------------------------------------------------
+scenario "Q: multi-target registry"
+start_server
+handshake || true
+call_tool "target_set" "{\"target\":\"$IN_SCOPE_IP\"}" || true
+call_tool "target_set" '{"target":"lab.example"}' || true
+call_tool "target_list" '{}' || true
+check "Q1 target_list shows both targets" "$LAST" "Targets (2)"
+check "Q2 most recent is active" "$LAST" "lab.example  🎯 (active)"
+call_tool "target_get" '{}' || true
+check "Q3 target_get returns most recent" "$LAST" "lab.example"
+call_tool "target_clear" '{"target":"lab.example"}' || true
+call_tool "target_list" '{}' || true
+check "Q4 removing active demotes to previous" "$LAST" "$IN_SCOPE_IP  🎯 (active)"
+call_tool "target_clear" '{}' || true
+call_tool "target_list" '{}' || true
+check "Q5 clear-all empties the registry" "$LAST" "No targets registered"
+
+# --- R: egress gates OFF -------------------------------------------------------
+scenario "R: whois/vuln egress-gated when internet OFF"
+start_server
+handshake || true
+call_tool "recon_whois" "{\"target\":\"$IN_SCOPE_IP\"}" || true
+check "R1 whois egress denied when internet off" "$LAST" "EGRESS DENIED"
+check "R2 whois refusal names the tool" "$LAST" "recon_whois"
+call_tool "recon_vuln_scan" "{\"target\":\"$IN_SCOPE_IP\"}" || true
+check "R3 vuln_scan egress denied when internet off" "$LAST" "EGRESS DENIED"
+check_absent "R4 vuln refusal before any scan output" "$LAST" "## recon_vuln_scan"
+
+# --- S: egress satisfied -------------------------------------------------------
+scenario "S: egress satisfied (internet ON, and tor route)"
+start_server COBRA_ALLOW_INTERNET=1
+handshake || true
+call_tool "recon_whois" "{\"target\":\"$IN_SCOPE_IP\"}" || true
+check_absent "S1 internet gate satisfies whois" "$LAST" "EGRESS DENIED"
+check "S2 whois past the gate (runs or missing-tool, not gate)" "$LAST" "whois"
+start_server COBRA_ENABLE_PROXY=1
+handshake || true
+call_tool "recon_whois" "{\"target\":\"$IN_SCOPE_IP\",\"tor\":true}" || true
+check_absent "S3 tor route satisfies whois egress" "$LAST" "EGRESS DENIED"
 
 # --- summary --------------------------------------------------------------------
 stop_server
