@@ -117,7 +117,7 @@ cobra run "Recon triage the active target"
 ```
 
 The `#cobrastrike` section of `index.html` is the human reference: it documents
-the full operator CLI (7 subcommands + flags) and the agent's 27 MCP tools
+the full operator CLI (7 subcommands + flags) and the agent's 49 MCP tools
 (grouped by category), alongside the resources/prompts read-side. Keep it in
 sync with `../CobraStrike/BUILD_PLAN.md` §2/§4 (the authoritative tool
 manifest) whenever the client CLI or the `cobra-mcp` tool set changes.

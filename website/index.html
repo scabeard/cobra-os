@@ -293,7 +293,9 @@ COBRA operator commands (cobra-ops)
     <p class="sec-lede"><strong>CobraStrike</strong> is COBRA's self-contained, headless AI agent. It spawns the
     <code>cobra-mcp</code> server over stdio, connects as an MCP client, and runs an autonomous loop on
     <strong>any model on OpenRouter</strong> — driven by a mission file, with a living brain and tradecraft
-    doctrine. Bring <strong>your own API key</strong>; it never touches this site.</p>
+    doctrine. The agent drives <strong>49 MCP tools</strong> across recon / web / creds / exploit / payload /
+    capture / lateral / C2 / local-shell / profiles, all gated by a scope guard in code. Bring
+    <strong>your own API key</strong>; it never touches this site.</p>
     <div class="build-grid">
       <div class="build-step">
         <h3><span class="step-num">1</span> install on any box</h3>
@@ -364,9 +366,11 @@ cobra run "…" --scope "10.10.10.0/24,lab.local"</code></pre>
           <tr><th>category</th><th>MCP tool</th><th>runs</th><th>purpose</th></tr>
         </thead>
         <tbody>
-          <tr><td class="ops-cat" rowspan="3">session</td>
-              <td><code>target_set &lt;host&gt;</code></td><td class="dim">— state —</td><td>set active target (must be in scope)</td></tr>
-          <tr><td><code>target_get</code></td><td class="dim">— state —</td><td>show active target</td></tr>
+          <tr><td class="ops-cat" rowspan="5">session</td>
+              <td><code>target_set &lt;host&gt;</code></td><td class="dim">— state —</td><td>register + set active target (must be in scope)</td></tr>
+          <tr><td><code>target_get</code></td><td class="dim">— state —</td><td>show active target (most recent)</td></tr>
+          <tr><td><code>target_list</code></td><td class="dim">— state —</td><td>multi-target registry, active marked</td></tr>
+          <tr><td><code>target_clear</code></td><td class="dim">— state —</td><td>remove one / all targets</td></tr>
           <tr><td><code>loot_path</code></td><td class="dim">— state —</td><td>show loot directory</td></tr>
 
           <tr><td class="ops-cat" rowspan="2">brain</td>
@@ -377,10 +381,10 @@ cobra run "…" --scope "10.10.10.0/24,lab.local"</code></pre>
               <td><code>recon_fast_scan</code></td><td class="dim">nmap -T4 -F</td><td>cheap first look, top ports</td></tr>
           <tr><td><code>recon_full_scan</code></td><td class="dim">nmap -p-</td><td>full TCP scan</td></tr>
           <tr><td><code>recon_service_scan</code></td><td class="dim">nmap -sV -sC</td><td>service/version on discovered ports</td></tr>
-          <tr><td><code>recon_vuln_scan</code></td><td class="dim">nmap vulners</td><td>⚠️ slow + noisy</td></tr>
-          <tr><td><code>recon_udp_scan</code></td><td class="dim">nmap -sU top-100</td><td>UDP (sudo)</td></tr>
+          <tr><td><code>recon_vuln_scan</code></td><td class="dim">nmap vulners</td><td>⚠️ slow + noisy · egress-gated</td></tr>
+          <tr><td><code>recon_udp_scan</code></td><td class="dim">nmap -sU top-100</td><td>UDP (sudo; direct-only)</td></tr>
           <tr><td><code>recon_dns</code></td><td class="dim">dig any</td><td>DNS lookup</td></tr>
-          <tr><td><code>recon_whois</code></td><td class="dim">whois</td><td>WHOIS lookup</td></tr>
+          <tr><td><code>recon_whois</code></td><td class="dim">whois</td><td>WHOIS (egress: ALLOW_INTERNET=1 or tor=1)</td></tr>
           <tr><td><code>recon_smb_enum</code></td><td class="dim">nmap smb NSE</td><td>SMB OS / shares / users</td></tr>
 
           <tr><td class="ops-cat" rowspan="3">web</td>
@@ -402,13 +406,38 @@ cobra run "…" --scope "10.10.10.0/24,lab.local"</code></pre>
           <tr><td><code>exfil_upserv_start</code></td><td class="dim">python3 http.server</td><td>HTTP up/download server (session)</td></tr>
           <tr><td><code>payload_serve</code></td><td class="dim">python3 http.server</td><td>serve loot dir for delivery (session)</td></tr>
 
-          <tr><td class="ops-cat" rowspan="6">capture</td>
+          <tr><td class="ops-cat" rowspan="9">capture</td>
               <td><code>listen_start</code></td><td class="dim">nc -lvnp</td><td>reverse-shell listener (session)</td></tr>
           <tr><td><code>capture_sniff_start</code></td><td class="dim">tcpdump</td><td>live sniff (session)</td></tr>
           <tr><td><code>capture_pcap_start</code></td><td class="dim">tshark -w</td><td>pcap capture (session)</td></tr>
           <tr><td><code>session_list</code></td><td class="dim">— sessions —</td><td>list active capture/listen sessions</td></tr>
           <tr><td><code>session_output</code></td><td class="dim">— sessions —</td><td>tail a session's output</td></tr>
-          <tr><td><code>session_kill</code></td><td class="dim">— sessions —</td><td>stop a session (+ <code>*_stop</code> aliases)</td></tr>
+          <tr><td><code>session_kill</code></td><td class="dim">— sessions —</td><td>stop a session</td></tr>
+          <tr><td><code>listen_stop</code></td><td class="dim">— sessions —</td><td>stop-alias for listeners</td></tr>
+          <tr><td><code>capture_sniff_stop</code></td><td class="dim">— sessions —</td><td>stop-alias for sniff captures</td></tr>
+          <tr><td><code>capture_pcap_stop</code></td><td class="dim">— sessions —</td><td>stop-alias for pcap captures</td></tr>
+
+          <tr><td class="ops-cat" rowspan="5">lateral</td>
+              <td><code>exec_ssh</code></td><td class="dim">ssh + sshpass</td><td>scope-gated remote exec (password or key)</td></tr>
+          <tr><td><code>ssh_key_setup</code></td><td class="dim">ssh + ssh-keygen</td><td>engagement keypair in loot dir</td></tr>
+          <tr><td><code>tunnel_socks_start</code></td><td class="dim">ssh -D</td><td>SOCKS5 tunnel session (gated ENABLE_TUNNELS=1)</td></tr>
+          <tr><td><code>tunnel_list</code></td><td class="dim">— state —</td><td>active SOCKS tunnels</td></tr>
+          <tr><td><code>tunnel_stop</code></td><td class="dim">— state —</td><td>stop a tunnel</td></tr>
+
+          <tr><td class="ops-cat" rowspan="5">c2 (gs-netcat)</td>
+              <td><code>c2_gs_secret</code></td><td class="dim">gs-netcat -g</td><td>mint a beacon secret (keyfile 0600)</td></tr>
+          <tr><td><code>c2_gs_deploy</code></td><td class="dim">gs-netcat -l</td><td>beacon one-liner + optional SSH auto-deploy</td></tr>
+          <tr><td><code>c2_gs_shell</code></td><td class="dim">gs-netcat</td><td>non-interactive command through the relay</td></tr>
+          <tr><td><code>c2_gs_socks_start</code></td><td class="dim">gs-netcat -S</td><td>SOCKS5 pivot — registers as a tunnel for via=</td></tr>
+          <tr><td><code>c2_gs_list</code></td><td class="dim">— registry —</td><td>beacons + tunnels dashboard / cleanup</td></tr>
+
+          <tr><td class="ops-cat" rowspan="2">local shell</td>
+              <td><code>shell_run</code></td><td class="dim">bash -c</td><td>arbitrary local exec (gated ENABLE_SHELL=1)</td></tr>
+          <tr><td><code>shell_xhome_probe</code></td><td class="dim">— env —</td><td>cobrashell xhome-bastion visibility (ungated, read-only)</td></tr>
+
+          <tr><td class="ops-cat" rowspan="2">profiles</td>
+              <td><code>profile_list</code></td><td class="dim">— probe —</td><td>COBRA_PROFILES groups, installed vs missing</td></tr>
+          <tr><td><code>profile_check</code></td><td class="dim">— probe —</td><td>one group's binaries + rebuild hint (read-only)</td></tr>
         </tbody>
       </table>
     </div>
