@@ -22,18 +22,25 @@
 #      → c2_gs_deploy to an out-of-scope host → SCOPE VIOLATION
 #   E  tunnels ON, internet ON, public GSRN
 #      → egress gate satisfied; fails at beacon resolution (no relay contact)
+# Phase 4 (shell toolbox, gate COBRA_ENABLE_SHELL):
+#   F  default deny → shell_run refused SHELL DISABLED; shell_xhome_probe OK
+#   G  shell gate ON → out-of-scope target → SCOPE VIOLATION
+#   H  shell gate ON → in-scope target runs locally; sentinel exit code residue
+#      must NOT be in the summary
+#   I  gate fires before spawn even with a target
+#   J  xhome probe with fake XHOME → reports it live + exact plumbing
 #
 # Usage: scripts/smoke-mcp.sh [--verbose]
 # Exit:  0 all pass · 1 failures (work dir kept for debugging) · 2 setup error
 #
-# NOTE: EXPECTED_TOOLS pins the registry size (43 at Phase 3). Bump it when a
+# NOTE: EXPECTED_TOOLS pins the registry size (45 at Phase 4). Bump it when a
 # phase adds or removes tools.
 
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIST="$HERE/../cobra-mcp/dist/cobra-mcp.js"
-EXPECTED_TOOLS=43
+EXPECTED_TOOLS=45
 VERBOSE=0
 [ "${1:-}" = "--verbose" ] && VERBOSE=1
 
@@ -77,7 +84,7 @@ start_server() {  # args: extra env KEY=VAL... (scenario knobs)
   stop_server
   SCEN=$((SCEN + 1))
   mkfifo "$WORK/in" "$WORK/out"
-  env -u GS_HOST -u GS_PORT -u COBRA_ENABLE_TUNNELS -u COBRA_ALLOW_INTERNET \
+  env -u GS_HOST -u GS_PORT -u COBRA_ENABLE_TUNNELS -u COBRA_ALLOW_INTERNET -u COBRA_ENABLE_SHELL -u XHOME \
     COBRA_LOOT_DIR="$COBRA_LOOT_DIR" \
     COBRA_ALLOWED_SCOPE="$COBRA_ALLOWED_SCOPE" \
     "$@" node "$DIST" <"$WORK/in" >"$WORK/out" 2>"$WORK/server-$SCEN.log" &
@@ -164,6 +171,9 @@ check "A6 c2_gs_socks_start registered" "$LIST" '"name":"c2_gs_socks_start"'
 check "A7 c2_gs_list registered" "$LIST" '"name":"c2_gs_list"'
 check "A8 exec_ssh registered (phase 2)" "$LIST" '"name":"exec_ssh"'
 check "A9 tunnel_socks_start registered (phase 2)" "$LIST" '"name":"tunnel_socks_start"'
+check "A9b shell_run registered (phase 4)" "$LIST" '"name":"shell_run"'
+check "A9c shell_xhome_probe registered (phase 4)" "$LIST" '"name":"shell_xhome_probe"'
+
 call_tool "c2_gs_secret" '{}' || true
 check "A10 secret gen works ungated (local RNG)" "$LAST" "gsocket secret"
 call_tool "c2_gs_shell" '{"beacon":"n0-such","command":"id"}' || true
@@ -213,6 +223,51 @@ handshake || true
 call_tool "c2_gs_shell" '{"beacon":"n0-such","command":"id"}' || true
 check_absent "E1 internet gate satisfies public-GSRN egress" "$LAST" "EGRESS DENIED"
 check "E2 fails at beacon resolution (no relay contact attempted)" "$LAST" "no such beacon"
+
+# --- F: shell gate OFF --------------------------------------------------------
+scenario "F: shell gate OFF (default deny)"
+start_server
+handshake || true
+call_tool "shell_run" '{"command":"id"}' || true
+check "F1 shell_run refused when gate off" "$LAST" "SHELL DISABLED"
+check_absent "F2 refusal does not leak target precheck output" "$LAST" "## shell_run"
+call_tool "shell_xhome_probe" '{}' || true
+check "F3 xhome probe works ungated" "$LAST" "XHOME env"
+
+# --- G: shell gate ON, target out of scope ------------------------------------
+scenario "G: shell gate ON, target out of scope"
+start_server COBRA_ENABLE_SHELL=1
+handshake || true
+call_tool "shell_run" "{\"command\":\"nmap -Pn $OOS_IP\",\"target\":\"$OOS_IP\"}" || true
+check "G1 out-of-scope target refused" "$LAST" "SCOPE VIOLATION"
+check_absent "G2 scope check fires before spawn (no output header)" "$LAST" "## shell_run"
+
+# --- H: shell gate ON, in-scope target ----------------------------------------
+scenario "H: shell gate ON, in-scope target runs locally"
+start_server COBRA_ENABLE_SHELL=1
+handshake || true
+call_tool "shell_run" "{\"command\":\"echo cobra-pid-$$; grep smoke /proc/self/cmdline | cut -c1-120\",\"target\":\"$IN_SCOPE_IP\"}" || true
+check "H1 in-scope target passes scope" "$LAST" "## shell_run"
+check_absent "H2 no scope violation" "$LAST" "SCOPE VIOLATION"
+check_absent "H3 sentinel marker stripped from summary" "$LAST" "__COBRA_SH_RC__"
+
+# --- I: gate fires before spawn even with a target ----------------------------
+scenario "I: gate fires before spawn even with a target"
+start_server
+handshake || true
+call_tool "shell_run" "{\"command\":\"nmap -Pn $IN_SCOPE_IP\",\"target\":\"$IN_SCOPE_IP\"}" || true
+check "I1 gate refusal still wins over an in-scope target" "$LAST" "SHELL DISABLED"
+check_absent "I2 no output header leaked" "$LAST" "## shell_run"
+
+# --- J: xhome probe with fake bastion ------------------------------------------
+scenario "J: xhome probe with fake bastion reported"
+mkdir -p "$WORK/xhome/bin"
+start_server XHOME="$WORK/xhome"
+handshake || true
+call_tool "shell_xhome_probe" '{}' || true
+check "J1 probe sees XHOME live" "$LAST" "XHOME live: yes"
+check "J2 probe gives exact plumbing" "$LAST" "Plumbing for bastion cwd"
+check "J3 response is valid tool text" "$LAST" '"type":"text"'
 
 # --- summary --------------------------------------------------------------------
 stop_server
