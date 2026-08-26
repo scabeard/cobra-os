@@ -8,7 +8,7 @@
 import { CONFIG } from "./config.js";
 
 interface ScopeEntry {
-  kind: "cidr" | "domain" | "ip";
+  kind: "cidr" | "domain" | "ip" | "onion";
   raw: string;
   // for cidr/ip
   base?: bigint;
@@ -46,6 +46,10 @@ function parseScope(raw: string): ScopeEntry[] {
       out.push({ kind: "cidr", raw: t, base, bits, prefix });
     } else if (ipToBigInt(t) !== null) {
       out.push({ kind: "ip", raw: t, base: ipToBigInt(t)! });
+    } else if (t.toLowerCase() === ".onion") {
+      // Wildcard: any .onion host. Phase 5 — an onion address isn't a CIDR or
+      // a normal domain, so it gets its own entry kind.
+      out.push({ kind: "onion", raw: t.toLowerCase() });
     } else {
       out.push({ kind: "domain", raw: t.toLowerCase() });
     }
@@ -88,6 +92,7 @@ export function inScope(target: string): boolean {
       if (e.kind === "cidr" && ipInCidr(ip, e)) return true;
     }
     if (e.kind === "domain" && domainMatches(target, e.raw)) return true;
+    if (e.kind === "onion" && target.toLowerCase().endsWith(".onion")) return true;
   }
   return false;
 }

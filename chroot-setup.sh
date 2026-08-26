@@ -325,6 +325,10 @@ export COBRA_ENABLE_TUNNELS="${COBRA_ENABLE_TUNNELS:-0}"
 # shell_run's OWN gate (Phase 4) — NOT the tunnels knob: arbitrary local exec
 # on the operator box is a separate blast radius. Default off.
 export COBRA_ENABLE_SHELL="${COBRA_ENABLE_SHELL:-0}"
+# Tor proxy (Phase 5) — its own gate, an independent axis from COBRA_ALLOW_INTERNET.
+# COBRA_PROXY defaults to the system tor daemon (socks5h://127.0.0.1:9050).
+export COBRA_ENABLE_PROXY="${COBRA_ENABLE_PROXY:-0}"
+[[ -n "${COBRA_PROXY:-}" ]] && export COBRA_PROXY
 # Self-hosted gsocket relay for the c2_gs_* tools (Phase 3): the client
 # forwards operator-set GS_HOST/GS_PORT to gs-netcat. Unset = public GSRN,
 # which the server egress-gates on COBRA_ALLOW_INTERNET.

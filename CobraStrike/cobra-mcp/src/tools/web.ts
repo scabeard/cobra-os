@@ -5,7 +5,7 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { assertInScope } from "../scope.js";
 import { requireCapability, capabilityPath } from "../capabilities.js";
-import { runToLoot, resultText, proxyPrefix } from "../lib/exec.js";
+import { runToLoot, resultText, resolveExecPrefix, assertNotUnroutedOnion } from "../lib/exec.js";
 
 function text(s: string) {
   return { content: [{ type: "text" as const, text: s }] };
@@ -23,6 +23,9 @@ const viaArg = {
   via: z.string().optional().describe(
     "Tunnel id from tunnel_socks_start — route through that foothold via proxychains. Omit for direct."
   ),
+  tor: z.boolean().optional().describe(
+    "true = route through the system tor daemon (COBRA_PROXY, COBRA_ENABLE_PROXY=1). Required for .onion targets. Mutually exclusive with via."
+  ),
 };
 
 export function registerWebTools(server: McpServer): void {
@@ -34,9 +37,10 @@ export function registerWebTools(server: McpServer): void {
       wordlist: z.string().optional().describe("Wordlist path (default: common.txt if present)"),
       ...viaArg,
     },
-    async ({ url, wordlist, via }) => {
+    async ({ url, wordlist, via, tor }) => {
+      assertNotUnroutedOnion(url, tor);
       assertInScope(hostFromUrl(url));
-      const prefix = proxyPrefix(via);
+      const prefix = resolveExecPrefix({ via, tor });
       const wl = wordlist ?? "/usr/share/wordlists/dirb/common.txt";
       const ffuf = capabilityPath("ffuf");
       if (ffuf) {
@@ -53,9 +57,10 @@ export function registerWebTools(server: McpServer): void {
     "web_vuln_scan",
     "⚠️ NOISY. nikto web vulnerability scan. Output to loot file.",
     { url: z.string().describe("Target URL"), ...viaArg },
-    async ({ url, via }) => {
+    async ({ url, via, tor }) => {
+      assertNotUnroutedOnion(url, tor);
       assertInScope(hostFromUrl(url));
-      const prefix = proxyPrefix(via);
+      const prefix = resolveExecPrefix({ via, tor });
       const nikto = requireCapability("nikto");
       const r = await runToLoot("web_vuln_scan", [...prefix, nikto, "-h", url], { timeoutMs: 30 * 60 * 1000 });
       return text(resultText("web_vuln_scan", r));
@@ -71,9 +76,10 @@ export function registerWebTools(server: McpServer): void {
       risk: z.string().optional().describe("sqlmap --risk (1-3, default 1)"),
       ...viaArg,
     },
-    async ({ url, level, risk, via }) => {
+    async ({ url, level, risk, via, tor }) => {
+      assertNotUnroutedOnion(url, tor);
       assertInScope(hostFromUrl(url));
-      const prefix = proxyPrefix(via);
+      const prefix = resolveExecPrefix({ via, tor });
       const sqlmap = requireCapability("sqlmap");
       const r = await runToLoot(
         "web_sql_inject",

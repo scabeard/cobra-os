@@ -5,7 +5,7 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { assertInScope } from "../scope.js";
 import { requireCapability } from "../capabilities.js";
-import { runToLoot, resultText, proxyPrefix } from "../lib/exec.js";
+import { runToLoot, resultText, resolveExecPrefix, assertNotUnroutedOnion } from "../lib/exec.js";
 
 function text(s: string) {
   return { content: [{ type: "text" as const, text: s }] };
@@ -24,10 +24,14 @@ export function registerCredsTools(server: McpServer): void {
       via: z.string().optional().describe(
         "Tunnel id from tunnel_socks_start — route the attack through that foothold via proxychains. Omit for direct."
       ),
+      tor: z.boolean().optional().describe(
+        "true = route through the system tor daemon (COBRA_PROXY, COBRA_ENABLE_PROXY=1). Required for .onion targets. Mutually exclusive with via."
+      ),
     },
-    async ({ host, service, user, passlist, port, via }) => {
+    async ({ host, service, user, passlist, port, via, tor }) => {
+      assertNotUnroutedOnion(host, tor);
       assertInScope(host);
-      const prefix = proxyPrefix(via);
+      const prefix = resolveExecPrefix({ via, tor });
       const hydra = requireCapability("hydra");
       const argv = [...prefix, hydra, "-t4", "-f", "-V", "-l", user, "-P", passlist];
       if (port) argv.push("-s", String(port));

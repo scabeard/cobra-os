@@ -32,6 +32,14 @@ export interface CobraConfig {
    * exec is a separate blast radius from tunnels. Default off.
    */
   enableShell: boolean;
+  /**
+   * 1 = Tor proxy routing enabled (`tor=1` on recon/web/creds/c2_gs_* tools).
+   * Own gate: exit-node egress is a separate axis from COBRA_ALLOW_INTERNET.
+   * Default off.
+   */
+  enableProxy: boolean;
+  /** SOCKS URL for the Tor/proxy listener. Default system tor (9050). */
+  proxyUrl: string;
 }
 
 function envBool(name: string, def: boolean): boolean {
@@ -53,6 +61,8 @@ export function loadConfig(): CobraConfig {
     repoRoot: process.env.COBRA_REPO_ROOT ?? REPO_ROOT,
     enableTunnels: envBool("COBRA_ENABLE_TUNNELS", false),
     enableShell: envBool("COBRA_ENABLE_SHELL", false),
+    enableProxy: envBool("COBRA_ENABLE_PROXY", false),
+    proxyUrl: process.env.COBRA_PROXY ?? "socks5h://127.0.0.1:9050",
   };
 }
 

@@ -6,16 +6,19 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { assertInScope } from "../scope.js";
 import { requireCapability } from "../capabilities.js";
-import { runToLoot, resultText, proxyPrefix } from "../lib/exec.js";
+import { runToLoot, resultText, resolveExecPrefix, assertNotUnroutedOnion } from "../lib/exec.js";
 import { getTarget } from "../state.js";
 
 function text(s: string) {
   return { content: [{ type: "text" as const, text: s }] };
 }
 
-function resolveTarget(t?: string): string {
+function resolveTarget(t?: string, tor?: boolean): string {
   const target = t ?? getTarget();
   if (!target) throw new Error("No target. Pass one explicitly or target_set first.");
+  // Onion routing guard BEFORE scope: a .onion without tor=1 is unroutable —
+  // that refusal is more actionable than a bare scope violation.
+  assertNotUnroutedOnion(target, tor);
   assertInScope(target);
   return target;
 }
@@ -26,16 +29,19 @@ export function registerReconTools(server: McpServer): void {
     via: z.string().optional().describe(
       "Tunnel id from tunnel_socks_start — route through that foothold via proxychains. Omit for direct."
     ),
+    tor: z.boolean().optional().describe(
+      "true = route through the system tor daemon (COBRA_PROXY, COBRA_ENABLE_PROXY=1). Required for .onion targets. Mutually exclusive with via."
+    ),
   };
 
   server.tool(
     "recon_fast_scan",
     "Fast nmap scan (top ports, -T4 -F). Cheap first look. Output to loot file.",
     { ...targetArg, ...viaArg },
-    async ({ target, via }) => {
-      const t = resolveTarget(target);
+    async ({ target, via, tor }) => {
+      const t = resolveTarget(target, tor);
       const nmap = requireCapability("nmap");
-      const prefix = proxyPrefix(via);
+      const prefix = resolveExecPrefix({ via, tor });
       const r = await runToLoot("recon_fast_scan", [...prefix, nmap, "-n", "-Pn", "-T4", "-F", "--open", t]);
       return text(resultText("recon_fast_scan", r));
     }
@@ -45,10 +51,10 @@ export function registerReconTools(server: McpServer): void {
     "recon_full_scan",
     "Full TCP port scan (nmap -p-). Slower but complete. Output to loot file.",
     { ...targetArg, ...viaArg },
-    async ({ target, via }) => {
-      const t = resolveTarget(target);
+    async ({ target, via, tor }) => {
+      const t = resolveTarget(target, tor);
       const nmap = requireCapability("nmap");
-      const prefix = proxyPrefix(via);
+      const prefix = resolveExecPrefix({ via, tor });
       const r = await runToLoot("recon_full_scan", [...prefix, nmap, "-n", "-Pn", "-p-", "--open", "-T4", t], { timeoutMs: 45 * 60 * 1000 });
       return text(resultText("recon_full_scan", r));
     }
@@ -58,10 +64,10 @@ export function registerReconTools(server: McpServer): void {
     "recon_service_scan",
     "Service/version detection (nmap -sV -sC). Run against discovered ports. Output to loot file.",
     { ports: z.string().describe("Comma-separated ports, e.g. '22,80,443'"), ...targetArg, ...viaArg },
-    async ({ ports, target, via }) => {
-      const t = resolveTarget(target);
+    async ({ ports, target, via, tor }) => {
+      const t = resolveTarget(target, tor);
       const nmap = requireCapability("nmap");
-      const prefix = proxyPrefix(via);
+      const prefix = resolveExecPrefix({ via, tor });
       const r = await runToLoot("recon_service_scan", [...prefix, nmap, "-n", "-Pn", "-sV", "-sC", "-p", ports, t], { timeoutMs: 20 * 60 * 1000 });
       return text(resultText("recon_service_scan", r));
     }
@@ -71,10 +77,10 @@ export function registerReconTools(server: McpServer): void {
     "recon_vuln_scan",
     "⚠️ SLOW + NOISY. nmap vulners script. Confirm the mission allows noise. Output to loot file.",
     { ...targetArg, ...viaArg },
-    async ({ target, via }) => {
-      const t = resolveTarget(target);
+    async ({ target, via, tor }) => {
+      const t = resolveTarget(target, tor);
       const nmap = requireCapability("nmap");
-      const prefix = proxyPrefix(via);
+      const prefix = resolveExecPrefix({ via, tor });
       const r = await runToLoot("recon_vuln_scan", [...prefix, nmap, "-Pn", "-sV", "--script", "vulners.nse", t], { timeoutMs: 30 * 60 * 1000 });
       return text(resultText("recon_vuln_scan", r));
     }
@@ -84,9 +90,9 @@ export function registerReconTools(server: McpServer): void {
     "recon_udp_scan",
     "UDP scan (top 100 UDP ports). Requires sudo/root. Direct only — SOCKS tunnels carry TCP, so `via` is refused here. Output to loot file.",
     { ...targetArg, ...viaArg },
-    async ({ target, via }) => {
-      if (via !== undefined) {
-        throw new Error("recon_udp_scan is direct-only: SOCKS tunnels carry TCP, UDP can't ride them.");
+    async ({ target, via, tor }) => {
+      if (via !== undefined || tor) {
+        throw new Error("recon_udp_scan is direct-only: SOCKS tunnels and tor carry TCP, UDP can't ride them.");
       }
       const t = resolveTarget(target);
       const nmap = requireCapability("nmap");
@@ -123,10 +129,10 @@ export function registerReconTools(server: McpServer): void {
     "recon_smb_enum",
     "SMB enumeration (nmap smb NSE: OS, shares, users). Output to loot file.",
     { ...targetArg, ...viaArg },
-    async ({ target, via }) => {
-      const t = resolveTarget(target);
+    async ({ target, via, tor }) => {
+      const t = resolveTarget(target, tor);
       const nmap = requireCapability("nmap");
-      const prefix = proxyPrefix(via);
+      const prefix = resolveExecPrefix({ via, tor });
       const r = await runToLoot("recon_smb_enum", [...prefix, nmap, "-n", "-Pn", "-p445", "--script", "smb-os-discovery,smb-enum-shares,smb-enum-users", t]);
       return text(resultText("recon_smb_enum", r));
     }

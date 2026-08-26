@@ -144,6 +144,75 @@ export function viaSuffix(via?: string): string {
   return t ? ` via ${t.id}` : "";
 }
 
+/* --- Tor / .onion routing (Phase 5) --------------------------------------- */
+
+export const TOR_GATE_OFF =
+  "TOR PROXY DISABLED: set COBRA_ENABLE_PROXY=1 on the server and restart. " +
+  "Own gate — exit-node egress is an independent axis from COBRA_ALLOW_INTERNET.";
+
+export const ONION_NEEDS_TOR =
+  "ONION ROUTING REQUIRED: this target is a .onion. Re-run with tor=1 (and set " +
+  "COBRA_ENABLE_PROXY=1 on the server). Refusing — .onion is not directly routable.";
+
+/**
+ * Build the proxychains4 argv prefix for the system tor daemon (or whatever
+ * COBRA_PROXY points at). Throws if the gate is off or proxychains4 is missing.
+ */
+export function torPrefix(): string[] {
+  if (!CONFIG.enableProxy) {
+    throw new Error(TOR_GATE_OFF);
+  }
+  const pc = capabilityPath("proxychains4");
+  if (!pc) {
+    throw new Error("MISSING TOOL: 'proxychains4' not found on this box. Install with: apt install proxychains4");
+  }
+  const m = CONFIG.proxyUrl.match(/^socks5h?:\/\/([^:/]+):(\d+)$/);
+  if (!m) {
+    throw new Error(
+      `COBRA_PROXY must be socks5h://host:port (got "${CONFIG.proxyUrl}") — proxychains4 needs a host:port.`
+    );
+  }
+  fs.mkdirSync(CONFIG.lootDir, { recursive: true });
+  const conf = path.join(CONFIG.lootDir, "proxychains-tor.conf");
+  fs.writeFileSync(conf, ["[ProxyList]", `socks5 ${m[1]} ${m[2]}`, ""].join("\n"), { mode: 0o600 });
+  return [pc, "-f", conf, "-q"];
+}
+
+/**
+ * Resolve an exec prefix when a tool supports BOTH a tunnel (`via`) and tor
+ * (`tor`): they are mutually exclusive. Returns the argv prefix (possibly []).
+ */
+export function resolveExecPrefix(opts: { via?: string; tor?: boolean }): string[] {
+  if (opts.tor && opts.via !== undefined && opts.via !== "") {
+    throw new Error("tor=1 and via=<tunnel> are mutually exclusive — pick one route.");
+  }
+  if (opts.tor) return torPrefix();
+  return proxyPrefix(opts.via);
+}
+
+/**
+ * Guard: a .onion target is only reachable over tor. If the target string
+ * looks like an onion host (or a URL whose hostname is one) and tor is not
+ * enabled for this call, throw with the actionable hint.
+ */
+export function assertNotUnroutedOnion(targetOrUrl: string, tor?: boolean): void {
+  let host = targetOrUrl;
+  try {
+    host = new URL(targetOrUrl).hostname;
+  } catch {
+    /* not a URL — treat as a bare host */
+  }
+  if (host.toLowerCase().endsWith(".onion") && !tor) {
+    throw new Error(ONION_NEEDS_TOR);
+  }
+}
+
+/** Label for loot headers: which route this command took. */
+export function routeSuffix(opts: { via?: string; tor?: boolean }): string {
+  if (opts.tor) return " via tor";
+  return viaSuffix(opts.via);
+}
+
 /** Format an ExecResult as MCP text content. */
 export function resultText(tool: string, r: ExecResult): string {
   return [

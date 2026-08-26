@@ -57,6 +57,8 @@ Scope: ${"${SCOPE}"}
 - tunnel_socks_start <h> <u>   SOCKS5 through a foothold (ssh -D, COBRA_ENABLE_TUNNELS=1)
 - tunnel_list / tunnel_stop    manage tunnels
 - via=<tunnel-id>              route recon/web/creds tools through a tunnel (proxychains)
+- tor=1                        route recon/web/creds + c2_gs_* through tor (COBRA_ENABLE_PROXY=1)
+                                 .onion targets REQUIRE tor=1; add .onion to COBRA_ALLOWED_SCOPE
 - c2_gs_secret                 generate a gsocket secret (local RNG, no gate)
 - c2_gs_deploy [mode] [host..] gs beacon one-liner (+ optional ssh auto-deploy to /dev/shm)
 - c2_gs_shell <beacon> <cmd>   run a command through the relay to a shell beacon

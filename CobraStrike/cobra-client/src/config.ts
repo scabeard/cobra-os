@@ -66,6 +66,10 @@ function defaultServer(): ServerSpec {
       // Phase 4: shell_run's OWN gate. Deliberately NOT the same knob as
       // tunnels — arbitrary local exec is a separate blast radius.
       COBRA_ENABLE_SHELL: process.env.COBRA_ENABLE_SHELL ?? "0",
+      // Phase 5: Tor proxy. Own gate, independent axis from ALLOW_INTERNET.
+      // Only forwarded when the operator set COBRA_PROXY — unset = system tor.
+      COBRA_ENABLE_PROXY: process.env.COBRA_ENABLE_PROXY ?? "0",
+      ...(process.env.COBRA_PROXY ? { COBRA_PROXY: process.env.COBRA_PROXY } : {}),
       COBRA_ALLOWED_SCOPE: process.env.COBRA_ALLOWED_SCOPE ?? "",
       COBRA_LOOT_DIR:
         process.env.COBRA_LOOT_DIR ?? path.join(REPO_ROOT, "loot"),

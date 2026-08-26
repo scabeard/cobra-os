@@ -20,8 +20,9 @@ root flag or whatever the mission demands.
 - **Custom MCP server** — `cobra-mcp` exposes recon, web, creds, payload, exfil, capture,
   lateral movement (scope-gated `exec_ssh` + SOCKS tunnel routing), and relay C2 tools
   (gs-netcat beacons, shell-through-relay, NAT-proof SOCKS pivots) and a gated
-  local-shell toolbox (`shell_run` on its own `COBRA_ENABLE_SHELL` knob) over
-  stdio with a hard scope guard
+  local-shell toolbox (`shell_run` on its own `COBRA_ENABLE_SHELL` knob), and
+  Tor/.onion routing (`tor=1` via system tor, its own `COBRA_ENABLE_PROXY` axis)
+  over stdio with a hard scope guard
 - **Capability-aware** — probes the runtime box at startup and reports which tools exist
   (and what to install for the ones that don't)
 

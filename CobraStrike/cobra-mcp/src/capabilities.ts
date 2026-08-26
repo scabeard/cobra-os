@@ -38,6 +38,7 @@ const TOOL_MAP: Record<string, [string, string?]> = {
   ssh: ["openssh-client", "openssh"],
   sshpass: ["sshpass", "sshpass"],
   proxychains4: ["proxychains4", "proxychains-ng"],
+  tor: ["tor", "tor"],
   "gs-netcat": ["gsocket (static build via cobrashell `bin gs-netcat`)", "gsocket"],
   python3: ["python3", "python3"],
   curl: ["curl", "curl"],
