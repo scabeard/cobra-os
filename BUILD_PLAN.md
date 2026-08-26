@@ -172,6 +172,8 @@ Registry rule: **function in `shell/cobra-ops.sh` ↔ package in
 | `upserv` | php-cli (**webplus** profile) | loot-drop upload server |
 | — (cobrashell `ghostip`/`ghostdev`/`bounce`) | iptables | SNAT/DNAT mark tricks (nft-translated) |
 | — (cobrashell web/proxy paths) | tor, torsocks, proxychains4 | anonymity + pivoting |
+| — (cobra-mcp lateral tools, **ai** profile) | sshpass | non-interactive SSH password auth for `exec_ssh`/`ssh_key_setup`/`tunnel_socks_start` (SSHPASS env, never argv; scope-gated per hop) |
+| — (cobra-mcp c2_gs_* tools, **ai** profile) | gs-netcat (static via cobrashell `bin gs-netcat`) | relay C2: beacon deploy, shell-through-relay, SOCKS pivot (secret via `-k` keyfile/`GSOCKET_ARGS`, never argv; gated on `COBRA_ENABLE_TUNNELS` + relay-egress rule) |
 | — | aircrack-ng | 802.11 auditing base |
 | — | macchanger | MAC ops |
 | — | wireguard-tools | wg tunnels (`ghostdev`) |

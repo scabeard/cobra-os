@@ -22,6 +22,11 @@ export interface CobraConfig {
   tradecraftDir: string;
   /** Repo root (for locating scripts, BUILD_PLAN, etc). */
   repoRoot: string;
+  /**
+   * 1 = SSH tunnels + `via` proxy routing enabled (cobra-ops xint equivalent —
+   * the operator flips it deliberately). Default off.
+   */
+  enableTunnels: boolean;
 }
 
 function envBool(name: string, def: boolean): boolean {
@@ -41,6 +46,7 @@ export function loadConfig(): CobraConfig {
     // in /etc/cobra, so the derived default would be "/" — scripts/ + BUILD_PLAN
     // lookups would break).
     repoRoot: process.env.COBRA_REPO_ROOT ?? REPO_ROOT,
+    enableTunnels: envBool("COBRA_ENABLE_TUNNELS", false),
   };
 }
 

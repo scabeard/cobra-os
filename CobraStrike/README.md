@@ -17,8 +17,10 @@ root flag or whatever the mission demands.
   ends, and next moves across the engagement
 - **Tradecraft library** — `tradecraft/` distills field-tested hack tricks into
   AI-consumable guides with a decision-tree index
-- **Custom MCP server** — `cobra-mcp` exposes recon, web, creds, payload, exfil, and
-  capture tools over stdio with a hard scope guard
+- **Custom MCP server** — `cobra-mcp` exposes recon, web, creds, payload, exfil, capture,
+  lateral movement (scope-gated `exec_ssh` + SOCKS tunnel routing), and relay C2 tools
+  (gs-netcat beacons, shell-through-relay, NAT-proof SOCKS pivots) over stdio
+  with a hard scope guard
 - **Capability-aware** — probes the runtime box at startup and reports which tools exist
   (and what to install for the ones that don't)
 

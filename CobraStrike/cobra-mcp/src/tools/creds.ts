@@ -5,7 +5,7 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { assertInScope } from "../scope.js";
 import { requireCapability } from "../capabilities.js";
-import { runToLoot, resultText } from "../lib/exec.js";
+import { runToLoot, resultText, proxyPrefix } from "../lib/exec.js";
 
 function text(s: string) {
   return { content: [{ type: "text" as const, text: s }] };
@@ -21,11 +21,15 @@ export function registerCredsTools(server: McpServer): void {
       user: z.string().describe("Username (or -L file via userFile)"),
       passlist: z.string().describe("Path to password wordlist"),
       port: z.number().optional().describe("Non-default port"),
+      via: z.string().optional().describe(
+        "Tunnel id from tunnel_socks_start — route the attack through that foothold via proxychains. Omit for direct."
+      ),
     },
-    async ({ host, service, user, passlist, port }) => {
+    async ({ host, service, user, passlist, port, via }) => {
       assertInScope(host);
+      const prefix = proxyPrefix(via);
       const hydra = requireCapability("hydra");
-      const argv = [hydra, "-t4", "-f", "-V", "-l", user, "-P", passlist];
+      const argv = [...prefix, hydra, "-t4", "-f", "-V", "-l", user, "-P", passlist];
       if (port) argv.push("-s", String(port));
       argv.push(`${service}://${host}`);
       const r = await runToLoot("creds_brute", argv, { timeoutMs: 60 * 60 * 1000 });

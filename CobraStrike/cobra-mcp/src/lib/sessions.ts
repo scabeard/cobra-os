@@ -19,14 +19,18 @@ function sessionOutputFile(id: string): string {
 export function startSession(
   kind: SessionInfo["kind"],
   desc: string,
-  argv: string[]
+  argv: string[],
+  opts: { env?: NodeJS.ProcessEnv } = {}
 ): SessionInfo {
   if (argv.length === 0) throw new Error("empty argv for session");
   const id = `${kind}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e4)}`;
   const outputFile = sessionOutputFile(id);
   const out = fs.createWriteStream(outputFile, { flags: "a" });
 
-  const child = spawn(argv[0], argv.slice(1), { stdio: ["ignore", "pipe", "pipe"] });
+  const child = spawn(argv[0], argv.slice(1), {
+    stdio: ["ignore", "pipe", "pipe"],
+    env: opts.env ? { ...process.env, ...opts.env } : process.env,
+  });
   child.stdout.on("data", (d) => out.write(d));
   child.stderr.on("data", (d) => out.write(d));
   child.on("close", () => out.end());
@@ -41,6 +45,30 @@ export function startSession(
   };
   procs.set(id, child);
   registerSession(info);
+  return info;
+}
+
+/** Start a session and throw if it dies before `graceMs` (default 2s). */
+export async function startSessionChecked(
+  kind: SessionInfo["kind"],
+  desc: string,
+  argv: string[],
+  graceMs = 2000,
+  opts: { env?: NodeJS.ProcessEnv } = {}
+): Promise<SessionInfo> {
+  const info = startSession(kind, desc, argv, opts);
+  await new Promise((r) => setTimeout(r, graceMs));
+  const child = procs.get(info.id);
+  if (!child || child.exitCode !== null) {
+    stopSession(info.id);
+    let tail = "";
+    try {
+      tail = fs.readFileSync(info.outputFile, "utf8").trim().split("\n").slice(-5).join("\n");
+    } catch { /* no output captured */ }
+    throw new Error(
+      `session ${info.id} died on startup (see ${info.outputFile})${tail ? `:\n${tail}` : "."}`
+    );
+  }
   return info;
 }
 

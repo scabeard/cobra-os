@@ -175,6 +175,11 @@ CORE_PKGS=(
     # searchsploit + its local CSV (cobra-ops sploit) — fully offline.
     enum4linux-ng
     exploitdb
+    # sshpass: non-interactive SSH password auth for the cobra-mcp lateral
+    # tools (exec_ssh / ssh_key_setup / tunnel_socks_start scope-gated hops;
+    # SSHPASS env only — never on the argv). Useless without openssh-client
+    # (BASE_PKGS) and the ai profile, but core-wide it documents the model.
+    sshpass
     # operator dashboard tools (the cobra-ops mon/files/web functions; tmux
     # itself is in BASE_PKGS — splits/tabs are the console dashboard).
     # links2 is also the Tor-capable web client: `xint && torify links2 <url>`.
@@ -314,6 +319,14 @@ export COBRA_REPO_ROOT="${COBRA_REPO_ROOT:-/etc/cobra}"
 export COBRA_BRAIN_PATH="${COBRA_BRAIN_PATH:-/etc/cobra/brain/BRAIN.md}"
 export COBRA_TRADECRAFT_DIR="${COBRA_TRADECRAFT_DIR:-/etc/cobra/tradecraft}"
 export COBRA_LOOT_DIR="${COBRA_LOOT_DIR:-/dev/shm/cobra-loot}"
+# Tunnels/via routing stay OFF unless the operator opts in (cobra-ops xint
+# equivalent for the non-interactive server; the client tunnels-arg forwards).
+export COBRA_ENABLE_TUNNELS="${COBRA_ENABLE_TUNNELS:-0}"
+# Self-hosted gsocket relay for the c2_gs_* tools (Phase 3): the client
+# forwards operator-set GS_HOST/GS_PORT to gs-netcat. Unset = public GSRN,
+# which the server egress-gates on COBRA_ALLOW_INTERNET.
+[[ -n "${GS_HOST:-}" ]] && export GS_HOST
+[[ -n "${GS_PORT:-}" ]] && export GS_PORT
 mkdir -p "$COBRA_LOOT_DIR" 2>/dev/null || true
 exec /usr/bin/node /etc/cobra/cobra.js \
     --server-command /usr/bin/node \

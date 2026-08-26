@@ -62,6 +62,7 @@ function defaultServer(): ServerSpec {
       // over, so every COBRA_* knob must be forwarded here explicitly.
       COBRA_REPO_ROOT: process.env.COBRA_REPO_ROOT ?? REPO_ROOT,
       COBRA_ALLOW_INTERNET: process.env.COBRA_ALLOW_INTERNET ?? "0",
+      COBRA_ENABLE_TUNNELS: process.env.COBRA_ENABLE_TUNNELS ?? "0",
       COBRA_ALLOWED_SCOPE: process.env.COBRA_ALLOWED_SCOPE ?? "",
       COBRA_LOOT_DIR:
         process.env.COBRA_LOOT_DIR ?? path.join(REPO_ROOT, "loot"),
@@ -69,6 +70,11 @@ function defaultServer(): ServerSpec {
         process.env.COBRA_BRAIN_PATH ?? path.join(REPO_ROOT, "brain", "BRAIN.md"),
       COBRA_TRADECRAFT_DIR:
         process.env.COBRA_TRADECRAFT_DIR ?? path.join(REPO_ROOT, "tradecraft"),
+      // Self-hosted gsocket relay for the c2_gs_* tools (native gsocket env).
+      // Forwarded only when the operator set them — unset means the public
+      // GSRN, which the server egress-gates on COBRA_ALLOW_INTERNET.
+      ...(process.env.GS_HOST ? { GS_HOST: process.env.GS_HOST } : {}),
+      ...(process.env.GS_PORT ? { GS_PORT: process.env.GS_PORT } : {}),
     },
   };
 }

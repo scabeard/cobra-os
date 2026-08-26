@@ -91,6 +91,13 @@ cobra <command> [options]
 | `--max-tokens <n>` | `4096` | Max tokens per completion |
 | `--verbose` | off | Stream full tool output |
 
+> Server env is forwarded from the operator's environment: `COBRA_ALLOWED_SCOPE`,
+> `COBRA_LOOT_DIR`, `COBRA_ALLOW_INTERNET`, `COBRA_ENABLE_TUNNELS` (tunnels/`via`
+> routing + the `c2_gs_*` relay-C2 tools), and — only when set — `GS_HOST`/`GS_PORT`
+> (self-hosted gsocket relay; unset = public GSRN, egress-gated on
+> `COBRA_ALLOW_INTERNET`). The MCP SDK passes the server a whitelisted env plus
+> exactly this map — nothing else crosses.
+
 ### Examples
 
 ```bash

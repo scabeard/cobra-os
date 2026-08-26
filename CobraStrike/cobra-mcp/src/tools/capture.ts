@@ -32,8 +32,7 @@ export function registerCaptureTools(server: McpServer): void {
     },
     async ({ iface, filter }) => {
       const tcpdump = requireCapability("tcpdump");
-      const argv = [tcpdump, "-i", iface, "-nn", "-q"];
-      if (filter) argv.push(filter);
+      const argv = [tcpdump, "-i", iface, "-nn", "-q", ...(filter ? [filter] : [])];
       const info = startSession("sniff", `tcpdump -i ${iface} ${filter ?? ""}`, argv);
       return text(`🔍 Sniffer started — session ${info.id}\n  output: ${info.outputFile}`);
     }

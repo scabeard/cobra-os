@@ -52,6 +52,16 @@ Scope: ${"${SCOPE}"}
 - listen_start <port>          nc listener (session)
 - capture_sniff_start <iface>  tcpdump (session)
 - capture_pcap_start <i> <o>   tshark (session)
+- exec_ssh <h> <u> <cmd>       run a command on a host (password/key) — lateral exec
+- ssh_key_setup <h> <u> <pw>   engagement keypair (loot dir) + pubkey install
+- tunnel_socks_start <h> <u>   SOCKS5 through a foothold (ssh -D, COBRA_ENABLE_TUNNELS=1)
+- tunnel_list / tunnel_stop    manage tunnels
+- via=<tunnel-id>              route recon/web/creds tools through a tunnel (proxychains)
+- c2_gs_secret                 generate a gsocket secret (local RNG, no gate)
+- c2_gs_deploy [mode] [host..] gs beacon one-liner (+ optional ssh auto-deploy to /dev/shm)
+- c2_gs_shell <beacon> <cmd>   run a command through the relay to a shell beacon
+- c2_gs_socks_start <beacon>   SOCKS5 pivot through a socks beacon (via= ready)
+- c2_gs_list                   beacons + tunnels dashboard (with cleanup commands)
 - session_list                 active sessions
 - session_output <id>          tail session output
 - session_kill <id>            stop session
