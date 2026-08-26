@@ -27,6 +27,11 @@ export interface CobraConfig {
    * the operator flips it deliberately). Default off.
    */
   enableTunnels: boolean;
+  /**
+   * 1 = `shell_run` local-exec toolbox enabled. Own gate: arbitrary local
+   * exec is a separate blast radius from tunnels. Default off.
+   */
+  enableShell: boolean;
 }
 
 function envBool(name: string, def: boolean): boolean {
@@ -47,6 +52,7 @@ export function loadConfig(): CobraConfig {
     // lookups would break).
     repoRoot: process.env.COBRA_REPO_ROOT ?? REPO_ROOT,
     enableTunnels: envBool("COBRA_ENABLE_TUNNELS", false),
+    enableShell: envBool("COBRA_ENABLE_SHELL", false),
   };
 }
 

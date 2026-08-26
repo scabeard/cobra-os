@@ -62,6 +62,8 @@ Scope: ${"${SCOPE}"}
 - c2_gs_shell <beacon> <cmd>   run a command through the relay to a shell beacon
 - c2_gs_socks_start <beacon>   SOCKS5 pivot through a socks beacon (via= ready)
 - c2_gs_list                   beacons + tunnels dashboard (with cleanup commands)
+- shell_run <cmd> [target]     local bash -c on the OPERATOR box (COBRA_ENABLE_SHELL=1)
+- shell_xhome_probe            xhome-bastion env report (ungated, read-only)
 - session_list                 active sessions
 - session_output <id>          tail session output
 - session_kill <id>            stop session

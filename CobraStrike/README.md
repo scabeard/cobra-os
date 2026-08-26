@@ -19,8 +19,9 @@ root flag or whatever the mission demands.
   AI-consumable guides with a decision-tree index
 - **Custom MCP server** — `cobra-mcp` exposes recon, web, creds, payload, exfil, capture,
   lateral movement (scope-gated `exec_ssh` + SOCKS tunnel routing), and relay C2 tools
-  (gs-netcat beacons, shell-through-relay, NAT-proof SOCKS pivots) over stdio
-  with a hard scope guard
+  (gs-netcat beacons, shell-through-relay, NAT-proof SOCKS pivots) and a gated
+  local-shell toolbox (`shell_run` on its own `COBRA_ENABLE_SHELL` knob) over
+  stdio with a hard scope guard
 - **Capability-aware** — probes the runtime box at startup and reports which tools exist
   (and what to install for the ones that don't)
 

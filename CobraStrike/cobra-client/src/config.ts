@@ -63,6 +63,9 @@ function defaultServer(): ServerSpec {
       COBRA_REPO_ROOT: process.env.COBRA_REPO_ROOT ?? REPO_ROOT,
       COBRA_ALLOW_INTERNET: process.env.COBRA_ALLOW_INTERNET ?? "0",
       COBRA_ENABLE_TUNNELS: process.env.COBRA_ENABLE_TUNNELS ?? "0",
+      // Phase 4: shell_run's OWN gate. Deliberately NOT the same knob as
+      // tunnels — arbitrary local exec is a separate blast radius.
+      COBRA_ENABLE_SHELL: process.env.COBRA_ENABLE_SHELL ?? "0",
       COBRA_ALLOWED_SCOPE: process.env.COBRA_ALLOWED_SCOPE ?? "",
       COBRA_LOOT_DIR:
         process.env.COBRA_LOOT_DIR ?? path.join(REPO_ROOT, "loot"),

@@ -16,6 +16,7 @@ import { registerPayloadTools } from "./tools/payload.js";
 import { registerCaptureTools } from "./tools/capture.js";
 import { registerLateralTools } from "./tools/lateral.js";
 import { registerC2Tools } from "./tools/c2.js";
+import { registerShellTools } from "./tools/shell.js";
 import { registerBrainTools } from "./tools/brain.js";
 import { registerResources } from "./resources/index.js";
 import { registerPrompts } from "./prompts/index.js";
@@ -41,6 +42,7 @@ async function main(): Promise<void> {
   registerCaptureTools(server);
   registerLateralTools(server);
   registerC2Tools(server);
+  registerShellTools(server);
   registerBrainTools(server);
 
   // Read-side

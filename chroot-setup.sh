@@ -322,6 +322,9 @@ export COBRA_LOOT_DIR="${COBRA_LOOT_DIR:-/dev/shm/cobra-loot}"
 # Tunnels/via routing stay OFF unless the operator opts in (cobra-ops xint
 # equivalent for the non-interactive server; the client tunnels-arg forwards).
 export COBRA_ENABLE_TUNNELS="${COBRA_ENABLE_TUNNELS:-0}"
+# shell_run's OWN gate (Phase 4) — NOT the tunnels knob: arbitrary local exec
+# on the operator box is a separate blast radius. Default off.
+export COBRA_ENABLE_SHELL="${COBRA_ENABLE_SHELL:-0}"
 # Self-hosted gsocket relay for the c2_gs_* tools (Phase 3): the client
 # forwards operator-set GS_HOST/GS_PORT to gs-netcat. Unset = public GSRN,
 # which the server egress-gates on COBRA_ALLOW_INTERNET.
