@@ -7425,9 +7425,10 @@ import readline2 from "node:readline";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { fileURLToPath } from "node:url";
 var DEFAULT_MODEL = "kwaipilot/kat-coder-pro-v2.5";
 var DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
-var HERE = path.dirname(new URL(import.meta.url).pathname);
+var HERE = path.dirname(fileURLToPath(import.meta.url));
 var REPO_ROOT = path.resolve(HERE, "..", "..");
 function defaultServer() {
   const serverEntry = path.join(REPO_ROOT, "cobra-mcp", "build", "index.js");
@@ -7442,10 +7443,23 @@ function defaultServer() {
       // over, so every COBRA_* knob must be forwarded here explicitly.
       COBRA_REPO_ROOT: process.env.COBRA_REPO_ROOT ?? REPO_ROOT,
       COBRA_ALLOW_INTERNET: process.env.COBRA_ALLOW_INTERNET ?? "0",
+      COBRA_ENABLE_TUNNELS: process.env.COBRA_ENABLE_TUNNELS ?? "0",
+      // Phase 4: shell_run's OWN gate. Deliberately NOT the same knob as
+      // tunnels — arbitrary local exec is a separate blast radius.
+      COBRA_ENABLE_SHELL: process.env.COBRA_ENABLE_SHELL ?? "0",
+      // Phase 5: Tor proxy. Own gate, independent axis from ALLOW_INTERNET.
+      // Only forwarded when the operator set COBRA_PROXY — unset = system tor.
+      COBRA_ENABLE_PROXY: process.env.COBRA_ENABLE_PROXY ?? "0",
+      ...process.env.COBRA_PROXY ? { COBRA_PROXY: process.env.COBRA_PROXY } : {},
       COBRA_ALLOWED_SCOPE: process.env.COBRA_ALLOWED_SCOPE ?? "",
       COBRA_LOOT_DIR: process.env.COBRA_LOOT_DIR ?? path.join(REPO_ROOT, "loot"),
       COBRA_BRAIN_PATH: process.env.COBRA_BRAIN_PATH ?? path.join(REPO_ROOT, "brain", "BRAIN.md"),
-      COBRA_TRADECRAFT_DIR: process.env.COBRA_TRADECRAFT_DIR ?? path.join(REPO_ROOT, "tradecraft")
+      COBRA_TRADECRAFT_DIR: process.env.COBRA_TRADECRAFT_DIR ?? path.join(REPO_ROOT, "tradecraft"),
+      // Self-hosted gsocket relay for the c2_gs_* tools (native gsocket env).
+      // Forwarded only when the operator set them — unset means the public
+      // GSRN, which the server egress-gates on COBRA_ALLOW_INTERNET.
+      ...process.env.GS_HOST ? { GS_HOST: process.env.GS_HOST } : {},
+      ...process.env.GS_PORT ? { GS_PORT: process.env.GS_PORT } : {}
     }
   };
 }
@@ -7500,7 +7514,10 @@ function loadConfig(apiKey, cli = {}) {
     server,
     maxTurns: cli.maxTurns ?? num(process.env.COBRA_MAX_TURNS) ?? file.maxTurns ?? 40,
     temperature: cli.temperature ?? num(process.env.COBRA_TEMPERATURE) ?? file.temperature ?? 0.2,
-    maxTokens: cli.maxTokens ?? num(process.env.COBRA_MAX_TOKENS) ?? file.maxTokens ?? 4096,
+    // 16 Ki default: full-document brain_write rewrites need headroom. A
+    // 4096-token ceiling truncates a medium brain's tool_call argument
+    // mid-JSON, which the agent now reports as TOOL ARG PARSE ERROR.
+    maxTokens: cli.maxTokens ?? num(process.env.COBRA_MAX_TOKENS) ?? file.maxTokens ?? 16384,
     siteUrl: process.env.COBRA_SITE_URL ?? file.siteUrl,
     siteName: process.env.COBRA_SITE_NAME ?? file.siteName ?? "CobraStrike"
   };
@@ -16509,12 +16526,21 @@ function toToolSpecs(tools) {
   }));
 }
 function parseArgs(raw) {
+  const t = raw.trim();
+  if (t === "")
+    return { ok: true, args: {} };
+  if (t === "null")
+    return { ok: true, args: {}, note: "arguments were the JSON literal null \u2014 treated as {}" };
+  let v;
   try {
-    const v = JSON.parse(raw || "{}");
-    return typeof v === "object" && v !== null ? v : {};
+    v = JSON.parse(t);
   } catch {
-    return {};
+    return { ok: false, error: `TOOL ARG PARSE ERROR: arguments are not valid JSON \u2014 probably truncated by maxTokens or malformed by the model. Payload starts: ${t.slice(0, 200)}${t.length > 200 ? "\u2026" : ""}` };
   }
+  if (typeof v === "object" && v !== null && !Array.isArray(v)) {
+    return { ok: true, args: v };
+  }
+  return { ok: false, error: `TOOL ARG PARSE ERROR: arguments are not a JSON object (got ${Array.isArray(v) ? "array" : typeof v}). Payload starts: ${t.slice(0, 200)}${t.length > 200 ? "\u2026" : ""}` };
 }
 var Agent = class {
   cfg;
@@ -16556,15 +16582,22 @@ var Agent = class {
       }
       for (const call of msg.tool_calls) {
         const name = call.function.name;
-        const args = parseArgs(call.function.arguments);
-        this.events.onToolCall?.(name, args);
+        const parsed = parseArgs(call.function.arguments);
         let result;
-        try {
-          result = await this.mcp.callTool(name, args);
-        } catch (err) {
-          result = `TOOL ERROR: ${err instanceof Error ? err.message : String(err)}`;
+        if (!parsed.ok) {
+          result = `TOOL ARG PARSE ERROR for ${name}: ${parsed.error}`;
+          this.events.onToolCall?.(name, {});
+          this.events.onToolResult?.(name, result);
+        } else {
+          const args = parsed.args;
+          this.events.onToolCall?.(name, args);
+          try {
+            result = await this.mcp.callTool(name, args);
+          } catch (err) {
+            result = `TOOL ERROR: ${err instanceof Error ? err.message : String(err)}`;
+          }
+          this.events.onToolResult?.(name, result);
         }
-        this.events.onToolResult?.(name, result);
         messages.push({
           role: "tool",
           tool_call_id: call.id,
@@ -16592,7 +16625,7 @@ async function gatherContext(mcp) {
     safe(() => mcp.readResource("cobra://target"), "(no target)"),
     safe(() => mcp.readResource("cobra://missions"), "(no missions)")
   ]);
-  return { scope: "", target, brain, missions, opshelp, engagement };
+  return { scope: "(via opshelp/prompt)", target, brain, missions, opshelp, engagement };
 }
 function buildSystemPrompt(ctx, missionText) {
   const parts = [];
@@ -16749,7 +16782,10 @@ function cliOverrides(f) {
     temperature: flagNum(f, "temperature"),
     maxTokens: flagNum(f, "max-tokens"),
     serverCommand: flagStr(f, "server-command"),
-    serverArgs: flagStr(f, "server-args")?.split(" "),
+    // NUL-split so paths with spaces (e.g. 'cobra OS') survive; a single
+    // token is the common case. Space-splitting would silently corrupt
+    // spaced server paths.
+    serverArgs: flagStr(f, "server-args")?.split("\0"),
     scope: flagStr(f, "scope"),
     lootDir: flagStr(f, "loot-dir")
   };
@@ -16776,7 +16812,7 @@ OPTIONS
   --loot-dir <dir>    Set COBRA_LOOT_DIR for the server
   --max-turns <n>     Max agent loop iterations (default 40)
   --temperature <n>   Sampling temperature (default 0.2)
-  --max-tokens <n>    Max tokens per completion (default 4096)
+  --max-tokens <n>    Max tokens per completion (default 16384)
   --save-key          (setup) persist the key to ~/.config/cobra/credentials (0600)
   --server-command <c>  Override MCP server executable
   --server-args <a>     Override MCP server args (space-separated)

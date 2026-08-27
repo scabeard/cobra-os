@@ -30,14 +30,43 @@ function toToolSpecs(tools: { name: string; description?: string; inputSchema: R
   }));
 }
 
-function parseArgs(raw: string): Record<string, unknown> {
-  try {
-    const v = JSON.parse(raw || "{}");
-    return typeof v === "object" && v !== null ? (v as Record<string, unknown>) : {};
-  } catch {
-    return {};
-  }
+interface ArgsOk {
+  ok: true;
+  args: Record<string, unknown>;
+  /** Optional non-fatal note (e.g. "empty arguments"). */
+  note?: string;
 }
+interface ArgsErr {
+  ok: false;
+  error: string;
+}
+
+/**
+ * Parse a tool-call argument payload. An empty payload is the empty-object
+ * shorthand. A malformed/truncated payload returns { ok: false; error } —
+ * never silently converted to {} — so the agent passes an explicit in-band
+ * error back to the model instead of invoking the tool with {}.
+ */
+function parseArgs(raw: string): ArgsOk | ArgsErr {
+  const t = raw.trim();
+  if (t === "") return { ok: true, args: {} };
+  if (t === "null") return { ok: true, args: {}, note: "arguments were the JSON literal null — treated as {}" };
+  let v: unknown;
+  try {
+    v = JSON.parse(t);
+  } catch {
+    // JSON.parse failed — payload is malformed (e.g. maxTokens truncated the
+    // model's completion mid-JSON). Return an in-band error so the model can
+    // see *why* the tool isn't running and resend.
+    return { ok: false, error: `TOOL ARG PARSE ERROR: arguments are not valid JSON — probably truncated by maxTokens or malformed by the model. Payload starts: ${t.slice(0, 200)}${t.length > 200 ? "…" : ""}` };
+  }
+  if (typeof v === "object" && v !== null && !Array.isArray(v)) {
+    return { ok: true, args: v as Record<string, unknown> };
+  }
+  return { ok: false, error: `TOOL ARG PARSE ERROR: arguments are not a JSON object (got ${Array.isArray(v) ? "array" : typeof v}). Payload starts: ${t.slice(0, 200)}${t.length > 200 ? "…" : ""}` };
+}
+
+
 
 export class Agent {
   constructor(
@@ -85,17 +114,24 @@ export class Agent {
       // Execute each requested tool against the MCP server.
       for (const call of msg.tool_calls) {
         const name = call.function.name;
-        const args = parseArgs(call.function.arguments);
-        this.events.onToolCall?.(name, args);
-
+        const parsed = parseArgs(call.function.arguments);
         let result: string;
-        try {
-          result = await this.mcp.callTool(name, args);
-        } catch (err) {
-          result = `TOOL ERROR: ${err instanceof Error ? err.message : String(err)}`;
+        if (!parsed.ok) {
+          // Argument payload was malformed/truncated — don't hit the server
+          // with {}; surface the parse error in-band so the model can resend.
+          result = `TOOL ARG PARSE ERROR for ${name}: ${parsed.error}`;
+          this.events.onToolCall?.(name, {});
+          this.events.onToolResult?.(name, result);
+        } else {
+          const args = parsed.args;
+          this.events.onToolCall?.(name, args);
+          try {
+            result = await this.mcp.callTool(name, args);
+          } catch (err) {
+            result = `TOOL ERROR: ${err instanceof Error ? err.message : String(err)}`;
+          }
+          this.events.onToolResult?.(name, result);
         }
-        this.events.onToolResult?.(name, result);
-
         messages.push({
           role: "tool",
           tool_call_id: call.id,

@@ -8,6 +8,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { fileURLToPath } from "node:url";
 
 export interface ServerSpec {
   /** Display name */
@@ -46,8 +47,10 @@ export interface ClientConfig {
 export const DEFAULT_MODEL = "kwaipilot/kat-coder-pro-v2.5";
 export const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
 
-/** Repo root = cobra-client/build/.. → ../.. (i.e. the CobraStrike checkout). */
-const HERE = path.dirname(new URL(import.meta.url).pathname);
+/** Repo root = cobra-client/build/.. → ../.. (i.e. the CobraStrike checkout).
+ * (fileURLToPath: URL.pathname would percent-encode spaces and break on repos
+ * checked out under e.g. 'cobra OS/'.) */
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = path.resolve(HERE, "..", "..");
 
 function defaultServer(): ServerSpec {
@@ -165,7 +168,10 @@ export function loadConfig(apiKey: string, cli: CliOverrides = {}): ClientConfig
     maxTurns: cli.maxTurns ?? num(process.env.COBRA_MAX_TURNS) ?? file.maxTurns ?? 40,
     temperature:
       cli.temperature ?? num(process.env.COBRA_TEMPERATURE) ?? file.temperature ?? 0.2,
-    maxTokens: cli.maxTokens ?? num(process.env.COBRA_MAX_TOKENS) ?? file.maxTokens ?? 4096,
+    // 16 Ki default: full-document brain_write rewrites need headroom. A
+    // 4096-token ceiling truncates a medium brain's tool_call argument
+    // mid-JSON, which the agent now reports as TOOL ARG PARSE ERROR.
+    maxTokens: cli.maxTokens ?? num(process.env.COBRA_MAX_TOKENS) ?? file.maxTokens ?? 16384,
     siteUrl: process.env.COBRA_SITE_URL ?? file.siteUrl,
     siteName: process.env.COBRA_SITE_NAME ?? file.siteName ?? "CobraStrike",
   };

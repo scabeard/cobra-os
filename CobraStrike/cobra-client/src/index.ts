@@ -77,7 +77,10 @@ function cliOverrides(f: Record<string, string | boolean>): CliOverrides {
     temperature: flagNum(f, "temperature"),
     maxTokens: flagNum(f, "max-tokens"),
     serverCommand: flagStr(f, "server-command"),
-    serverArgs: flagStr(f, "server-args")?.split(" "),
+    // NUL-split so paths with spaces (e.g. 'cobra OS') survive; a single
+    // token is the common case. Space-splitting would silently corrupt
+    // spaced server paths.
+    serverArgs: flagStr(f, "server-args")?.split("\0"),
     scope: flagStr(f, "scope"),
     lootDir: flagStr(f, "loot-dir"),
   };
@@ -105,7 +108,7 @@ OPTIONS
   --loot-dir <dir>    Set COBRA_LOOT_DIR for the server
   --max-turns <n>     Max agent loop iterations (default 40)
   --temperature <n>   Sampling temperature (default 0.2)
-  --max-tokens <n>    Max tokens per completion (default 4096)
+  --max-tokens <n>    Max tokens per completion (default 16384)
   --save-key          (setup) persist the key to ~/.config/cobra/credentials (0600)
   --server-command <c>  Override MCP server executable
   --server-args <a>     Override MCP server args (space-separated)

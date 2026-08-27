@@ -30,7 +30,7 @@ export async function gatherContext(mcp: CobraMcp): Promise<PromptContext> {
     safe(() => mcp.readResource("cobra://target"), "(no target)"),
     safe(() => mcp.readResource("cobra://missions"), "(no missions)"),
   ]);
-  return { scope: "", target, brain, missions, opshelp, engagement };
+  return { scope: "(via opshelp/prompt)", target, brain, missions, opshelp, engagement };
 }
 
 export function buildSystemPrompt(ctx: PromptContext, missionText?: string): string {

