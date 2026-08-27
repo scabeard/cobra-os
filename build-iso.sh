@@ -6,7 +6,8 @@
 # BUILD_PLAN.md §5):
 #
 #   - lb config: trixie, iso-hybrid (BIOS+UEFI), minimal bootstrap, no
-#     debian-installer / memtest / firmware bundles, apt --no-recommends
+#     debian-installer / memtest / lb firmware bundles (firmware is the
+#     curated FIRMWARE_PKGS layer in chroot-setup.sh), apt --no-recommends
 #   - package list: live-boot (squashfs mounting, `toram`, `persistence`)
 #     + cryptsetup (LUKS persistence unlock at boot). The hook PURGES
 #     lb's auto-added live-config — its defaults (passwordless-sudo "user",
@@ -89,6 +90,14 @@ if [[ -d config ]]; then
   echo "    (rm -rf '$LB_DIR' to reconfigure from scratch)"
 else
   echo "[*] lb config ($DEBIAN_SUITE, iso-hybrid, minimal flavour)..."
+  # lb's own firmware bundles stay OFF (--firmware-binary/--firmware-chroot
+  # below): -binary only builds a d-i firmware pool (we ship no d-i), and
+  # -chroot's auto-picked set is broad + undocumentable. The CURATED firmware
+  # set (radeon/amdgpu, i915 DMC, iwlwifi/realtek/atheros/brcm, CPU microcode)
+  # comes from chroot-setup.sh's FIRMWARE_PKGS — one source of truth for
+  # rootfs + ISO. Without it AMD laptops die at boot with "R600 or later
+  # requires firmware installed" (2026-08-27). NOTE: keep comments OUT of the
+  # lb config continuation itself — a '#' line inside it ends the command.
   lb config \
     --distribution "$DEBIAN_SUITE" \
     --binary-image iso-hybrid \

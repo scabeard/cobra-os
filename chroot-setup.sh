@@ -134,6 +134,35 @@ else
 fi
 apt-get install -y --no-install-recommends "${BASE_PKGS[@]}"
 
+echo "[*] Installing hardware firmware (bare-metal portability: GPU modesetting + NICs)..."
+# The live USB must boot on ARBITRARY laptops/PCs. Without non-free GPU blobs
+# the radeon driver fails modesetting on every AMD GPU since the HD 2000 era
+# ("radeon ... firmware: failed to load radeon/R600_rlc.bin" -> "*ERROR* R600
+# or later requires firmware installed" -> dead/black console), and i915 loses
+# its DMC/GuC blobs on Intel. Without NIC blobs most laptop Wi-Fi never comes
+# up. Both build modes need this (a rootfs on bare metal hits it identically);
+# on the ISO, live-build owns kernel/bootloader but NOT firmware — its
+# --firmware-* options stay false (see build-iso.sh), this is the one source.
+# Justified in BUILD_PLAN.md §5. Deliberately excluded:
+#   firmware-sof-signed    audio DSP — a console-only image has no audio path
+#   firmware-nvidia-gsp    huge; nouveau consoles modeset fine without it
+#   firmware-b43-installer postinst DOWNLOADS blobs at install time — violates
+#                          the no-remote-sourcing rule and fails offline here
+FIRMWARE_PKGS=(
+    firmware-linux-free      # free blobs (main)
+    firmware-amd-graphics    # radeon (R600+) + amdgpu — the reported boot failure
+    firmware-misc-nonfree    # Intel i915 DMC/GuC + misc NIC/GPU blobs
+    firmware-iwlwifi         # Intel Wi-Fi — the commonest laptop NIC family
+    firmware-realtek         # Realtek wired + wireless (very common on laptops)
+    firmware-atheros         # ath9k/ath10k — laptops AND wireless-profile chipsets
+    firmware-brcm80211       # Broadcom laptop Wi-Fi
+    # CPU microcode, early-initramfs loaded (the ISO hook rebuilds the
+    # initramfs after this script, so the blobs land in the initrd).
+    intel-microcode
+    amd64-microcode
+)
+apt-get install -y --no-install-recommends "${FIRMWARE_PKGS[@]}"
+
 echo "[*] Installing the curated COBRA core tool set (Parrot-fed, minimal)..."
 # Every package here maps to a cobra-ops function and a row in BUILD_PLAN.md.
 # Deliberately narrow — use COBRA_PROFILES or parrot-tools-* metapackages

@@ -101,6 +101,13 @@ not generated at boot). `toram` stays a TAB-edit at the boot menu. Boot
 params, the LUKS persistence-stick recipe, and design rationale:
 BUILD_PLAN.md §5.
 
+Hardware: the image carries a curated non-free firmware set so the stick
+boots on arbitrary laptops/PCs — AMD (radeon/amdgpu) and Intel (i915 DMC)
+GPU modesetting blobs, Intel/Realtek/Atheros/Broadcom Wi-Fi, and CPU
+microcode. Without it an AMD GPU dies at boot with "R600 or later requires
+firmware installed". If an exotic GPU still breaks the console, TAB-edit
+`nomodeset` onto the boot line to fall back to efifb/vesa.
+
 The boot menu is themed: `splash.png` (the cobra from `Cobras-OS.png`,
 flattened for vesamenu) backs both the isolinux (BIOS) and GRUB (UEFI)
 menus, with neon-red-on-black menu colors — see §6 below.
