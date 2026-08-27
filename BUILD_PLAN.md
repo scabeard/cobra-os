@@ -1,5 +1,35 @@
 # COBRA OS — build plan & decision log
 
+> **2026-08-27 (later): theme micro-fixes.** Two latent bugs fixed in
+> `shell/cobra-theme.sh`: (1) `GREP_COLORS` claimed "bold black on neon red"
+> in its comment but shipped `ms=30;41` — now `ms=1;30;41` (bold actually
+> on; matches the less/tmux standout style). (2) The palette repaint's
+> screen-wipe branch also matched `/dev/console` — on serial-enabled images
+> that can map to ttyS0, where the VGA palette escapes and the `\e[2J` wipe
+> are garbage; the wipe is now tty1-only, matching its own comment and the
+> 2026-08-20 login-flow entry. Also flagged: `rootfs/` on the build box is a
+> stale Aug-17 artifact still carrying the OLD theme (pre-login-flow-fix
+> loaded-flag + unconditional-wipe bugs) plus stale cobrashell/cobra-ops —
+> delete it (`sudo rm -rf rootfs`); `build-rootfs.sh` regenerates it on
+> demand from `shell/`. No packages touched.
+
+
+> **2026-08-27: bare-metal firmware layer.** Booting the live USB on real
+> laptops failed on AMD GPUs with "*ERROR* R600 or later requires firmware
+> installed" — the image shipped ZERO firmware: lb's `--firmware-binary`/
+> `--firmware-chroot` were false and no package list carried firmware. New
+> `FIRMWARE_PKGS` in `chroot-setup.sh` (applies to rootfs AND ISO):
+> `firmware-amd-graphics` (radeon R600+ + amdgpu), `firmware-misc-nonfree`
+> (Intel i915 DMC/GuC), `firmware-iwlwifi`/`firmware-realtek`/
+> `firmware-atheros`/`firmware-brcm80211` (laptop NICs), `firmware-linux-free`,
+> and `intel-microcode`/`amd64-microcode` (early-initramfs load). Excluded on
+> purpose: `firmware-sof-signed` (no audio on a console-only image),
+> `firmware-nvidia-gsp` (nouveau modesets without it), `firmware-b43-installer`
+> (its postinst DOWNLOADS blobs — offline-hostile and against the
+> no-remote-sourcing rule). If an exotic GPU still misbehaves: TAB-edit
+> `nomodeset` onto the boot line to fall back to efifb/vesa. See §5.
+
+
 > **2026-08-24: editor swap — nano replaces vim-tiny in BASE_PKGS.** The first
 > ai-profile boot exposed that the minimal image had no usable on-box editor
 > (mission files, the brain, configs): `vim.tiny` shipped but `vi` is hostile
@@ -188,7 +218,10 @@ Base system packages (init, network, shell plumbing) are listed in
 `BASE_PKGS` with inline justifications in `chroot-setup.sh` — including the
 small cobrashell support utilities (`psmisc` for `fuser`/xtmux socket
 cleanup, `bsdextrautils` for `column`/`hexdump`, `iputils-ping` for
-ghostip.sh/linpeas, `strace` for cobrashell `tit`).
+ghostip.sh/linpeas, `strace` for cobrashell `tit`). Hardware-enablement
+firmware is likewise NOT in the sync table (no cobra-ops function maps to a
+GPU blob): it lives in `FIRMWARE_PKGS` with inline justifications and the
+rationale note at the top of this file / §5.
 
 ### §2a. Profiles (`COBRA_PROFILES`, space-separated)
 
@@ -298,6 +331,14 @@ Applied in `chroot-setup.sh` (idempotent):
   `--apt-recommends false`, no debian-installer/memtest/firmware bundles,
   `--linux-packages linux-image` (live-build owns kernel + bootloader —
   `COBRA_ISO=1` makes `chroot-setup.sh` skip kernel/grub).
+- Firmware (2026-08-27): lb's `--firmware-binary`/`--firmware-chroot` stay
+  false — the former only builds a d-i firmware pool (no d-i shipped) and the
+  latter's auto-picked set is broad and undocumentable. The curated
+  `FIRMWARE_PKGS` layer in `chroot-setup.sh` covers radeon (R600+) + amdgpu,
+  Intel i915 DMC/GuC, iwlwifi/realtek/atheros/brcm NICs, and CPU microcode —
+  without it AMD laptops die at boot with "R600 or later requires firmware
+  installed". Fallback for exotic GPUs: TAB-edit `nomodeset` at the boot
+  menu (efifb/vesa console, no modesetting).
 - Chroot package list: `live-boot cryptsetup initramfs-tools
   libnss-myhostname` only; everything else comes from the hook.
 - The hook (`config/hooks/normal/9000-cobra.hook.chroot`) runs

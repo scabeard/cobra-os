@@ -61,9 +61,11 @@ if [ "${TERM:-}" = "linux" ]; then
     # the visible screen — only do it on the bare console right after
     # autologin (tty1), where the screen is otherwise the stale getty
     # prompt. On ssh/tmux/'linux'-TERM xterm keep the user's buffer; new
-    # output picks up the palette anyway.
+    # output picks up the palette anyway. (/dev/console is deliberately
+    # excluded: on serial-enabled images it can map to ttyS0, where the
+    # VGA palette escapes and the wipe are garbage.)
     case "$(tty 2>/dev/null)" in
-        /dev/tty1|/dev/console) printf '\e[40m\e[37m\e[2J\e[H' ;;
+        /dev/tty1)              printf '\e[40m\e[37m\e[2J\e[H' ;;
         *)                      printf '\e[40m\e[37m' ;;
     esac
 fi
@@ -80,8 +82,8 @@ else
 fi
 
 # --- 3. grep / less / man ----------------------------------------------------
-# ms = match (bold black on neon red), mc = match in -v context, sl/cx reset.
-export GREP_COLORS="ms=30;41:mc=30;41:sl=:cx=:fn=36:se=35:ln=32:bn=32"
+# ms = match (bold black on neon red), mc = match in context lines, sl/cx reset.
+export GREP_COLORS="ms=1;30;41:mc=1;30;41:sl=:cx=:fn=36:se=35:ln=32:bn=32"
 # man/less: bold headers in neon red, underline in cyan, standout (status
 # bar/search) black-on-red, end-caps reset.
 export LESS_TERMCAP_mb=$'\e[1;31m'    # blink      -> bold red
