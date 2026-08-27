@@ -1,4 +1,4 @@
-# ISOs never enter git (2.4+ GiB each). COBRA OS ships NO prebuilt ISO —
+# ISOs never enter git (~2+ GiB each, profile-dependent). COBRA OS ships NO prebuilt ISO —
 # users build their own with build-iso.sh (see website/README.md). This dir
 # carries only the reference .sha256 sidecars so operators can hash-compare
 # their own builds against ours. Never on Cloudflare Pages (25 MiB cap),

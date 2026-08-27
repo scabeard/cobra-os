@@ -494,12 +494,6 @@ code {
 .codeblock code { background: none; padding: 0; color: inherit; font-size: inherit; }
 
 /* download */
-.dl-grid {
-  display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  gap: 26px;
-  align-items: start;
-}
 .dl-card {
   background: var(--panel);
   border: 1px solid rgba(255, 42, 60, .4);
@@ -522,7 +516,6 @@ code {
 .dl-meta strong { color: var(--fg); font-weight: 600; text-align: right; }
 .dl-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .dl-note { color: var(--dim); font-size: 12.5px; margin: 16px 0 0; }
-.dl-verify h3 { margin: 0 0 14px; font-size: 17px; }
 
 /* footer */
 .footer {
@@ -561,7 +554,7 @@ code {
 @media (max-width: 1020px) {
   .hero-grid { grid-template-columns: 1fr; gap: 44px; }
   .feature-grid { grid-template-columns: repeat(2, 1fr); }
-  .overview-grid, .dl-grid { grid-template-columns: 1fr; }
+  .overview-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 720px) {
   .nav-links {
