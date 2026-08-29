@@ -3227,8 +3227,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path10) {
-      let input = path10;
+    function removeDotSegments(path11) {
+      let input = path11;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3480,8 +3480,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path10, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path10 && path10 !== "/" ? path10 : void 0;
+        const [path11, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path11 && path11 !== "/" ? path11 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -4339,7 +4339,7 @@ var require_core = __commonJS({
       errorsText(errors = this.errors, { separator = ", ", dataVar = "data" } = {}) {
         if (!errors || errors.length === 0)
           return "No errors";
-        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text13, msg) => text13 + separator + msg);
+        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text14, msg) => text14 + separator + msg);
       }
       $dataMetaSchema(metaSchema, keywordsJsonPointers) {
         const rules = this.RULES.all;
@@ -6900,12 +6900,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs8, exportName) {
+    function addFormats(ajv, list, fs9, exportName) {
       var _a3;
       var _b;
       (_a3 = (_b = ajv.opts.code).formats) !== null && _a3 !== void 0 ? _a3 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs8[f]);
+        ajv.addFormat(f, fs9[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -7272,8 +7272,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path10, errorMaps, issueData } = params;
-  const fullPath = [...path10, ...issueData.path || []];
+  const { data, path: path11, errorMaps, issueData } = params;
+  const fullPath = [...path11, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7388,11 +7388,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path10, key) {
+  constructor(parent, value, path11, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path10;
+    this._path = path11;
     this._key = key;
   }
   get path() {
@@ -11313,10 +11313,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path10) {
-  if (!path10)
+function getElementAtPath(obj, path11) {
+  if (!path11)
     return obj;
-  return path10.reduce((acc, key) => acc?.[key], obj);
+  return path11.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -11725,11 +11725,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path10, issues) {
+function prefixIssues(path11, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path10);
+    iss.path.unshift(path11);
     return iss;
   });
 }
@@ -11876,16 +11876,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path10 = []) => {
+  const processError = (error52, path11 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path10, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path11, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path10, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path11, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path10, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path11, ...issue2.path]);
       } else {
-        const fullpath = [...path10, ...issue2.path];
+        const fullpath = [...path11, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -11912,17 +11912,17 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path10 = []) => {
+  const processError = (error52, path11 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path10, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path11, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path10, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path11, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path10, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path11, ...issue2.path]);
       } else {
-        const fullpath = [...path10, ...issue2.path];
+        const fullpath = [...path11, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -11954,8 +11954,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path10 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path10) {
+  const path11 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path11) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -18185,8 +18185,8 @@ function ko_default() {
 }
 
 // node_modules/zod/v4/locales/lt.js
-var capitalizeFirstCharacter = (text13) => {
-  return text13.charAt(0).toUpperCase() + text13.slice(1);
+var capitalizeFirstCharacter = (text14) => {
+  return text14.charAt(0).toUpperCase() + text14.slice(1);
 };
 function getUnitTypeFromNumber(number4) {
   const abs = Math.abs(number4);
@@ -23067,11 +23067,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path10) {
-  if (path10.length === 0) {
+function getDotPath(path11) {
+  if (path11.length === 0) {
     return "object root";
   }
-  return path10.reduce((acc, seg, index) => {
+  return path11.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -25096,13 +25096,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path10 = ref.slice(1).split("/").filter(Boolean);
-  if (path10.length === 0) {
+  const path11 = ref.slice(1).split("/").filter(Boolean);
+  if (path11.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path10[0] === defsKey) {
-    const key = path10[1];
+  if (path11[0] === defsKey) {
+    const key = path11[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -32942,11 +32942,15 @@ function registerBrainTools(server) {
   });
 }
 
+// build/tools/mission.js
+import fs8 from "node:fs";
+import path10 from "node:path";
+
 // build/resources/index.js
 import fs7 from "node:fs";
 import path9 from "node:path";
-function textResource(uri, text13) {
-  return { contents: [{ uri, text: text13 }] };
+function textResource(uri, text14) {
+  return { contents: [{ uri, text: text14 }] };
 }
 function readFileSafe(p) {
   try {
@@ -33020,9 +33024,14 @@ Scope: ${"${SCOPE}"}
 
 ## Missions
 - Missions are markdown files in the missions dir (next to the brain).
+- An ACTIVE MISSION section in your context means the mission file is already
+  loaded \u2014 do NOT re-read it.
+- To load a mission file mid-session, use the mission_read tool (ungated,
+  read-only, path-contained to the missions dir). Do NOT use shell_run just
+  to read a mission file \u2014 that is what mission_read is for.
 - cobra://missions shows the exact directory, the template path, and the
-  run command; cobra://missions/{file} reads one.
-- Run one: cobra mission <path-to-file.mission.md> (xint first on COBRA OS).
+  run command.
+- The operator can also run one with content injected: cobra mission <path-to-file.mission.md> (xint first on COBRA OS).
 
 All tool output \u2192 loot files. Read summaries; pull detail from files only as needed.
 Update the brain after every phase (brain_write / brain_append).
@@ -33119,6 +33128,41 @@ function registerResources(server) {
   });
 }
 
+// build/tools/mission.js
+function text13(s) {
+  return { content: [{ type: "text", text: s }] };
+}
+function registerMissionTools(server) {
+  const missionsDir = path10.join(path10.dirname(CONFIG.brainPath), "missions");
+  server.tool("mission_read", "Read a mission file from the missions directory (ungated, read-only, path-contained). Use this to load a mission's objective/scope/ROE when a task references a *.mission.md file by name and no ACTIVE MISSION was injected. Pass just the filename (hunter.mission.md) or a path under the missions dir. To run a mission with its content injected as ACTIVE MISSION, the operator should instead use: cobra mission <file>.", {
+    file: external_exports.string().describe("Mission filename (e.g. hunter.mission.md) or a path under the missions directory")
+  }, async ({ file: file2 }) => {
+    const p = resolveContained(missionsDir, file2);
+    if (!p)
+      return text13(`\u26D4 mission_read: access denied \u2014 '${file2}' escapes the missions directory (${missionsDir})`);
+    let content;
+    try {
+      content = fs8.readFileSync(p, "utf8");
+    } catch {
+      let available = [];
+      try {
+        available = fs8.readdirSync(missionsDir).filter((f) => f.endsWith(".mission.md")).sort();
+      } catch {
+      }
+      return text13(`\u26A0\uFE0F mission_read: not found: ${p}
+Missions directory: ${missionsDir}
+` + (available.length ? `Available missions:
+${available.map((f) => `- ${f}`).join("\n")}` : "(no *.mission.md files \u2014 copy TEMPLATE.mission.md and fill it in)"));
+    }
+    if (!content.trim()) {
+      return text13(`\u26A0\uFE0F mission_read: ${path10.basename(p)} is empty \u2014 tell the operator to fill it in from the template.`);
+    }
+    return text13(`## Mission: ${path10.basename(p)}
+
+${content}`);
+  });
+}
+
 // build/prompts/index.js
 function promptText(s) {
   return { messages: [{ role: "user", content: { type: "text", text: s } }] };
@@ -33132,7 +33176,7 @@ AUTHORIZATION FRAMING:
 - Every action must be consistent with the engagement's rules of engagement.
 
 WORKFLOW:
-1. Read the mission file \u2014 cobra://missions shows the missions dir, template, and run command.
+1. Get the mission \u2014 if an ACTIVE MISSION section is in your context, that IS the mission (already injected; do NOT re-read the file). Otherwise use the mission_read tool to load one by name (mission files are listed in your context under MISSION FILES).
 2. Set the target (target_set) \u2014 it must be in scope.
 3. Run standard tools; all output goes to loot files.
 4. Read loot summaries; pull detail only as needed.
@@ -33195,6 +33239,7 @@ async function main() {
   registerShellTools(server);
   registerProfileTools(server);
   registerBrainTools(server);
+  registerMissionTools(server);
   registerResources(server);
   registerPrompts(server);
   const cleanup = () => {

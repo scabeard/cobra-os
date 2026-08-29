@@ -19,6 +19,7 @@ import { registerC2Tools } from "./tools/c2.js";
 import { registerShellTools } from "./tools/shell.js";
 import { registerProfileTools } from "./tools/profiles.js";
 import { registerBrainTools } from "./tools/brain.js";
+import { registerMissionTools } from "./tools/mission.js";
 import { registerResources } from "./resources/index.js";
 import { registerPrompts } from "./prompts/index.js";
 import { stopAllSessions } from "./lib/sessions.js";
@@ -46,6 +47,7 @@ async function main(): Promise<void> {
   registerShellTools(server);
   registerProfileTools(server);
   registerBrainTools(server);
+  registerMissionTools(server);
 
   // Read-side
   registerResources(server);

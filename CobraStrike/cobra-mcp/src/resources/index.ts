@@ -30,7 +30,7 @@ function readFileSafe(p: string): string {
  * `path.resolve` canonicalizes; the `base + sep` boundary prevents a sibling
  * like `/etc/cobra-secret` from matching a `/etc/cobra` base.
  */
-function resolveContained(base: string, p: string): string | null {
+export function resolveContained(base: string, p: string): string | null {
   const resolved = path.resolve(base, p);
   const baseResolved = path.resolve(base);
   if (resolved === baseResolved) return resolved;
@@ -94,9 +94,14 @@ Scope: ${"${SCOPE}"}
 
 ## Missions
 - Missions are markdown files in the missions dir (next to the brain).
+- An ACTIVE MISSION section in your context means the mission file is already
+  loaded — do NOT re-read it.
+- To load a mission file mid-session, use the mission_read tool (ungated,
+  read-only, path-contained to the missions dir). Do NOT use shell_run just
+  to read a mission file — that is what mission_read is for.
 - cobra://missions shows the exact directory, the template path, and the
-  run command; cobra://missions/{file} reads one.
-- Run one: cobra mission <path-to-file.mission.md> (xint first on COBRA OS).
+  run command.
+- The operator can also run one with content injected: cobra mission <path-to-file.mission.md> (xint first on COBRA OS).
 
 All tool output → loot files. Read summaries; pull detail from files only as needed.
 Update the brain after every phase (brain_write / brain_append).

@@ -31,30 +31,59 @@ interface ParsedArgs {
   flags: Record<string, string | boolean>;
 }
 
+const KNOWN_COMMANDS = new Set(["run", "mission", "chat", "models", "setup", "tools", "doctor"]);
+
+// Flags that carry NO value (switches). Everything else takes a value.
+// Extends with --flag=value, so only list the true booleans.
+const BOOL_FLAGS = new Set(["help", "h", "verbose", "save-key"]);
+
+/**
+ * Flags-first tolerant parser (2026-08-28).
+ *
+ * The ISO system launcher prepends its own flags BEFORE the operator's args:
+ *   node cobra.js --server-command … --server-args … "$@"
+ * so the subcommand is NOT argv[0] on an installed box. The old parser only
+ * recognized argv[0], which silently degraded `cobra mission x.mission.md`
+ * (and every other subcommand) into a `run` task with the literal words
+ * "mission x.mission.md" — the file was never read, never injected. Now the
+ * first bare token that names a known command becomes the command wherever
+ * it lands; unknown bare tokens stay positional (task text).
+ */
 function parseArgs(argv: string[]): ParsedArgs {
   const flags: Record<string, string | boolean> = {};
   const positional: string[] = [];
-  let cmd = "run";
-  const args = [...argv];
-  if (args.length > 0 && !args[0].startsWith("-")) {
-    cmd = args.shift()!;
-  }
-  for (let i = 0; i < args.length; i++) {
-    const a = args[i];
+  let cmd: string | undefined;
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--") {
+      // Explicit end-of-flags: everything after is positional.
+      positional.push(...argv.slice(i + 1));
+      break;
+    }
     if (a.startsWith("--")) {
-      const key = a.slice(2);
-      const next = args[i + 1];
-      if (next !== undefined && !next.startsWith("--")) {
-        flags[key] = next;
-        i++;
+      const eq = a.indexOf("=");
+      if (eq !== -1) {
+        flags[a.slice(2, eq)] = a.slice(eq + 1);
       } else {
-        flags[key] = true;
+        const key = a.slice(2);
+        const next = argv[i + 1];
+        if (!BOOL_FLAGS.has(key) && next !== undefined && !next.startsWith("-")) {
+          flags[key] = next;
+          i++;
+        } else {
+          flags[key] = true;
+        }
       }
+    } else if (a.startsWith("-") && a.length > 1) {
+      // Short switches are all booleans (-h); never swallow the next token.
+      for (const ch of a.slice(1)) flags[ch] = true;
+    } else if (cmd === undefined && KNOWN_COMMANDS.has(a)) {
+      cmd = a;
     } else {
       positional.push(a);
     }
   }
-  return { cmd, positional, flags };
+  return { cmd: cmd ?? "run", positional, flags };
 }
 
 function flagStr(f: Record<string, string | boolean>, k: string): string | undefined {
@@ -262,6 +291,12 @@ async function runTask(
     const agent = new Agent(cfg, llm, mcp, makeAgentEvents(verbose));
     ui.info(`Task: ${task}`);
     const result = await agent.run(systemPrompt, task);
+    // Bare `.mission.md` mentions in the task are the classic symptom of the
+    // flags-first bug class: the operator meant `mission <file>` but it was
+    // parsed as a task string. Warn so this is never invisible again.
+    if (!missionText && /\.mission\.md\b/.test(task)) {
+      ui.info("hint: the task names a .mission.md file but none was loaded — use `cobra mission <file>` to inject it");
+    }
     process.stdout.write("\n");
     ui.ok(`Done in ${result.turns} messages • ${result.totalTokens} tokens`);
   } finally {
@@ -329,9 +364,14 @@ async function main(): Promise<void> {
         process.exit(1);
       }
       const missionText = fs.readFileSync(path.resolve(file), "utf8");
+      if (!missionText.trim()) {
+        ui.err(`${file} is empty — copy the template and fill it in first.`);
+        process.exit(1);
+      }
       const task =
         flagStr(flags, "task") ??
         "Execute the mission described in the ACTIVE MISSION section. Begin with recon triage and proceed methodically toward the objective.";
+      ui.ok(`Mission file loaded: ${path.resolve(file)} (${missionText.length} bytes → ACTIVE MISSION in system prompt)`);
       await runTask(task, overrides, missionText);
       break;
     }

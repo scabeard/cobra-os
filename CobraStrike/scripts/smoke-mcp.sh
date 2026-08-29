@@ -47,14 +47,14 @@
 # Usage: scripts/smoke-mcp.sh [--verbose]
 # Exit:  0 all pass · 1 failures (work dir kept for debugging) · 2 setup error
 #
-# NOTE: EXPECTED_TOOLS pins the registry size (49 at Phase 7). Bump it when a
-# phase adds or removes tools.
+# NOTE: EXPECTED_TOOLS pins the registry size (50 with mission_read). Bump it
+# when a phase adds or removes tools.
 
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIST="$HERE/../cobra-mcp/dist/cobra-mcp.js"
-EXPECTED_TOOLS=49
+EXPECTED_TOOLS=50
 VERBOSE=0
 [ "${1:-}" = "--verbose" ] && VERBOSE=1
 
@@ -67,6 +67,12 @@ export COBRA_LOOT_DIR="$WORK/loot"
 export COBRA_ALLOWED_SCOPE="10.13.37.0/24,lab.example"
 IN_SCOPE_IP="10.13.37.1"
 OOS_IP="192.0.2.1"   # TEST-NET-1: never in scope, never routed
+
+# Fake brain/missions tree for scenario U (mission_read tool). The missions
+# dir always sits next to the brain: COBRA_BRAIN_PATH=<work>/brain/BRAIN.md.
+export COBRA_BRAIN_PATH="$WORK/brain/BRAIN.md"
+mkdir -p "$WORK/brain/missions"
+printf '# Smoke mission\nTarget: %s\n' "$IN_SCOPE_IP" > "$WORK/brain/missions/hunter.mission.md"
 
 SRV_PID=""
 REQ=""
@@ -101,6 +107,7 @@ start_server() {  # args: extra env KEY=VAL... (scenario knobs)
   env -u GS_HOST -u GS_PORT -u COBRA_ENABLE_TUNNELS -u COBRA_ALLOW_INTERNET -u COBRA_ENABLE_SHELL -u COBRA_ENABLE_PROXY -u COBRA_PROXY -u XHOME \
     COBRA_LOOT_DIR="$COBRA_LOOT_DIR" \
     COBRA_ALLOWED_SCOPE="$COBRA_ALLOWED_SCOPE" \
+    COBRA_BRAIN_PATH="$COBRA_BRAIN_PATH" \
     "$@" node "$DIST" <"$WORK/in" >"$WORK/out" 2>"$WORK/server-$SCEN.log" &
   SRV_PID=$!
   exec {REQ}>"$WORK/in"
@@ -187,6 +194,7 @@ check "A8 exec_ssh registered (phase 2)" "$LIST" '"name":"exec_ssh"'
 check "A9 tunnel_socks_start registered (phase 2)" "$LIST" '"name":"tunnel_socks_start"'
 check "A9b shell_run registered (phase 4)" "$LIST" '"name":"shell_run"'
 check "A9c shell_xhome_probe registered (phase 4)" "$LIST" '"name":"shell_xhome_probe"'
+check "A9d mission_read registered" "$LIST" '"name":"mission_read"'
 
 call_tool "c2_gs_secret" '{}' || true
 check "A10 secret gen works ungated (local RNG)" "$LAST" "gsocket secret"
@@ -394,6 +402,24 @@ check_absent "T3 encoded ..%2F returns no passwd content" "$LAST" "root:x:0:0"
 # A legitimate in-dir read still works (guard doesn't over-block).
 rpc "resources/read" '{"uri":"cobra://buildplan"}' || true
 check "T4 legit resource read works" "$LAST" "CobraStrike"
+
+# --- U: mission_read tool (ungated, read-only, path-contained) ----------------
+# 2026-08-28: resources are not callable by the model mid-session in the
+# cobra-client agent loop, so the agent had no way to load a mission file by
+# name without the gated shell_run. mission_read is the fix — it must work
+# with EVERY gate off, refuse traversal, and handle missing/empty files.
+scenario "U: mission_read tool"
+start_server
+handshake || true
+call_tool "mission_read" '{"file":"hunter.mission.md"}' || true
+check "U1 reads a mission file ungated (all gates off)" "$LAST" "# Smoke mission"
+check "U2 content includes the target line" "$LAST" "$IN_SCOPE_IP"
+call_tool "mission_read" '{"file":"../../etc/passwd"}' || true
+check_absent "U3 traversal returns no passwd content" "$LAST" "root:x:0:0"
+check "U4 traversal is refused loudly" "$LAST" "access denied"
+call_tool "mission_read" '{"file":"nope.mission.md"}' || true
+check "U5 missing file reports and lists available" "$LAST" "not found"
+check "U6 available list names the real mission" "$LAST" "hunter.mission.md"
 
 # --- summary --------------------------------------------------------------------
 stop_server

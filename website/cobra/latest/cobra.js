@@ -16738,30 +16738,42 @@ var Spinner = class {
 };
 
 // build/index.js
+var KNOWN_COMMANDS = /* @__PURE__ */ new Set(["run", "mission", "chat", "models", "setup", "tools", "doctor"]);
+var BOOL_FLAGS = /* @__PURE__ */ new Set(["help", "h", "verbose", "save-key"]);
 function parseArgs2(argv) {
   const flags = {};
   const positional = [];
-  let cmd = "run";
-  const args = [...argv];
-  if (args.length > 0 && !args[0].startsWith("-")) {
-    cmd = args.shift();
-  }
-  for (let i = 0; i < args.length; i++) {
-    const a = args[i];
+  let cmd;
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--") {
+      positional.push(...argv.slice(i + 1));
+      break;
+    }
     if (a.startsWith("--")) {
-      const key = a.slice(2);
-      const next = args[i + 1];
-      if (next !== void 0 && !next.startsWith("--")) {
-        flags[key] = next;
-        i++;
+      const eq = a.indexOf("=");
+      if (eq !== -1) {
+        flags[a.slice(2, eq)] = a.slice(eq + 1);
       } else {
-        flags[key] = true;
+        const key = a.slice(2);
+        const next = argv[i + 1];
+        if (!BOOL_FLAGS.has(key) && next !== void 0 && !next.startsWith("-")) {
+          flags[key] = next;
+          i++;
+        } else {
+          flags[key] = true;
+        }
       }
+    } else if (a.startsWith("-") && a.length > 1) {
+      for (const ch of a.slice(1))
+        flags[ch] = true;
+    } else if (cmd === void 0 && KNOWN_COMMANDS.has(a)) {
+      cmd = a;
     } else {
       positional.push(a);
     }
   }
-  return { cmd, positional, flags };
+  return { cmd: cmd ?? "run", positional, flags };
 }
 function flagStr(f, k) {
   const v = f[k];
@@ -16951,6 +16963,9 @@ async function runTask(task, overrides, missionText) {
     const agent = new Agent(cfg, llm, mcp, makeAgentEvents(verbose));
     ui.info(`Task: ${task}`);
     const result = await agent.run(systemPrompt, task);
+    if (!missionText && /\.mission\.md\b/.test(task)) {
+      ui.info("hint: the task names a .mission.md file but none was loaded \u2014 use `cobra mission <file>` to inject it");
+    }
     process.stdout.write("\n");
     ui.ok(`Done in ${result.turns} messages \u2022 ${result.totalTokens} tokens`);
   } finally {
@@ -17016,7 +17031,12 @@ async function main() {
         process.exit(1);
       }
       const missionText = fs3.readFileSync(path3.resolve(file), "utf8");
+      if (!missionText.trim()) {
+        ui.err(`${file} is empty \u2014 copy the template and fill it in first.`);
+        process.exit(1);
+      }
       const task = flagStr(flags, "task") ?? "Execute the mission described in the ACTIVE MISSION section. Begin with recon triage and proceed methodically toward the objective.";
+      ui.ok(`Mission file loaded: ${path3.resolve(file)} (${missionText.length} bytes \u2192 ACTIVE MISSION in system prompt)`);
       await runTask(task, overrides, missionText);
       break;
     }

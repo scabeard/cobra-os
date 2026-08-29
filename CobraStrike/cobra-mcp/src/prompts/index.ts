@@ -22,7 +22,7 @@ export function registerPrompts(server: McpServer): void {
           `- The scope guard enforces this in code; do not attempt to bypass it.\n` +
           `- Every action must be consistent with the engagement's rules of engagement.\n\n` +
           `WORKFLOW:\n` +
-          `1. Read the mission file — cobra://missions shows the missions dir, template, and run command.\n` +
+          `1. Get the mission — if an ACTIVE MISSION section is in your context, that IS the mission (already injected; do NOT re-read the file). Otherwise use the mission_read tool to load one by name (mission files are listed in your context under MISSION FILES).\n` +
           `2. Set the target (target_set) — it must be in scope.\n` +
           `3. Run standard tools; all output goes to loot files.\n` +
           `4. Read loot summaries; pull detail only as needed.\n` +
