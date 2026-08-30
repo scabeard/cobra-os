@@ -25,6 +25,17 @@ import { Agent } from "./agent.js";
 import { gatherContext, buildSystemPrompt } from "./prompt.js";
 import { ui, Spinner } from "./ui.js";
 
+/** Tools whose results are ALWAYS shown (failures + brain-write confirmations) — never hidden behind --verbose. */
+const BRAIN_WRITE_TOOLS = new Set(["brain_write", "brain_append", "mission_begin"]);
+
+function isAlwaysShowResult(name: string, result: string): boolean {
+  return (
+    result.startsWith("TOOL ERROR") ||
+    result.startsWith("TOOL ARG PARSE ERROR") ||
+    BRAIN_WRITE_TOOLS.has(name)
+  );
+}
+
 interface ParsedArgs {
   cmd: string;
   positional: string[];
@@ -265,22 +276,52 @@ function makeAgentEvents(verbose: boolean) {
   return {
     onAssistantText: (t: string) => ui.assistant(t),
     onToolCall: (name: string, args: Record<string, unknown>) => ui.tool(name, args),
-    onToolResult: (_name: string, result: string) => {
+    onToolResult: (name: string, result: string) => {
       if (verbose) ui.toolResult(result);
+      else if (isAlwaysShowResult(name, result)) ui.toolStatus(result);
     },
     onUsage: (tokens: number, turn: number) => ui.usage(tokens, turn),
+    onCheckpoint: (text: string) => ui.checkpoint(text),
   };
 }
 
 async function runTask(
   task: string,
   overrides: CliOverrides,
-  missionText?: string
+  mission?: { file: string; content: string }
 ): Promise<void> {
   const { mcp, cfg } = await connectMcp(overrides);
   const verbose = currentFlags["verbose"] === true;
   try {
     ui.banner(cfg.model);
+
+    // Deterministic mission → brain seeding: the mission is injected into the
+    // system prompt (ACTIVE MISSION) but must ALSO land in the brain — the
+    // agent's only cross-run memory. Historically the Mission section stayed
+    // `*(none loaded)*` unless the model volunteered to fill it. Seed it
+    // ourselves via the server's mission_begin tool (its read side is
+    // path-contained to the missions dir — absolute paths outside it are
+    // refused there and fall back to a plain prompt injection below).
+    // missionSeeded tracks whether the seed actually landed so the end-of-run
+    // check can distinguish "mission seeded but model never wrote" from
+    // "brain never touched at all".
+    let missionText: string | undefined;
+    let missionSeeded = false;
+    if (mission) {
+      try {
+        const res = await mcp.callTool("mission_begin", { file: mission.file });
+        if (/^⛔/.test(res)) {
+          ui.warn(`mission_begin refused (${mission.file} is outside the missions dir) — injecting the mission into the prompt only; the brain Mission section is unchanged.`);
+        } else {
+          ui.ok(res.split("\n")[0]);
+          missionSeeded = true;
+        }
+      } catch (err) {
+        ui.warn(`mission_begin failed (${err instanceof Error ? err.message : String(err)}) — continuing with prompt-only injection.`);
+      }
+      missionText = mission.content;
+    }
+
     const sp = new Spinner("gathering engagement context…");
     sp.start();
     const ctx = await gatherContext(mcp);
@@ -296,6 +337,27 @@ async function runTask(
     // parsed as a task string. Warn so this is never invisible again.
     if (!missionText && /\.mission\.md\b/.test(task)) {
       ui.info("hint: the task names a .mission.md file but none was loaded — use `cobra mission <file>` to inject it");
+    }
+    // End-of-run brain verification: a run that never wrote the brain leaves
+    // the engagement's only cross-run memory untouched — the NEXT run resumes
+    // from the old brain and repeats the same scans. Never let that pass
+    // silently. Distinguish "agent never wrote" from "mission seeded but the
+    // agent recorded no findings".
+    if (result.brainWrites === 0) {
+      if (missionSeeded) {
+        ui.warn(
+          "The mission was seeded into the brain, but the agent recorded NO findings this run — " +
+            "no target profile, attack surface, or next moves were saved. The next run still has no operational memory."
+        );
+      } else {
+        ui.warn(
+          "The brain was NOT updated this run — nothing learned was saved. " +
+            "The next run starts from the old brain (this is what makes scans repeat). " +
+            "Tell the agent to update the brain, or run with --verbose to watch brain_write."
+        );
+      }
+    } else {
+      ui.ok(`Brain updated ${result.brainWrites}× this run.`);
     }
     process.stdout.write("\n");
     ui.ok(`Done in ${result.turns} messages • ${result.totalTokens} tokens`);
@@ -363,16 +425,16 @@ async function main(): Promise<void> {
         ui.err("mission requires a file path, e.g. cobra mission brain/missions/x.mission.md");
         process.exit(1);
       }
-      const missionText = fs.readFileSync(path.resolve(file), "utf8");
-      if (!missionText.trim()) {
+      const missionContent = fs.readFileSync(path.resolve(file), "utf8");
+      if (!missionContent.trim()) {
         ui.err(`${file} is empty — copy the template and fill it in first.`);
         process.exit(1);
       }
       const task =
         flagStr(flags, "task") ??
         "Execute the mission described in the ACTIVE MISSION section. Begin with recon triage and proceed methodically toward the objective.";
-      ui.ok(`Mission file loaded: ${path.resolve(file)} (${missionText.length} bytes → ACTIVE MISSION in system prompt)`);
-      await runTask(task, overrides, missionText);
+      ui.ok(`Mission file loaded: ${path.resolve(file)} (${missionContent.length} bytes → ACTIVE MISSION in system prompt)`);
+      await runTask(task, overrides, { file, content: missionContent });
       break;
     }
     case "run":

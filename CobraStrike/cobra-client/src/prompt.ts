@@ -48,8 +48,10 @@ export function buildSystemPrompt(ctx: PromptContext, missionText?: string): str
     "OPERATING DOCTRINE:\n" +
       "- Work in phases: recon → enumeration → exploitation → privesc → objective.\n" +
       "- Every tool writes full output to loot files; read summaries, pull detail only as needed.\n" +
+      "- The BRAIN is the engagement's only memory across runs and phases — you cannot remember anything outside it. It is what stops you repeating scans and retrying dead ends.\n" +
       "- NEVER retry anything logged under 'Attempted & Failed' in the brain.\n" +
-      "- Update the brain after every phase using brain_write (full document) or brain_append (quick note): target profile, attack surface, creds, access, next moves.\n" +
+      "- Your context copy of the brain is a STARTUP SNAPSHOT — it goes stale after every write. Use the brain_read tool to re-read the current brain before planning from memory and before every brain_write.\n" +
+      "- Update the brain after EVERY phase: brain_read first, then brain_write (full document) or brain_append (quick note). Record: target profile, attack surface, creds, access, attempted-and-failed, next moves. The agent loop injects [checkpoint] reminders — honor them immediately.\n" +
       "- Consult tradecraft/ guides (cobra://tradecraft/{guide}) before using an unfamiliar technique.\n" +
       "- Stay strictly within authorized scope; the scope guard refuses out-of-scope targets.\n" +
       "- Think step by step, then act. Prefer one well-chosen tool over many speculative ones."

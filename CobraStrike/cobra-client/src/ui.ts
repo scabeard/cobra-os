@@ -20,6 +20,14 @@ function paint(color: keyof typeof C, s: string): string {
   return `${C[color]}${s}${C.reset}`;
 }
 
+const MAX_ARG_LEN = 160;
+
+/** Single-line, truncated arg preview — full brain_write payloads must never dump to the console. */
+function truncate(s: string): string {
+  const flat = s.replace(/\s+/g, " ").trim();
+  return flat.length > MAX_ARG_LEN ? `${flat.slice(0, MAX_ARG_LEN)}…` : flat;
+}
+
 export const ui = {
   banner(model: string): void {
     const art = [
@@ -38,7 +46,7 @@ export const ui = {
   err: (s: string) => process.stdout.write(paint("red", "✖ ") + s + "\n"),
   tool: (name: string, args: Record<string, unknown>) => {
     const argStr = Object.entries(args)
-      .map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`)
+      .map(([k, v]) => `${k}=${truncate(typeof v === "string" ? v : JSON.stringify(v))}`)
       .join(" ");
     process.stdout.write(paint("magenta", `\n▶ ${name}`) + paint("dim", ` ${argStr}\n`));
   },
@@ -47,6 +55,21 @@ export const ui = {
     const head = lines.slice(0, 6).join("\n");
     const more = lines.length > 6 ? paint("dim", `\n  … ${lines.length - 6} more lines`) : "";
     process.stdout.write(paint("dim", head) + more + "\n");
+  },
+  /**
+   * Always-visible tool result — for failures (TOOL ERROR) and brain-write
+   * confirmations. These must never hide behind --verbose: a silent brain
+   * failure is invisible otherwise, and a silent error loop wastes a mission.
+   */
+  toolStatus: (result: string) => {
+    const lines = result.split("\n");
+    const head = lines.slice(0, 3).join("\n");
+    const more = lines.length > 3 ? paint("dim", ` … +${lines.length - 3} lines`) : "";
+    const bad = /^(TOOL ERROR|TOOL ARG PARSE ERROR|⛔|⚠️)/.test(result);
+    process.stdout.write("  " + paint(bad ? "red" : "green", head) + more + "\n");
+  },
+  checkpoint: (text: string) => {
+    process.stdout.write(paint("yellow", "⏺ ") + paint("dim", text) + "\n");
   },
   assistant: (text: string) => {
     process.stdout.write("\n" + paint("bold", "🐍 cobra") + paint("dim", " › ") + text + "\n");

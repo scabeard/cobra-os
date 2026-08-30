@@ -149,11 +149,17 @@ cobra run "…" --scope "10.10.10.0/24,lab.local" --loot-dir /dev/shm/cobra-loot
 
 1. `cobra` spawns `cobra-mcp` and connects as an MCP client.
 2. It gathers engagement context (authorized-engagement prompt, opshelp, brain,
-   target) and builds a system prompt.
+   target) and builds a system prompt. Under `cobra mission <file>`, the client
+   first calls `mission_begin` to seed the mission into the brain's Mission
+   section (deterministic — not left to the model).
 3. The **agent loop** sends messages + tool schemas to the model; when the model
    requests tool calls, the client executes them against the server and feeds
-   results back — until the model stops or hits `--max-turns`.
-4. All tool output lands in loot files; the brain is updated after each phase.
+   results back — until the model stops or hits `--max-turns`. Every 8 non-brain
+   tool calls the loop injects a `[checkpoint]` nudge (brain_read → brain_write),
+   and the end-of-run summary warns if the brain was never updated.
+4. All tool output lands in loot files; the brain is updated after each phase —
+   brain_write confirmations and tool errors are always shown (no `--verbose`
+   needed), and `brain_read` lets the agent re-read the current brain mid-run.
 
 ---
 

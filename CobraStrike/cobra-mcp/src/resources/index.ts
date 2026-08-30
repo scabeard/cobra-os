@@ -89,8 +89,11 @@ Scope: ${"${SCOPE}"}
 - session_list                 active sessions
 - session_output <id>          tail session output
 - session_kill <id>            stop session
-- brain_write <md>             replace the brain (read cobra://brain first)
-- brain_append <note>          append a dated note to the brain
+- brain_read                   re-read the CURRENT brain from disk — your context
+                                  snapshot goes STALE after every write; read before
+                                  planning from memory and before a brain_write
+- brain_write <full md>        rewrite the ENTIRE brain (brain_read first, fold in updates)
+- brain_append <note>          append a terse dated note (Lessons Learned)
 
 ## Missions
 - Missions are markdown files in the missions dir (next to the brain).
@@ -101,10 +104,12 @@ Scope: ${"${SCOPE}"}
   to read a mission file — that is what mission_read is for.
 - cobra://missions shows the exact directory, the template path, and the
   run command.
+- mission_begin <file> starts a mission: seeds the file's objective into the
+  brain Mission section (the cobra mission CLI does this automatically).
 - The operator can also run one with content injected: cobra mission <path-to-file.mission.md> (xint first on COBRA OS).
 
 All tool output → loot files. Read summaries; pull detail from files only as needed.
-Update the brain after every phase (brain_write / brain_append).
+Update the brain after every phase (brain_read → brain_write / brain_append).
 `;
 
 export function registerResources(server: McpServer): void {

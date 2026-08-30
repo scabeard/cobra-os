@@ -20,6 +20,7 @@ import { registerShellTools } from "./tools/shell.js";
 import { registerProfileTools } from "./tools/profiles.js";
 import { registerBrainTools } from "./tools/brain.js";
 import { registerMissionTools } from "./tools/mission.js";
+import { registerMemoryTools } from "./tools/memory.js";
 import { registerResources } from "./resources/index.js";
 import { registerPrompts } from "./prompts/index.js";
 import { stopAllSessions } from "./lib/sessions.js";
@@ -48,6 +49,7 @@ async function main(): Promise<void> {
   registerProfileTools(server);
   registerBrainTools(server);
   registerMissionTools(server);
+  registerMemoryTools(server);
 
   // Read-side
   registerResources(server);

@@ -293,7 +293,7 @@ COBRA operator commands (cobra-ops)
     <p class="sec-lede"><strong>CobraStrike</strong> is COBRA's self-contained, headless AI agent. It spawns the
     <code>cobra-mcp</code> server over stdio, connects as an MCP client, and runs an autonomous loop on
     <strong>any model on OpenRouter</strong> — driven by a mission file, with a living brain and tradecraft
-    doctrine. The agent drives <strong>49 MCP tools</strong> across recon / web / creds / exploit / payload /
+    doctrine. The agent drives <strong>52 MCP tools</strong> across recon / web / creds / exploit / payload /
     capture / lateral / C2 / local-shell / profiles, all gated by a scope guard in code. Bring
     <strong>your own API key</strong>; it never touches this site.</p>
     <div class="build-grid">
@@ -373,8 +373,9 @@ cobra run "…" --scope "10.10.10.0/24,lab.local"</code></pre>
           <tr><td><code>target_clear</code></td><td class="dim">— state —</td><td>remove one / all targets</td></tr>
           <tr><td><code>loot_path</code></td><td class="dim">— state —</td><td>show loot directory</td></tr>
 
-          <tr><td class="ops-cat" rowspan="2">brain</td>
-              <td><code>brain_write</code></td><td class="dim">— state —</td><td>rewrite the whole brain (every phase)</td></tr>
+          <tr><td class="ops-cat" rowspan="3">brain</td>
+              <td><code>brain_read</code></td><td class="dim">— state —</td><td>re-read the CURRENT brain (snapshot goes stale)</td></tr>
+          <tr><td><code>brain_write</code></td><td class="dim">— state —</td><td>rewrite the whole brain (every phase)</td></tr>
           <tr><td><code>brain_append</code></td><td class="dim">— state —</td><td>append a dated note (lessons learned)</td></tr>
 
           <tr><td class="ops-cat" rowspan="8">recon</td>
@@ -439,8 +440,9 @@ cobra run "…" --scope "10.10.10.0/24,lab.local"</code></pre>
               <td><code>profile_list</code></td><td class="dim">— probe —</td><td>COBRA_PROFILES groups, installed vs missing</td></tr>
           <tr><td><code>profile_check</code></td><td class="dim">— probe —</td><td>one group's binaries + rebuild hint (read-only)</td></tr>
 
-          <tr><td class="ops-cat">missions</td>
+          <tr><td class="ops-cat" rowspan="2">missions</td>
               <td><code>mission_read</code></td><td class="dim">— file —</td><td>read a mission file by name (ungated, read-only, path-contained)</td></tr>
+          <tr><td><code>mission_begin</code></td><td class="dim">— file —</td><td>seed a mission file into the brain's Mission section (auto-run by cobra mission)</td></tr>
         </tbody>
       </table>
     </div>

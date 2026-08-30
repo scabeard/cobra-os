@@ -14,6 +14,8 @@ export interface AgentEvents {
   onToolCall?: (name: string, args: Record<string, unknown>) => void;
   onToolResult?: (name: string, result: string) => void;
   onUsage?: (used: number, turn: number) => void;
+  /** In-loop checkpoint reminder (brain hygiene) — surfaced as a dim status line. */
+  onCheckpoint?: (text: string) => void;
 }
 
 export interface AgentResult {
@@ -21,6 +23,8 @@ export interface AgentResult {
   turns: number;
   totalTokens: number;
   messages: ChatMessage[];
+  /** Number of brain_write/brain_append/mission_begin calls this run (0 = the brain was never touched). */
+  brainWrites: number;
 }
 
 function toToolSpecs(tools: { name: string; description?: string; inputSchema: Record<string, unknown> }[]): ToolSpec[] {
@@ -40,6 +44,11 @@ interface ArgsErr {
   ok: false;
   error: string;
 }
+
+/** Tools that write to the brain — tracked for checkpoints + end-of-run verification. */
+const BRAIN_WRITE_TOOLS = new Set(["brain_write", "brain_append", "mission_begin"]);
+/** Inject a brain-checkpoint nudge after this many non-brain tool calls. */
+const BRAIN_CHECKPOINT_EVERY = 8;
 
 /**
  * Parse a tool-call argument payload. An empty payload is the empty-object
@@ -85,6 +94,9 @@ export class Agent {
 
     let totalTokens = 0;
     let finalText = "";
+    let brainWrites = 0;
+    let callsSinceBrainWrite = 0;
+    let checkpointsIssued = 0;
 
     for (let turn = 1; turn <= this.cfg.maxTurns; turn++) {
       const res = await this.llm.chat(messages, tools);
@@ -138,8 +150,32 @@ export class Agent {
           content: result,
         });
       }
+
+      // Brain hygiene: the brain is the engagement's only cross-run memory and
+      // the dedup record ("Attempted & Failed" is what stops repeated scans),
+      // but the doctrine is model-voluntary — so the loop enforces it. After
+      // every N non-brain tool calls, inject an in-band checkpoint nudge.
+      for (const call of msg.tool_calls) {
+        if (BRAIN_WRITE_TOOLS.has(call.function.name)) {
+          brainWrites += 1;
+          callsSinceBrainWrite = 0;
+        } else {
+          callsSinceBrainWrite += 1;
+        }
+      }
+      if (callsSinceBrainWrite >= BRAIN_CHECKPOINT_EVERY && checkpointsIssued < 4) {
+        checkpointsIssued += 1;
+        callsSinceBrainWrite = 0;
+        const nudge =
+          `[checkpoint] BRAIN CHECKPOINT — you have run ${BRAIN_CHECKPOINT_EVERY}+ tool calls without updating the brain. ` +
+          `Doctrine requires a brain update after every phase. Call brain_read now, then brain_write the full document ` +
+          `(Mission, Target Profile, Attack Surface, Credentials, Access, Attempted & Failed, Next Moves, Loot Index) ` +
+          `or brain_append a quick note. If there is genuinely nothing new to record yet, say so in one line and continue.`;
+        messages.push({ role: "user", content: nudge });
+        this.events.onCheckpoint?.(nudge);
+      }
     }
 
-    return { finalText, turns: messages.length, totalTokens, messages };
+    return { finalText, turns: messages.length, totalTokens, messages, brainWrites };
   }
 }

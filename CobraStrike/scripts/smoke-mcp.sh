@@ -43,18 +43,20 @@
 #   S  egress satisfied when internet ON, or via tor=1 route
 # Hardening (path-traversal containment on resources):
 #   T  ../ escapes on missions/loot/tradecraft resources → (access denied)
+#   V  brain tools (Phase 9) — brain_write/append/read round-trip on disk,
+#      empty-write refused, mission_begin seeds the Mission section
 #
 # Usage: scripts/smoke-mcp.sh [--verbose]
 # Exit:  0 all pass · 1 failures (work dir kept for debugging) · 2 setup error
 #
-# NOTE: EXPECTED_TOOLS pins the registry size (50 with mission_read). Bump it
-# when a phase adds or removes tools.
+# NOTE: EXPECTED_TOOLS pins the registry size (52 with brain_read +
+# mission_begin). Bump it when a phase adds or removes tools.
 
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIST="$HERE/../cobra-mcp/dist/cobra-mcp.js"
-EXPECTED_TOOLS=50
+EXPECTED_TOOLS=52
 VERBOSE=0
 [ "${1:-}" = "--verbose" ] && VERBOSE=1
 
@@ -68,11 +70,14 @@ export COBRA_ALLOWED_SCOPE="10.13.37.0/24,lab.example"
 IN_SCOPE_IP="10.13.37.1"
 OOS_IP="192.0.2.1"   # TEST-NET-1: never in scope, never routed
 
-# Fake brain/missions tree for scenario U (mission_read tool). The missions
-# dir always sits next to the brain: COBRA_BRAIN_PATH=<work>/brain/BRAIN.md.
+# Fake brain/missions tree for scenarios U (mission_read) + V (brain tools).
+# The missions dir always sits next to the brain: COBRA_BRAIN_PATH=<work>/brain/BRAIN.md.
 export COBRA_BRAIN_PATH="$WORK/brain/BRAIN.md"
 mkdir -p "$WORK/brain/missions"
 printf '# Smoke mission\nTarget: %s\n' "$IN_SCOPE_IP" > "$WORK/brain/missions/hunter.mission.md"
+# Seed a template brain so mission_begin has a `## Mission` section to splice
+# and brain_read has something to return before the first write.
+printf '# Brain\n\n## Mission\n- **Mission file:** *(none loaded)*\n\n---\n\n## Attack Surface Map\n' > "$COBRA_BRAIN_PATH"
 
 SRV_PID=""
 REQ=""
@@ -420,6 +425,34 @@ check "U4 traversal is refused loudly" "$LAST" "access denied"
 call_tool "mission_read" '{"file":"nope.mission.md"}' || true
 check "U5 missing file reports and lists available" "$LAST" "not found"
 check "U6 available list names the real mission" "$LAST" "hunter.mission.md"
+
+# --- V: brain tools (Phase 9) — the engagement memory loop --------------------
+# The brain is the ONLY cross-run memory and the dedup record ("Attempted &
+# Failed" stops repeated scans), yet the smoke suite never exercised it. These
+# checks pin the disk round-trip so the brain path can never regress silently:
+# write lands on disk, append appends, read returns current content, empty
+# write refused, mission_begin seeds the Mission section.
+scenario "V: brain tools (write/append/read on disk, mission_begin)"
+start_server
+handshake || true
+call_tool "brain_read" '{}' || true
+check "V1 brain_read returns the seeded brain" "$LAST" "none loaded"
+call_tool "brain_write" '{"content":"# Brain\n\n## Attack Surface Map\n| 22 | tcp | ssh | OpenSSH |\n"}' || true
+check "V2 brain_write reports the path" "$LAST" "Brain written"
+check "V3 brain_write lands ON DISK" "$(cat "$COBRA_BRAIN_PATH")" "Attack Surface Map"
+call_tool "brain_append" '{"note":"recon triage complete"}' || true
+check "V4 brain_append reports success" "$LAST" "Note appended"
+check "V5 brain_append lands ON DISK" "$(cat "$COBRA_BRAIN_PATH")" "recon triage complete"
+call_tool "brain_read" '{}' || true
+check "V6 brain_read reflects writes" "$LAST" "OpenSSH"
+call_tool "brain_write" '{"content":"   "}' || true
+check "V7 empty brain_write refused (no wipe)" "$LAST" "refused"
+call_tool "mission_begin" '{"file":"hunter.mission.md"}' || true
+check "V8 mission_begin seeds the brain" "$LAST" "Mission seeded"
+check "V9 mission_begin writes Mission section ON DISK" "$(cat "$COBRA_BRAIN_PATH")" "hunter.mission.md"
+call_tool "mission_begin" '{"file":"../../../etc/passwd"}' || true
+check_absent "V10 mission_begin traversal returns no passwd" "$LAST" "root:x:0:0"
+check "V11 mission_begin traversal refused loudly" "$LAST" "access denied"
 
 # --- summary --------------------------------------------------------------------
 stop_server

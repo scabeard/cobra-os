@@ -14,7 +14,10 @@ root flag or whatever the mission demands.
 - **Token-efficient** — scans write full output to loot files; the AI reads summaries and
   only pulls detail when it needs it
 - **Self-updating brain** — `brain/BRAIN.md` tracks attack surface, creds, access, dead
-  ends, and next moves across the engagement
+  ends, and next moves across the engagement. The loop is enforced, not voluntary: `cobra
+  mission` seeds the Mission section deterministically (`mission_begin`), the agent re-reads
+  the current brain mid-run (`brain_read`), a checkpoint nudge fires every 8 non-brain tool
+  calls, and the run summary warns if the brain was never touched
 - **Tradecraft library** — `tradecraft/` distills field-tested hack tricks into
   AI-consumable guides with a decision-tree index
 - **Custom MCP server** — `cobra-mcp` exposes recon, web, creds, payload, exfil, capture,

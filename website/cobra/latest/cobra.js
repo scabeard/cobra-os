@@ -16525,6 +16525,8 @@ function toToolSpecs(tools) {
     function: { name: t.name, description: t.description, parameters: t.inputSchema }
   }));
 }
+var BRAIN_WRITE_TOOLS = /* @__PURE__ */ new Set(["brain_write", "brain_append", "mission_begin"]);
+var BRAIN_CHECKPOINT_EVERY = 8;
 function parseArgs(raw) {
   const t = raw.trim();
   if (t === "")
@@ -16561,6 +16563,9 @@ var Agent = class {
     ];
     let totalTokens = 0;
     let finalText = "";
+    let brainWrites = 0;
+    let callsSinceBrainWrite = 0;
+    let checkpointsIssued = 0;
     for (let turn = 1; turn <= this.cfg.maxTurns; turn++) {
       const res = await this.llm.chat(messages, tools);
       const msg = res.message;
@@ -16604,8 +16609,23 @@ var Agent = class {
           content: result
         });
       }
+      for (const call of msg.tool_calls) {
+        if (BRAIN_WRITE_TOOLS.has(call.function.name)) {
+          brainWrites += 1;
+          callsSinceBrainWrite = 0;
+        } else {
+          callsSinceBrainWrite += 1;
+        }
+      }
+      if (callsSinceBrainWrite >= BRAIN_CHECKPOINT_EVERY && checkpointsIssued < 4) {
+        checkpointsIssued += 1;
+        callsSinceBrainWrite = 0;
+        const nudge = `[checkpoint] BRAIN CHECKPOINT \u2014 you have run ${BRAIN_CHECKPOINT_EVERY}+ tool calls without updating the brain. Doctrine requires a brain update after every phase. Call brain_read now, then brain_write the full document (Mission, Target Profile, Attack Surface, Credentials, Access, Attempted & Failed, Next Moves, Loot Index) or brain_append a quick note. If there is genuinely nothing new to record yet, say so in one line and continue.`;
+        messages.push({ role: "user", content: nudge });
+        this.events.onCheckpoint?.(nudge);
+      }
     }
-    return { finalText, turns: messages.length, totalTokens, messages };
+    return { finalText, turns: messages.length, totalTokens, messages, brainWrites };
   }
 };
 
@@ -16632,7 +16652,7 @@ function buildSystemPrompt(ctx, missionText) {
   parts.push("You are CobraStrike \u2014 an autonomous, authorized red-team pentest agent. You drive a custom MCP server of pentest tools. You are methodical, evidence-driven, and token-efficient.");
   if (ctx.engagement)
     parts.push(ctx.engagement);
-  parts.push("OPERATING DOCTRINE:\n- Work in phases: recon \u2192 enumeration \u2192 exploitation \u2192 privesc \u2192 objective.\n- Every tool writes full output to loot files; read summaries, pull detail only as needed.\n- NEVER retry anything logged under 'Attempted & Failed' in the brain.\n- Update the brain after every phase using brain_write (full document) or brain_append (quick note): target profile, attack surface, creds, access, next moves.\n- Consult tradecraft/ guides (cobra://tradecraft/{guide}) before using an unfamiliar technique.\n- Stay strictly within authorized scope; the scope guard refuses out-of-scope targets.\n- Think step by step, then act. Prefer one well-chosen tool over many speculative ones.");
+  parts.push("OPERATING DOCTRINE:\n- Work in phases: recon \u2192 enumeration \u2192 exploitation \u2192 privesc \u2192 objective.\n- Every tool writes full output to loot files; read summaries, pull detail only as needed.\n- The BRAIN is the engagement's only memory across runs and phases \u2014 you cannot remember anything outside it. It is what stops you repeating scans and retrying dead ends.\n- NEVER retry anything logged under 'Attempted & Failed' in the brain.\n- Your context copy of the brain is a STARTUP SNAPSHOT \u2014 it goes stale after every write. Use the brain_read tool to re-read the current brain before planning from memory and before every brain_write.\n- Update the brain after EVERY phase: brain_read first, then brain_write (full document) or brain_append (quick note). Record: target profile, attack surface, creds, access, attempted-and-failed, next moves. The agent loop injects [checkpoint] reminders \u2014 honor them immediately.\n- Consult tradecraft/ guides (cobra://tradecraft/{guide}) before using an unfamiliar technique.\n- Stay strictly within authorized scope; the scope guard refuses out-of-scope targets.\n- Think step by step, then act. Prefer one well-chosen tool over many speculative ones.");
   if (missionText) {
     parts.push(`ACTIVE MISSION:
 ${missionText}`);
@@ -16670,6 +16690,11 @@ function paint(color, s) {
     return s;
   return `${C[color]}${s}${C.reset}`;
 }
+var MAX_ARG_LEN = 160;
+function truncate(s) {
+  const flat = s.replace(/\s+/g, " ").trim();
+  return flat.length > MAX_ARG_LEN ? `${flat.slice(0, MAX_ARG_LEN)}\u2026` : flat;
+}
 var ui = {
   banner(model) {
     const art = [
@@ -16689,7 +16714,7 @@ var ui = {
   warn: (s) => process.stdout.write(paint("yellow", "\u26A0 ") + s + "\n"),
   err: (s) => process.stdout.write(paint("red", "\u2716 ") + s + "\n"),
   tool: (name, args) => {
-    const argStr = Object.entries(args).map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`).join(" ");
+    const argStr = Object.entries(args).map(([k, v]) => `${k}=${truncate(typeof v === "string" ? v : JSON.stringify(v))}`).join(" ");
     process.stdout.write(paint("magenta", `
 \u25B6 ${name}`) + paint("dim", ` ${argStr}
 `));
@@ -16700,6 +16725,21 @@ var ui = {
     const more = lines.length > 6 ? paint("dim", `
   \u2026 ${lines.length - 6} more lines`) : "";
     process.stdout.write(paint("dim", head) + more + "\n");
+  },
+  /**
+   * Always-visible tool result — for failures (TOOL ERROR) and brain-write
+   * confirmations. These must never hide behind --verbose: a silent brain
+   * failure is invisible otherwise, and a silent error loop wastes a mission.
+   */
+  toolStatus: (result) => {
+    const lines = result.split("\n");
+    const head = lines.slice(0, 3).join("\n");
+    const more = lines.length > 3 ? paint("dim", ` \u2026 +${lines.length - 3} lines`) : "";
+    const bad = /^(TOOL ERROR|TOOL ARG PARSE ERROR|⛔|⚠️)/.test(result);
+    process.stdout.write("  " + paint(bad ? "red" : "green", head) + more + "\n");
+  },
+  checkpoint: (text) => {
+    process.stdout.write(paint("yellow", "\u23FA ") + paint("dim", text) + "\n");
   },
   assistant: (text) => {
     process.stdout.write("\n" + paint("bold", "\u{1F40D} cobra") + paint("dim", " \u203A ") + text + "\n");
@@ -16738,6 +16778,10 @@ var Spinner = class {
 };
 
 // build/index.js
+var BRAIN_WRITE_TOOLS2 = /* @__PURE__ */ new Set(["brain_write", "brain_append", "mission_begin"]);
+function isAlwaysShowResult(name, result) {
+  return result.startsWith("TOOL ERROR") || result.startsWith("TOOL ARG PARSE ERROR") || BRAIN_WRITE_TOOLS2.has(name);
+}
 var KNOWN_COMMANDS = /* @__PURE__ */ new Set(["run", "mission", "chat", "models", "setup", "tools", "doctor"]);
 var BOOL_FLAGS = /* @__PURE__ */ new Set(["help", "h", "verbose", "save-key"]);
 function parseArgs2(argv) {
@@ -16942,18 +16986,37 @@ function makeAgentEvents(verbose) {
   return {
     onAssistantText: (t) => ui.assistant(t),
     onToolCall: (name, args) => ui.tool(name, args),
-    onToolResult: (_name, result) => {
+    onToolResult: (name, result) => {
       if (verbose)
         ui.toolResult(result);
+      else if (isAlwaysShowResult(name, result))
+        ui.toolStatus(result);
     },
-    onUsage: (tokens, turn) => ui.usage(tokens, turn)
+    onUsage: (tokens, turn) => ui.usage(tokens, turn),
+    onCheckpoint: (text) => ui.checkpoint(text)
   };
 }
-async function runTask(task, overrides, missionText) {
+async function runTask(task, overrides, mission) {
   const { mcp, cfg } = await connectMcp(overrides);
   const verbose = currentFlags["verbose"] === true;
   try {
     ui.banner(cfg.model);
+    let missionText;
+    let missionSeeded = false;
+    if (mission) {
+      try {
+        const res = await mcp.callTool("mission_begin", { file: mission.file });
+        if (/^⛔/.test(res)) {
+          ui.warn(`mission_begin refused (${mission.file} is outside the missions dir) \u2014 injecting the mission into the prompt only; the brain Mission section is unchanged.`);
+        } else {
+          ui.ok(res.split("\n")[0]);
+          missionSeeded = true;
+        }
+      } catch (err) {
+        ui.warn(`mission_begin failed (${err instanceof Error ? err.message : String(err)}) \u2014 continuing with prompt-only injection.`);
+      }
+      missionText = mission.content;
+    }
     const sp = new Spinner("gathering engagement context\u2026");
     sp.start();
     const ctx = await gatherContext(mcp);
@@ -16965,6 +17028,15 @@ async function runTask(task, overrides, missionText) {
     const result = await agent.run(systemPrompt, task);
     if (!missionText && /\.mission\.md\b/.test(task)) {
       ui.info("hint: the task names a .mission.md file but none was loaded \u2014 use `cobra mission <file>` to inject it");
+    }
+    if (result.brainWrites === 0) {
+      if (missionSeeded) {
+        ui.warn("The mission was seeded into the brain, but the agent recorded NO findings this run \u2014 no target profile, attack surface, or next moves were saved. The next run still has no operational memory.");
+      } else {
+        ui.warn("The brain was NOT updated this run \u2014 nothing learned was saved. The next run starts from the old brain (this is what makes scans repeat). Tell the agent to update the brain, or run with --verbose to watch brain_write.");
+      }
+    } else {
+      ui.ok(`Brain updated ${result.brainWrites}\xD7 this run.`);
     }
     process.stdout.write("\n");
     ui.ok(`Done in ${result.turns} messages \u2022 ${result.totalTokens} tokens`);
@@ -17030,14 +17102,14 @@ async function main() {
         ui.err("mission requires a file path, e.g. cobra mission brain/missions/x.mission.md");
         process.exit(1);
       }
-      const missionText = fs3.readFileSync(path3.resolve(file), "utf8");
-      if (!missionText.trim()) {
+      const missionContent = fs3.readFileSync(path3.resolve(file), "utf8");
+      if (!missionContent.trim()) {
         ui.err(`${file} is empty \u2014 copy the template and fill it in first.`);
         process.exit(1);
       }
       const task = flagStr(flags, "task") ?? "Execute the mission described in the ACTIVE MISSION section. Begin with recon triage and proceed methodically toward the objective.";
-      ui.ok(`Mission file loaded: ${path3.resolve(file)} (${missionText.length} bytes \u2192 ACTIVE MISSION in system prompt)`);
-      await runTask(task, overrides, missionText);
+      ui.ok(`Mission file loaded: ${path3.resolve(file)} (${missionContent.length} bytes \u2192 ACTIVE MISSION in system prompt)`);
+      await runTask(task, overrides, { file, content: missionContent });
       break;
     }
     case "run":

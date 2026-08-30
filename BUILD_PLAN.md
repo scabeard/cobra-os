@@ -268,6 +268,17 @@ Retired profiles: `headless` (obsolete — every build is headless now).
 > `COBRA_*` env (loot at `/dev/shm/cobra-loot`). Non-COBRA boxes get the full
 > doctrine tree from the site — same as the baked image.
 >
+> **Brain loop enforcement (2026-08-30, CobraStrike Phase 9).** The brain is the
+> engagement's only cross-run memory, but its updates were model-voluntary — an
+> agent could run a whole engagement with zero brain_writes (symptom: identical
+> scans repeated every run). The baked bundles now carry the enforced loop:
+> `mission_begin` (the `cobra mission` CLI seeds the Mission section
+> deterministically), `brain_read` (mid-run re-read — the startup snapshot goes
+> stale), an in-loop checkpoint nudge every 8 non-brain tool calls, an
+> end-of-run warning when the brain was never touched, and always-visible
+> brain-write confirmations / tool errors. See `CobraStrike/BUILD_PLAN.md` §8
+> Phase 9. No chroot changes — the launcher already forwards `COBRA_BRAIN_PATH`.
+>
 > **Agent self-knowledge (2026-08-24, follow-up).** The agent had no way to know
 > where missions/the brain lived on an installed box — and no tool to update the
 > brain at all, despite the doctrine requiring it every phase. Added
