@@ -5,7 +5,7 @@ Scope-check first. Brute force is loud — prefer targeted over spray.
 ## Flow
 1. **Scope reminder** — confirm target ∈ `COBRA_ALLOWED_SCOPE`.
 2. **Choose wordlists** — see tradecraft/07 §wordlists. Small targeted list first.
-3. **Online brute** — `creds_brute` (hydra) with `-t4` throttle, `-f` stop-on-first-hit.
+3. **Online brute** — `creds_brute` (hydra) with `-t4` throttle, `-f` stop-on-first-hit. It is **session-managed**: it returns a session id immediately, then poll with `session_output` for a hit (`login: <user> password: <pw>`) and stop with `session_kill` when done.
 4. **Offline crack** — got hashes? `creds_crack_john` (CPU) or `creds_crack_hashcat` (GPU).
 5. **Validate** — test every cracked cred against every service. Record in brain `Credentials`.
 

@@ -454,6 +454,33 @@ call_tool "mission_begin" '{"file":"../../../etc/passwd"}' || true
 check_absent "V10 mission_begin traversal returns no passwd" "$LAST" "root:x:0:0"
 check "V11 mission_begin traversal refused loudly" "$LAST" "access denied"
 
+# --- W: creds_brute session-managed (the -32001 Request-timeout fix) ------------
+# creds_brute ran hydra as a blocking runToLoot — outliving the client's 60s MCP
+# request timeout (cobra-client → SDK RequestTimeout -32001). Now it must START a
+# "brute" session and return a session id immediately, never blocking. Scope/egress
+# gates throw synchronously (JSON-RPC error, not text), so only the in-scope path
+# returns content here. Hydra may be absent — requireCapability throws cleanly
+# before spawn, so these checks are capability-independent.
+scenario "W: creds_brute session-managed (no -32001 blocking)"
+start_server
+handshake || true
+rpc "tools/list" '{}' || true
+check "W1 creds_brute still registered" "$LAST" '"name":"creds_brute"'
+check "W2 creds_brute advertises session management" "$LAST" 'session'
+call_tool "creds_brute" "{\"host\":\"$IN_SCOPE_IP\",\"service\":\"ssh\",\"user\":\"debian\",\"passlist\":\"/tmp/x\"}" || true
+# Hydra may be absent on the dev box (requireCapability throws before spawn), so
+# pin the two things that MUST now hold regardless of capability: (a) the call
+# resolves with a result (no -32001 / JSON-RPC transport error — it did NOT block
+# past the request timeout), and (b) it returns in-band content. When hydra IS
+# present that content is a "brute-" session id (asserted separately below).
+check_absent "W3 no -32001 Request-timeout / transport error" "$LAST" '"error"'
+check "W4 returns in-band content (never a bare transport error)" "$LAST" '"content"'
+if command -v hydra >/dev/null 2>&1; then
+  check "W5 hydra present → returns a brute session id" "$LAST" "session brute-"
+else
+  echo "  SKIP  W5 hydra not installed on this box (requireCapability fired cleanly, in-band)"
+fi
+
 # --- summary --------------------------------------------------------------------
 stop_server
 echo

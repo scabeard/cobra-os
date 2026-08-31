@@ -80,7 +80,7 @@ export function registerPrompts(server: McpServer): void {
           `⚠️ SCOPE CHECK: confirm ${host} ∈ ${scopeSummary()} before any attempt.\n\n` +
           `Follow brain/playbooks/credential-attack.md:\n` +
           `1. Choose targeted wordlists (tradecraft/07)\n` +
-          `2. creds_brute (hydra, throttled -t4, -f)\n` +
+          `2. creds_brute (hydra, throttled -t4, -f) — session-managed; poll session_output for a hit, session_kill when done\n` +
           `3. Offline crack hashes: creds_crack_john / creds_crack_hashcat\n` +
           `4. Validate all cracked creds; record in brain Credentials\n\n` +
           `Log every attempt in brain Attempted & Failed.`

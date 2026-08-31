@@ -59,7 +59,7 @@ Scope: ${"${SCOPE}"}
 - web_dir_brute <url> [wl]     ffuf/gobuster
 - web_vuln_scan <url>          ⚠️ nikto
 - web_sql_inject <url>         sqlmap --batch
-- creds_brute <h> <s> <u> <wl> ⚠️ hydra (throttled)
+- creds_brute <h> <s> <u> <wl> ⚠️ hydra (throttled) — SESSION; poll session_output, kill session_kill
 - creds_crack_john <hashfile>  john
 - creds_crack_hashcat <f> <m>  hashcat
 - exploit_search <terms>       searchsploit (offline)

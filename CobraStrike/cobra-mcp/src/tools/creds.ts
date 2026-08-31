@@ -5,16 +5,22 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { assertInScope } from "../scope.js";
 import { requireCapability } from "../capabilities.js";
-import { runToLoot, resultText, resolveExecPrefix, assertNotUnroutedOnion } from "../lib/exec.js";
+import { runToLoot, resultText, resolveExecPrefix, assertNotUnroutedOnion, viaSuffix } from "../lib/exec.js";
+import { startSession } from "../lib/sessions.js";
 
 function text(s: string) {
   return { content: [{ type: "text" as const, text: s }] };
 }
 
 export function registerCredsTools(server: McpServer): void {
+  // creds_brute is SESSION-MANAGED: an online brute force against a real
+  // service runs for minutes-to-hours, which would outlive the client's 60s
+  // MCP request timeout (the -32001 "Request timed out" bug) if it blocked.
+  // Start hydra as a session, return the id immediately, and let the agent
+  // poll session_output / stop with session_kill. Full output → session log.
   server.tool(
     "creds_brute",
-    "⚠️ LOUD. Online brute force (hydra). Throttled to 4 tasks, stop on first hit. Output to loot file.",
+    "⚠️ LOUD. Online brute force (hydra), throttled to 4 tasks, stop on first hit. Session-managed: returns a session id immediately; poll with session_output (hydra prints '[service] host: ... login: <user> password: <pw>' on a hit), stop with session_kill. Full output → session log.",
     {
       host: z.string().describe("Target host (in scope)"),
       service: z.string().describe("Service: ssh, ftp, rdp, vnc, mysql, postgres, telnet, smb, http-get, etc."),
@@ -36,8 +42,17 @@ export function registerCredsTools(server: McpServer): void {
       const argv = [...prefix, hydra, "-t4", "-f", "-V", "-l", user, "-P", passlist];
       if (port) argv.push("-s", String(port));
       argv.push(`${service}://${host}`);
-      const r = await runToLoot("creds_brute", argv, { timeoutMs: 60 * 60 * 1000 });
-      return text(resultText("creds_brute", r));
+      const info = startSession(
+        "brute",
+        `hydra -t4 -f -l ${user} -P ${passlist}${port ? ` -s ${port}` : ""} ${service}://${host}${viaSuffix(via)}`,
+        argv
+      );
+      return text(
+        `🔨 creds_brute started — session ${info.id}\n` +
+          `  hydra -t4 -f -l ${user} -P ${passlist} ${service}://${host}\n` +
+          `  output: ${info.outputFile}\n` +
+          `  Poll with session_output id="${info.id}" (a hit prints 'login: ${user} password: ...'). Stop with session_kill.`
+      );
     }
   );
 

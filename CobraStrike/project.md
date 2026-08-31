@@ -54,7 +54,7 @@ Here's the proposed MCP server spec for the future self-automated red team teste
 ### Credentials
 | name | wraps |
 |---|---|
-| `creds_brute` | `brute <host> <svc> <user>` |
+| `creds_brute` | `brute <host> <svc> <user>` (session-managed — poll `session_output`) |
 | `creds_crack_john` | `crack <hashfile>` |
 | `creds_crack_hashcat` | `hashcrack <mode> <hashfile>` |
 

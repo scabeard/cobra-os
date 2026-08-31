@@ -5,7 +5,7 @@
 
 export interface SessionInfo {
   id: string;
-  kind: "listen" | "sniff" | "pcap" | "upserv" | "serve" | "tunnel";
+  kind: "listen" | "sniff" | "pcap" | "upserv" | "serve" | "tunnel" | "brute";
   pid: number;
   started: string;
   /** human description, e.g. "nc -lvnp 4444" */
